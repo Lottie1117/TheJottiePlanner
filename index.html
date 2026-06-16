@@ -440,6 +440,12 @@
       background: #1976D2; color: white; border: none; border-radius: 8px;
       padding: 8px 13px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap;
     }
+
+    .recur-badge {
+      font-size: 11px; font-weight: 700;
+      background: #E8F5E9; color: #2E7D32;
+      padding: 2px 8px; border-radius: 20px;
+    }
   </style>
 </head>
 <body>
@@ -600,6 +606,13 @@
         <option value="Either">🤷 Either</option>
       </select>
       <input type="date" id="td-due" placeholder="Due date">
+    </div>
+    <div class="row">
+      <select id="td-recur">
+        <option value="">One-off</option>
+        <option value="weekly">🔁 Weekly</option>
+        <option value="monthly">🔁 Monthly</option>
+      </select>
     </div>
     <button class="btn-primary" onclick="addTodo()">Add Task</button>
   </div>
@@ -856,6 +869,7 @@ function addEvent() {
     addedBy: me,
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   }).then(() => {
+    sendNotification('📅 Calendar', `${me} added ${title}`);
     document.getElementById('ev-title').value = '';
     document.getElementById('ev-time').value  = '';
     document.getElementById('ev-notes').value = '';
@@ -983,22 +997,44 @@ function shopCard(i) {
 // ── To-Do ────────────────────────────────────────────────────────
 function addTodo() {
   const title = document.getElementById('td-title').value.trim();
-  const who   = document.getElementById('td-who').value;
-  const due   = document.getElementById('td-due').value;
+  const who    = document.getElementById('td-who').value;
+  const due    = document.getElementById('td-due').value;
+  const recur  = document.getElementById('td-recur').value;
   if (!title) return;
   if (!db) return;
   db.collection('todos').add({
-    title, who, due, completed: false,
+    title, who, due, recurrence: recur, completed: false,
     addedBy: me,
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   }).then(() => {
+    sendNotification('✅ To-Do', `${me} added “${title}”`);
     document.getElementById('td-title').value = '';
     document.getElementById('td-who').value   = '';
     document.getElementById('td-due').value   = '';
+    document.getElementById('td-recur').value = '';
   });
 }
 
-function toggleTodo(id, done) { db.collection('todos').doc(id).update({completed: !done}); }
+async function toggleTodo(id, done) {
+  // If marking as complete and task is recurring, create next occurrence
+  if (!done) {
+    const snap = await db.collection('todos').doc(id).get();
+    const d    = snap.data();
+    if (d && d.recurrence) {
+      const base = new Date((d.due || new Date().toISOString().split('T')[0]) + 'T00:00:00');
+      if (d.recurrence === 'weekly')  base.setDate(base.getDate() + 7);
+      if (d.recurrence === 'monthly') base.setMonth(base.getMonth() + 1);
+      const nextDue = base.toISOString().split('T')[0];
+      db.collection('todos').add({
+        title: d.title, who: d.who || '', due: nextDue,
+        recurrence: d.recurrence, completed: false,
+        addedBy: d.addedBy,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+  }
+  db.collection('todos').doc(id).update({completed: !done});
+}
 function delTodo(id)          { db.collection('todos').doc(id).delete(); }
 
 function listenTodos() {
@@ -1032,12 +1068,13 @@ function todoCard(i) {
   const whoIcon = {Lottie:'👩',Jonny:'👨',Both:'👫',Either:'🤷'};
   const whoStr  = i.who ? `${whoIcon[i.who]||'👤'} ${esc(i.who)} · ` : '';
   const dueStr  = i.due ? `Due ${fmtDate(i.due)} · ` : '';
+  const recurBadge = i.recurrence ? `<span class="recur-badge">🔁 ${i.recurrence}</span> ` : '';
   return `
   <div class="item-card${i.completed ? ' done' : ''}">
     <div class="checkbox${i.completed ? ' checked' : ''}" onclick="toggleTodo('${i.id}',${i.completed})"></div>
     <div class="item-body">
       <div class="item-title">${esc(i.title)}</div>
-      <div class="item-meta">${whoStr}${dueStr}${badge(i.addedBy)} · ${ago(i.createdAt)}</div>
+      <div class="item-meta">${recurBadge}${whoStr}${dueStr}${badge(i.addedBy)} · ${ago(i.createdAt)}</div>
     </div>
     <button class="del-btn" onclick="delTodo('${i.id}')">✕</button>
   </div>`;
@@ -1049,6 +1086,8 @@ function logChew() {
   db.collection('luna').add({
     loggedBy: me,
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(() => {
+    sendNotification('🦴 Luna', `${me} logged Luna’s chew`);
   });
 }
 
@@ -1129,6 +1168,7 @@ function addLunaNote() {
     addedBy: me,
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   }).then(() => {
+    sendNotification('📝 Luna Note', `${me} added a note${title ? ': '+title : ''}`);
     document.getElementById('ln-title').value = '';
     document.getElementById('ln-body').value  = '';
   });
@@ -1171,7 +1211,7 @@ function listenLunaNotes() {
 // ── FCM Push Notifications ─────────────────────────────────────────
 // Paste your Web Push VAPID public key from Firebase Console →
 // Project Settings → Cloud Messaging → Web Push certificates → Key pair
-const VAPID_KEY = 'BDIzLqLjnrurx7t8S39LtfFY-BBj86Qmw04Zd-rj_3kRvKzKCksrKOvrARlqWanz836lAzB_HG7wJCnsgBPjLO0';
+const VAPID_KEY = 'YOUR_VAPID_KEY_HERE';
 
 let messaging = null;
 
@@ -1231,15 +1271,17 @@ function checkNotifStatus() {
   }
 }
 
-function sendShoppingNotification(itemName) {
+function sendNotification(title, body) {
   if (!db || !me) return;
   const targetUser = me === 'Lottie' ? 'Jonny' : 'Lottie';
   db.collection('notifications').add({
-    targetUser,
-    title: '🛒 Shopping List',
-    body: `${me} added ${itemName}`,
+    targetUser, title, body,
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   }).catch(e => console.warn('Notif write:', e));
+}
+
+function sendShoppingNotification(itemName) {
+  sendNotification('🛒 Shopping List', `${me} added ${itemName}`);
 }
 
 // ── Enter-key support ────────────────────────────────────────────
