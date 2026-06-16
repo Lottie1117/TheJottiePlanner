@@ -1172,6 +1172,7 @@ function listenLunaNotes() {
 // Paste your Web Push VAPID public key from Firebase Console →
 // Project Settings → Cloud Messaging → Web Push certificates → Key pair
 const VAPID_KEY = 'BDIzLqLjnrurx7t8S39LtfFY-BBj86Qmw04Zd-rj_3kRvKzKCksrKOvrARlqWanz836lAzB_HG7wJCnsgBPjLO0';
+
 let messaging = null;
 
 function initMessaging() {
@@ -1200,14 +1201,19 @@ function _showInAppToast(title, body) {
   setTimeout(() => el.remove(), 4000);
 }
 
+async function requestNotifPermission() {
+  if (!messaging) { alert('Notifications not available — open this as an installed app.'); return; }
+  try {
+    const perm = await Notification.requestPermission();
+    if (perm === 'granted') await _saveFCMToken();
+    document.getElementById('notif-banner').style.display = 'none';
+  } catch(e) { console.warn('Notif permission:', e); }
+}
+
 async function _saveFCMToken() {
   if (!messaging || !db || !me) return;
   try {
-    const reg = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
-    const token = await messaging.getToken({
-      vapidKey: VAPID_KEY,
-      serviceWorkerRegistration: reg
-    });
+    const token = await messaging.getToken({ vapidKey: VAPID_KEY });
     if (token) {
       await db.collection('devices').doc(me).set({
         token, updatedAt: firebase.firestore.FieldValue.serverTimestamp()
