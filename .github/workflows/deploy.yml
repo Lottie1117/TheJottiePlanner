@@ -1,28 +1,20 @@
-name: Deploy to Firebase
+steps:
+  - uses: actions/checkout@v4
 
-on:
-  push:
-    branches:
-      - main
+  - uses: actions/setup-node@v4
+    with:
+      node-version: 22
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
+  - name: Install Firebase CLI
+    run: npm install -g firebase-tools
 
-    steps:
-      - uses: actions/checkout@v4
+  - name: Debug workspace
+    run: |
+      pwd
+      echo "----"
+      ls -la
+      echo "----"
+      find . -name firebase.json
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Install Firebase CLI
-        run: npm install -g firebase-tools
-
-      - name: Authenticate with Firebase
-        run: |
-          echo '${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}' > /tmp/sa.json
-          echo "GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json" >> $GITHUB_ENV
-
-      - name: Deploy to Firebase
-        run: firebase deploy --only hosting --project jottieplans
+  - name: Deploy to Firebase
+    run: firebase deploy --only hosting --project jottieplans --token "${{ secrets.FIREBASE_TOKEN }}"
