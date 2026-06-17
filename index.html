@@ -780,11 +780,15 @@
       <input type="date" id="td-due" placeholder="Due date">
     </div>
     <div class="row">
-      <select id="td-recur">
-        <option value="">One-off</option>
-        <option value="weekly">🔁 Weekly</option>
-        <option value="monthly">🔁 Monthly</option>
-      </select>
+    <select id="td-recur">
+  <option value="">One-off</option>
+  <option value="daily">🔁 Daily</option>
+  <option value="weekly">🔁 Weekly</option>
+  <option value="fortnightly">🔁 Every 2 Weeks</option>
+  <option value="monthly">🔁 Monthly</option>
+  <option value="quarterly">🔁 Quarterly</option>
+  <option value="yearly">🔁 Yearly</option>
+</select>
     </div>
     <button class="btn-primary" onclick="addTodo()">Add Task</button>
   </div>
@@ -1362,8 +1366,12 @@ async function toggleTodo(id, done) {
     const d = snap.data();
     if (d && d.recurrence) {
       const base = new Date((d.due || new Date().toISOString().split('T')[0]) + 'T00:00:00');
-      if (d.recurrence === 'weekly')  base.setDate(base.getDate() + 7);
-      if (d.recurrence === 'monthly') base.setMonth(base.getMonth() + 1);
+     if (d.recurrence === 'daily')       base.setDate(base.getDate() + 1);
+      if (d.recurrence === 'weekly')      base.setDate(base.getDate() + 7);
+if (d.recurrence === 'fortnightly') base.setDate(base.getDate() + 14);
+if (d.recurrence === 'monthly')     base.setMonth(base.getMonth() + 1);
+if (d.recurrence === 'quarterly')   base.setMonth(base.getMonth() + 3);
+if (d.recurrence === 'yearly')      base.setFullYear(base.getFullYear() + 1);
       db.collection('todos').add({
         title: d.title, who: d.who || '', due: base.toISOString().split('T')[0],
         recurrence: d.recurrence, completed: false, addedBy: d.addedBy,
