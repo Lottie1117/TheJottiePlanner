@@ -57,7 +57,7 @@
     header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; }
     #header-greeting { font-size: 22px; font-weight: 800; letter-spacing: -0.3px; line-height: 1.2; }
     #header-date { font-size: 13px; opacity: 0.88; margin-top: 3px; }
-    #section-title { font-size: 13px; font-weight: 700; opacity: 0.9; letter-spacing: 0.2px; text-align:right; margin-top: 3px; }
+    #section-title { font-size: 22px; font-weight: 700; opacity: 0.9; letter-spacing: 0.2px; text-align:right; margin-top: 3px; }
 
     /* ── Bottom Nav ──────────────────────────────────── */
     .bottom-nav {
@@ -1108,7 +1108,7 @@
       <span class="luna-unlog" id="dash-luna-unlog" style="display:none" onclick="dashUnlogChew()">Undo</span>
     </div>
     <div class="dash-card-sm">
-      <div class="dash-hdr"><div class="dash-hdr-title">📅 Coming Up</div><span class="dash-count" id="dash-ev-count">-</span></div>
+      <div class="dash-hdr"><div class="dash-hdr-title">📅 Wasson this month...</div><span class="dash-count" id="dash-ev-count">-</span></div>
       <div id="dash-events"><div class="dash-empty">Loading…</div></div>
       <a class="view-all" onclick="navTo('calendar')">View all upcoming →</a>
     </div>
@@ -1591,7 +1591,7 @@ function renderToday() {
     document.getElementById('header-date').textContent = fmtFullDate(new Date());
     return;
   }
-  document.getElementById('header-greeting').textContent = `${getGreeting()}, ${me}! 💜`;
+  document.getElementById('header-greeting').textContent = `${getGreeting()}, ${me}!`;
   document.getElementById('header-date').textContent = fmtFullDate(new Date());
 
   const todayStr = new Date().toISOString().split('T')[0];
