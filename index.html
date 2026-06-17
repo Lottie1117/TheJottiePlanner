@@ -15,6 +15,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
 
   <style>
     :root {
@@ -570,6 +571,166 @@
     .dice-btn:active { opacity:0.75; }
     .dice-result { background:var(--card); border-radius:14px; padding:14px; margin-bottom:12px;
       text-align:center; font-size:16px; font-weight:700; color:var(--primary); display:none; border:2px solid var(--primary); }
+    /* ── Glimmer Photo Upload ───────────────────────── */
+    .photo-upload-area {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.18s, background 0.18s;
+      margin-bottom: 9px;
+      background: var(--bg);
+      user-select: none;
+    }
+    .photo-upload-area:hover,
+    .photo-upload-area:active { border-color: var(--primary); background: var(--primary-light); }
+    .photo-upload-area .upload-icon { font-size: 22px; margin-bottom: 4px; }
+    .photo-upload-area .upload-label { font-size: 13px; color: var(--muted); font-weight: 600; }
+    #glimmer-img-input { display: none; }
+    .photo-preview-wrap {
+      position: relative;
+      margin-bottom: 9px;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #000;
+    }
+    .photo-preview-wrap img {
+      width: 100%;
+      max-height: 220px;
+      object-fit: cover;
+      display: block;
+      border-radius: 12px;
+      opacity: 0.95;
+    }
+    .photo-remove-btn {
+      position: absolute;
+      top: 8px; right: 8px;
+      background: rgba(0,0,0,0.55);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 30px; height: 30px;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s;
+      line-height: 1;
+    }
+    .photo-remove-btn:hover { background: rgba(239,83,80,0.85); }
+    .glimmer-thumb {
+      width: 62px; height: 62px;
+      border-radius: 10px;
+      object-fit: cover;
+      flex-shrink: 0;
+      cursor: pointer;
+      border: 2px solid var(--border);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .glimmer-thumb:hover { transform: scale(1.06); box-shadow: 0 4px 12px rgba(0,0,0,0.18); }
+    /* ── Glimmer Streak Card ────────────────────────── */
+    .streak-card {
+      background: linear-gradient(135deg, #7C5CBF 0%, #9B7DD4 100%);
+      color: white;
+      border-radius: 20px;
+      padding: 20px 18px 16px;
+      margin-bottom: 14px;
+      box-shadow: 0 4px 18px rgba(124,92,191,0.35);
+      text-align: center;
+    }
+    .streak-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.9px; opacity: 0.82; margin-bottom: 8px; }
+    .streak-number { font-size: 56px; font-weight: 900; line-height: 1; margin-bottom: 2px; letter-spacing: -3px; }
+    .streak-label { font-size: 14px; opacity: 0.88; margin-bottom: 16px; font-weight: 600; }
+    .streak-people { display: flex; justify-content: center; gap: 28px; margin-bottom: 14px; }
+    .streak-person { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+    .streak-person-dot {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      background: rgba(255,255,255,0.18);
+      border: 2px solid rgba(255,255,255,0.35);
+      transition: all 0.25s;
+    }
+    .streak-person-dot.done { background: rgba(76,175,80,0.72); border-color: #A5D6A7; font-size: 20px; }
+    .streak-person-name { font-size: 12px; opacity: 0.85; font-weight: 600; }
+    .nudge-btn {
+      background: rgba(255,255,255,0.18);
+      color: white;
+      border: 2px solid rgba(255,255,255,0.45);
+      border-radius: 22px;
+      padding: 8px 22px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.18s;
+      letter-spacing: 0.2px;
+      margin-bottom: 2px;
+    }
+    .nudge-btn:hover { background: rgba(255,255,255,0.32); }
+    .nudge-btn:active { transform: scale(0.97); }
+    .streak-stats { display: flex; justify-content: center; gap: 28px; padding-top: 12px; margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.2); }
+    .streak-stat { text-align: center; }
+    .streak-stat-val { font-size: 22px; font-weight: 800; }
+    .streak-stat-lbl { font-size: 10px; opacity: 0.72; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 1px; }
+    /* ── Dashboard streak mini card ─────────────────── */
+    #dash-streak-mini { padding: 2px 0; }
+    #dash-lottie-status, #dash-jonny-status { font-weight: 600; }
+    #dash-nudge-wrap { margin-top: 4px; }
+    /* ── Lightbox ───────────────────────────────────── */
+    #glimmer-lightbox {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.90);
+      z-index: 300;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      -webkit-backdrop-filter: blur(4px);
+      backdrop-filter: blur(4px);
+    }
+    #glimmer-lightbox.open { display: flex; }
+    #glimmer-lightbox img {
+      max-width: 100%;
+      max-height: 88vh;
+      border-radius: 14px;
+      object-fit: contain;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    }
+    #glimmer-lightbox-close {
+      position: fixed;
+      top: 16px; right: 16px;
+      background: rgba(255,255,255,0.15);
+      border: none;
+      color: white;
+      font-size: 22px;
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.18s;
+    }
+    #glimmer-lightbox-close:hover { background: rgba(255,255,255,0.28); }
+    /* ── Toast notification ─────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: 88px; left: 50%;
+      transform: translateX(-50%) translateY(16px);
+      background: #1a1a2e;
+      color: white;
+      padding: 11px 22px;
+      border-radius: 24px;
+      font-size: 14px;
+      font-weight: 600;
+      opacity: 0;
+      transition: opacity 0.28s, transform 0.28s;
+      z-index: 400;
+      white-space: nowrap;
+      pointer-events: none;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
   </style>
 </head>
 <body>
@@ -706,9 +867,18 @@
     </div>
   </div>
 
-  <div class="dash-card dash-clickable" onclick="navTo('glimmers')">
-    <div class="dash-hdr"><div class="dash-hdr-title">✨ Today's Glimmers</div></div>
-    <div id="dash-glimmers"><div class="dash-empty">No glimmers yet today 🌱</div></div>
+  <div class="dash-card" id="dash-streak-card">
+    <div class="dash-hdr">
+      <span class="dash-hdr-title">✨ Glimmer Streak</span>
+      <span class="dash-count" id="dash-streak-count">0 days</span>
+    </div>
+    <div id="dash-streak-mini">
+      <div style="display:flex;gap:16px;align-items:center;margin-bottom:6px;">
+        <span id="dash-lottie-status">⭕ Lottie</span>
+        <span id="dash-jonny-status">⭕ Jonny</span>
+      </div>
+      <div id="dash-nudge-wrap"></div>
+    </div>
   </div>
 
   <div class="dash-card" id="dash-completed-card">
@@ -888,15 +1058,69 @@
 
 <!-- ── Glimmers ──────────────────────────────────────────────────── -->
 <div id="glimmers-section" class="section">
+
+  <!-- Add Glimmer form -->
   <div class="add-card">
-    <div class="add-card-title">✨ Share a Glimmer</div>
-    <div class="glimmer-input-row">
-      <textarea id="glimmer-text" placeholder="share a moment that made you smile today 🌸" rows="2"></textarea>
+    <div class="add-card-title">✨ Add a Glimmer</div>
+    <textarea id="glimmer-text" placeholder="What made you smile today?" rows="3"></textarea>
+    <select id="glimmer-by">
+      <option value="Lottie">👩 Lottie</option>
+      <option value="Jonny">👨 Jonny</option>
+    </select>
+
+    <!-- Photo upload (visible before image selected) -->
+    <div class="photo-upload-area" id="glimmer-upload-area"
+         onclick="document.getElementById('glimmer-img-input').click()"
+         role="button" tabindex="0" aria-label="Add photo">
+      <div class="upload-icon">📷</div>
+      <div class="upload-label">Add Photo (optional)</div>
     </div>
-    <button class="btn-primary" onclick="addGlimmer()">Share Glimmer</button>
+    <input type="file" id="glimmer-img-input" accept="image/*">
+
+    <!-- Preview (visible after image selected) -->
+    <div class="photo-preview-wrap" id="glimmer-preview-wrap" style="display:none;">
+      <img id="glimmer-preview-img" src="" alt="Photo preview">
+      <button class="photo-remove-btn" onclick="removeGlimmerPhoto()" title="Remove photo">✕</button>
+    </div>
+
+    <button class="btn-primary" id="glimmer-save-btn" onclick="saveGlimmer()">
+      ✨ Save Glimmer
+    </button>
   </div>
-  <div class="list-label">All Glimmers</div>
-  <div id="glimmers-list"><div class="loading">Loading…</div></div>
+
+  <!-- Streak card -->
+  <div class="streak-card" id="glimmer-streak-card">
+    <div class="streak-title">🔥 Glimmer Streak</div>
+    <div class="streak-number" id="streak-current">–</div>
+    <div class="streak-label" id="streak-label">loading…</div>
+    <div class="streak-people">
+      <div class="streak-person">
+        <div class="streak-person-dot" id="streak-dot-lottie">👩</div>
+        <div class="streak-person-name">Lottie</div>
+      </div>
+      <div class="streak-person">
+        <div class="streak-person-dot" id="streak-dot-jonny">👨</div>
+        <div class="streak-person-name">Jonny</div>
+      </div>
+    </div>
+    <div id="streak-nudge-wrap" style="min-height:36px;display:flex;justify-content:center;align-items:center;"></div>
+    <div class="streak-stats">
+      <div class="streak-stat">
+        <div class="streak-stat-val" id="streak-longest">–</div>
+        <div class="streak-stat-lbl">Longest</div>
+      </div>
+      <div class="streak-stat">
+        <div class="streak-stat-val" id="streak-total-days">–</div>
+        <div class="streak-stat-lbl">Valid Days</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Glimmers list -->
+  <div class="list-label">Recent Glimmers</div>
+  <div id="glimmers-list">
+    <div class="loading">Loading glimmers…</div>
+  </div>
 </div>
 
 <!-- ── Luna ───────────────────────────────────────────────── -->
@@ -1071,6 +1295,7 @@ function initFirebase() {
   }
   firebase.initializeApp(firebaseConfig);
   db = firebase.firestore();
+  const storage = firebase.storage();
   initMessaging();
   listenCalendar();
   listenShopping();
@@ -1921,82 +2146,7 @@ function renderBirthdaysDash() {
 
 
 
-// ── Glimmers ─────────────────────────────────────────────────────
-let _glimmersData = [];
-
-function listenGlimmers() {
-  if (!configured) return;
-  db.collection('glimmers').orderBy('createdAt', 'desc').limit(50)
-    .onSnapshot(snap => {
-      _glimmersData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      renderGlimmers();
-      renderGlimmersDash();
-    });
-}
-
-function renderGlimmers() {
-  const el = document.getElementById('glimmers-list');
-  if (!el) return;
-  if (!_glimmersData.length) {
-    el.innerHTML = '<div class="empty"><div class="emo">✨</div><p>No glimmers yet — share the first one!</p></div>';
-    return;
-  }
-  el.innerHTML = _glimmersData.map(g => {
-    const hearts = g.hearts || 0;
-    return `<div class="glimmer-card">
-      <div class="glimmer-text">${esc(g.text)}</div>
-      <div class="glimmer-meta">
-        ${badge(g.addedBy)} · ${ago(g.createdAt)}
-        <button class="glimmer-react" onclick="heartGlimmer('${g.id}')">🤍 ${hearts > 0 ? hearts : ''}</button>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function renderGlimmersDash() {
-  const el = document.getElementById('dash-glimmers');
-  if (!el) return;
-  const today = new Date().toLocaleDateString('en-GB');
-  const todayGlimmers = _glimmersData.filter(g => {
-    if (!g.createdAt) return false;
-    return g.createdAt.toDate().toLocaleDateString('en-GB') === today;
-  }).slice(0, 3);
-  if (!todayGlimmers.length) {
-    el.innerHTML = '<div class="dash-empty">No glimmers yet today 🌱</div>';
-    return;
-  }
-  el.innerHTML = todayGlimmers.map(g =>
-    `<div class="dash-glimmer-card" style="position:relative">
-      <div class="dash-glimmer-text">${esc(g.text)}</div>
-      <div class="dash-glimmer-meta">${badge(g.addedBy)}</div>
-    </div>`
-  ).join('');
-}
-
-async function addGlimmer() {
-  const text = document.getElementById('glimmer-text').value.trim();
-  if (!text || !me) return;
-  await db.collection('glimmers').add({
-    text, addedBy: me, hearts: 0, createdAt: firebase.firestore.FieldValue.serverTimestamp()
-  });
-  document.getElementById('glimmer-text').value = '';
-}
-
-function heartGlimmerDash(id, el) {
-  if (!db || !me) return;
-  const ref = db.collection('glimmers').doc(id);
-  ref.get().then(doc => {
-    if (!doc.exists) return;
-    const hearts = doc.data().hearts || {};
-    hearts[me] = !hearts[me];
-    ref.update({ hearts }).then(() => { el.textContent = hearts[me] ? '❤️' : '🤍'; });
-  });
-}
-
-async function heartGlimmer(id) {
-  const ref = db.collection('glimmers').doc(id);
-  await ref.update({ hearts: firebase.firestore.FieldValue.increment(1) });
-}
+// ── Glimmers (Photo + Streak features loaded below) ──────────────
 
 // ── Enter-key support ────────────────────────────────────────────
 ['ev-title','sh-name','td-title'].forEach((id, idx) => {
@@ -2018,6 +2168,604 @@ window.addEventListener('load', () => {
   initFirebase();
 });
 </script>
+
+<!-- Image Lightbox -->
+<div id="glimmer-lightbox" role="dialog" aria-modal="true" aria-label="Photo viewer">
+  <button id="glimmer-lightbox-close" onclick="closeLightbox()" aria-label="Close">✕</button>
+  <img id="glimmer-lightbox-img" src="" alt="Glimmer photo full size">
+</div>
+
+<!-- Toast notification -->
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────
+// GLIMMER FEATURE — PHOTO UPLOADS + STREAKS
+// ─────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+// GLIMMER FEATURE — PHOTO UPLOADS + STREAKS
+// Add this entire block inside the main <script> tag,
+// AFTER firebase.initializeApp() and AFTER db is defined.
+// ═══════════════════════════════════════════════════════════════
+
+// Requires: Firebase Storage SDK loaded in <head>
+// Add to index.html <head> (after firebase-messaging-compat.js):
+// <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+//
+// And after firebase.initializeApp(firebaseConfig):
+// const storage = firebase.storage();
+
+(function() {
+'use strict';
+
+// ──────────────────────────────────────────────────────────────
+// IMAGE COMPRESSION
+// ──────────────────────────────────────────────────────────────
+
+/**
+ * Resize + compress an image File to JPEG, max 1200px wide, quality 0.75.
+ * Returns a Promise<Blob>.
+ */
+function compressImage(file) {
+  return new Promise((resolve, reject) => {
+    const MAX_WIDTH = 1200;
+    const QUALITY = 0.75;
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('FileReader failed'));
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Image load failed'));
+      img.onload = () => {
+        let w = img.naturalWidth, h = img.naturalHeight;
+        if (w > MAX_WIDTH) {
+          h = Math.round(h * MAX_WIDTH / w);
+          w = MAX_WIDTH;
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        canvas.toBlob((blob) => {
+          if (!blob) return reject(new Error('Canvas toBlob returned null'));
+          resolve(blob);
+        }, 'image/jpeg', QUALITY);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// ──────────────────────────────────────────────────────────────
+// PHOTO PREVIEW
+// ──────────────────────────────────────────────────────────────
+
+let glimmerPendingBlob = null; // holds compressed blob before save
+
+const imgInput = document.getElementById('glimmer-img-input');
+if (imgInput) {
+  imgInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      showToast('⏳ Preparing image…');
+      glimmerPendingBlob = await compressImage(file);
+      const objectUrl = URL.createObjectURL(glimmerPendingBlob);
+      const previewImg = document.getElementById('glimmer-preview-img');
+      if (previewImg.dataset.prevUrl) URL.revokeObjectURL(previewImg.dataset.prevUrl);
+      previewImg.src = objectUrl;
+      previewImg.dataset.prevUrl = objectUrl;
+      document.getElementById('glimmer-preview-wrap').style.display = 'block';
+      document.getElementById('glimmer-upload-area').style.display = 'none';
+      showToast('📷 Photo ready');
+    } catch (err) {
+      console.error('Image compress error:', err);
+      showToast('⚠️ Could not process image — try a different photo');
+    }
+  });
+}
+
+window.removeGlimmerPhoto = function() {
+  glimmerPendingBlob = null;
+  const previewImg = document.getElementById('glimmer-preview-img');
+  if (previewImg && previewImg.dataset.prevUrl) {
+    URL.revokeObjectURL(previewImg.dataset.prevUrl);
+    previewImg.removeAttribute('data-prev-url');
+    previewImg.src = '';
+  }
+  const wrap = document.getElementById('glimmer-preview-wrap');
+  const area = document.getElementById('glimmer-upload-area');
+  const input = document.getElementById('glimmer-img-input');
+  if (wrap) wrap.style.display = 'none';
+  if (area) area.style.display = 'block';
+  if (input) input.value = '';
+};
+
+// ──────────────────────────────────────────────────────────────
+// FIREBASE STORAGE UPLOAD
+// ──────────────────────────────────────────────────────────────
+
+async function uploadGlimmerImage(blob) {
+  const filename = `glimmers/${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`;
+  const ref = storage.ref(filename);
+  await ref.put(blob, { contentType: 'image/jpeg' });
+  return await ref.getDownloadURL();
+}
+
+// ──────────────────────────────────────────────────────────────
+// SAVE GLIMMER
+// ──────────────────────────────────────────────────────────────
+
+/**
+ * Returns today's date as 'YYYY-MM-DD' in local time.
+ * Critical for streak accuracy across timezones.
+ */
+function getLocalDateKey(date) {
+  date = date || new Date();
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+window.saveGlimmer = async function() {
+  const textEl = document.getElementById('glimmer-text');
+  const byEl = document.getElementById('glimmer-by');
+  if (!textEl || !byEl) return;
+
+  const text = textEl.value.trim();
+  const by = byEl.value;
+  if (!text) { showToast('✏️ Write something first!'); return; }
+
+  const btn = document.getElementById('glimmer-save-btn');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = glimmerPendingBlob ? '📤 Uploading…' : '💾 Saving…';
+  }
+
+  try {
+    // Upload image if present
+    let images = [];
+    if (glimmerPendingBlob) {
+      const url = await uploadGlimmerImage(glimmerPendingBlob);
+      images = [url];
+    }
+
+    await db.collection('glimmers').add({
+      text,
+      by,
+      images,                                                  // future-proof array
+      dateKey: getLocalDateKey(),                              // for streak calc
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    // Reset form
+    textEl.value = '';
+    removeGlimmerPhoto();
+    // Reset selector to the current user
+    const me = localStorage.getItem('jottie-name') || 'Lottie';
+    byEl.value = me;
+
+    showToast('✨ Glimmer saved!');
+    loadGlimmersAndStreak();
+  } catch (err) {
+    console.error('Save glimmer error:', err);
+    showToast('⚠️ Save failed — check your connection');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = '✨ Save Glimmer';
+    }
+  }
+};
+
+// ──────────────────────────────────────────────────────────────
+// LOAD & RENDER GLIMMERS LIST
+// ──────────────────────────────────────────────────────────────
+
+let glimmersUnsubscribe = null;
+
+function loadGlimmersAndStreak() {
+  loadGlimmersList();
+  loadStreakData();
+  updateDashboardStreak();
+}
+
+function loadGlimmersList() {
+  const list = document.getElementById('glimmers-list');
+  if (!list) return;
+
+  // Unsubscribe previous listener if any
+  if (glimmersUnsubscribe) { glimmersUnsubscribe(); glimmersUnsubscribe = null; }
+
+  list.innerHTML = '<div class="loading">Loading glimmers…</div>';
+
+  glimmersUnsubscribe = db.collection('glimmers')
+    .orderBy('createdAt', 'desc')
+    .limit(40)
+    .onSnapshot((snap) => {
+      if (snap.empty) {
+        list.innerHTML = '<div class="empty"><div class="emo">✨</div><p>No glimmers yet — add your first one!</p></div>';
+        return;
+      }
+      list.innerHTML = '';
+      snap.forEach(doc => {
+        const g = doc.data();
+        // Backward-compat: support old imageUrl field AND new images array
+        const images = g.images && g.images.length
+          ? g.images
+          : (g.imageUrl ? [g.imageUrl] : []);
+
+        const thumb = images.length
+          ? `<img class="glimmer-thumb" src="${escapeAttr(images[0])}" alt="Glimmer photo"
+               onclick="openGlimmerLightbox('${escapeAttr(images[0])}')" loading="lazy">`
+          : '';
+
+        const byChip = g.by === 'Lottie'
+          ? '<span class="badge badge-a">👩 Lottie</span>'
+          : '<span class="badge badge-b">👨 Jonny</span>';
+
+        const timeStr = g.createdAt ? formatRelativeTime(g.createdAt.toDate()) : '';
+
+        // Encode images array for delete button (escape quotes)
+        const imagesJson = escapeAttr(JSON.stringify(images));
+
+        const card = document.createElement('div');
+        card.className = 'item-card';
+        card.innerHTML = `
+          ${thumb}
+          <div class="item-body">
+            <div class="item-title">${escapeHtml(g.text)}</div>
+            <div class="item-meta">${byChip} <span>${timeStr}</span></div>
+          </div>
+          <button class="del-btn" onclick="deleteGlimmer('${doc.id}', '${imagesJson}')"
+            title="Delete glimmer" aria-label="Delete">🗑</button>`;
+        list.appendChild(card);
+      });
+      // After list updates, recalculate streak
+      loadStreakData();
+      updateDashboardStreak();
+    }, (err) => {
+      console.error('Glimmer listener error:', err);
+      list.innerHTML = '<div class="empty"><p>Error loading glimmers — please reload.</p></div>';
+    });
+}
+
+// ──────────────────────────────────────────────────────────────
+// DELETE GLIMMER
+// ──────────────────────────────────────────────────────────────
+
+window.deleteGlimmer = async function(id, imagesJson) {
+  if (!confirm('Delete this glimmer?')) return;
+  let images = [];
+  try { images = JSON.parse(imagesJson); } catch (e) { images = []; }
+  try {
+    // Delete storage files first
+    for (const url of images) {
+      try { await storage.refFromURL(url).delete(); } catch (e) { /* already gone */ }
+    }
+    await db.collection('glimmers').doc(id).delete();
+    showToast('🗑 Glimmer deleted');
+    loadStreakData();
+    updateDashboardStreak();
+  } catch (err) {
+    console.error('Delete glimmer error:', err);
+    showToast('⚠️ Delete failed');
+  }
+};
+
+// ──────────────────────────────────────────────────────────────
+// LIGHTBOX
+// ──────────────────────────────────────────────────────────────
+
+window.openGlimmerLightbox = function(src) {
+  const lb = document.getElementById('glimmer-lightbox');
+  const img = document.getElementById('glimmer-lightbox-img');
+  if (!lb || !img) return;
+  img.src = src;
+  lb.classList.add('open');
+};
+
+window.closeLightbox = function() {
+  const lb = document.getElementById('glimmer-lightbox');
+  if (lb) lb.classList.remove('open');
+};
+
+const lightbox = document.getElementById('glimmer-lightbox');
+if (lightbox) {
+  lightbox.addEventListener('click', (e) => {
+    if (e.target === lightbox) closeLightbox();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeLightbox();
+  });
+}
+
+// ──────────────────────────────────────────────────────────────
+// STREAK CALCULATION
+// ──────────────────────────────────────────────────────────────
+
+/**
+ * Reads all glimmers from Firestore and calculates:
+ * - currentStreak: consecutive valid days (both Lottie AND Jonny) up to today/yesterday
+ * - longest: all-time longest such streak
+ * - totalValidDays: count of days where both submitted
+ * - lottieDone / jonnyDone: whether each has submitted TODAY
+ */
+async function calculateStreaks() {
+  const snap = await db.collection('glimmers').get();
+
+  // Map: dateKey → Set of submitters
+  const dayMap = {};
+
+  snap.forEach(doc => {
+    const g = doc.data();
+    let key = g.dateKey;
+
+    // Migration: old glimmers may lack dateKey; derive from createdAt
+    if (!key && g.createdAt) {
+      key = getLocalDateKey(g.createdAt.toDate());
+    }
+    if (!key) return;
+
+    if (!dayMap[key]) dayMap[key] = new Set();
+    if (g.by) dayMap[key].add(g.by);
+  });
+
+  // Valid days = BOTH Lottie AND Jonny submitted
+  const validDays = new Set(
+    Object.entries(dayMap)
+      .filter(([, submitters]) => submitters.has('Lottie') && submitters.has('Jonny'))
+      .map(([day]) => day)
+  );
+
+  const sortedValid = Array.from(validDays).sort(); // ascending
+
+  const todayKey = getLocalDateKey();
+
+  // ── Current streak ──────────────────────────────
+  // Walk backwards from today. If today is valid, count it.
+  // If today is not yet valid, the streak is still alive from yesterday (not broken).
+  let currentStreak = 0;
+  const startDate = new Date();
+  // If today isn't valid, start checking from yesterday
+  if (!validDays.has(todayKey)) {
+    startDate.setDate(startDate.getDate() - 1);
+  }
+  let checkDate = new Date(startDate);
+  while (true) {
+    const k = getLocalDateKey(checkDate);
+    if (!validDays.has(k)) break;
+    currentStreak++;
+    checkDate.setDate(checkDate.getDate() - 1);
+  }
+
+  // ── Longest streak ─────────────────────────────
+  let longest = 0, run = 0;
+  for (let i = 0; i < sortedValid.length; i++) {
+    if (i === 0) {
+      run = 1;
+    } else {
+      const prev = new Date(sortedValid[i - 1] + 'T00:00:00');
+      const curr = new Date(sortedValid[i] + 'T00:00:00');
+      const diffDays = Math.round((curr - prev) / 86400000);
+      run = diffDays === 1 ? run + 1 : 1;
+    }
+    if (run > longest) longest = run;
+  }
+
+  // ── Today's individual status ──────────────────
+  const todaySubmitters = dayMap[todayKey] || new Set();
+
+  return {
+    currentStreak,
+    longest: Math.max(longest, currentStreak),
+    totalValidDays: validDays.size,
+    lottieDone: todaySubmitters.has('Lottie'),
+    jonnyDone:  todaySubmitters.has('Jonny'),
+    todayComplete: todaySubmitters.has('Lottie') && todaySubmitters.has('Jonny')
+  };
+}
+
+// ──────────────────────────────────────────────────────────────
+// RENDER STREAK — GLIMMERS PAGE
+// ──────────────────────────────────────────────────────────────
+
+async function loadStreakData() {
+  try {
+    const data = await calculateStreaks();
+
+    const numEl = document.getElementById('streak-current');
+    const labelEl = document.getElementById('streak-label');
+    const longestEl = document.getElementById('streak-longest');
+    const totalEl = document.getElementById('streak-total-days');
+    const dotL = document.getElementById('streak-dot-lottie');
+    const dotJ = document.getElementById('streak-dot-jonny');
+    const nudgeWrap = document.getElementById('streak-nudge-wrap');
+
+    if (numEl) numEl.textContent = data.currentStreak;
+    if (longestEl) longestEl.textContent = data.longest;
+    if (totalEl) totalEl.textContent = data.totalValidDays;
+
+    if (labelEl) {
+      if (data.currentStreak === 0) labelEl.textContent = 'Start your streak today! 💜';
+      else if (data.currentStreak === 1) labelEl.textContent = 'day in a row — keep going!';
+      else labelEl.textContent = `days in a row 🔥`;
+    }
+
+    if (dotL) {
+      dotL.className = 'streak-person-dot' + (data.lottieDone ? ' done' : '');
+      dotL.textContent = data.lottieDone ? '✓' : '👩';
+    }
+    if (dotJ) {
+      dotJ.className = 'streak-person-dot' + (data.jonnyDone ? ' done' : '');
+      dotJ.textContent = data.jonnyDone ? '✓' : '👨';
+    }
+
+    if (nudgeWrap) {
+      nudgeWrap.innerHTML = '';
+      if (!data.todayComplete) {
+        const missing = !data.lottieDone ? 'Lottie' : 'Jonny';
+        const btn = document.createElement('button');
+        btn.className = 'nudge-btn';
+        btn.textContent = `👉 Nudge ${missing}`;
+        btn.onclick = () => nudgePerson(missing);
+        nudgeWrap.appendChild(btn);
+      }
+    }
+  } catch (err) {
+    console.error('loadStreakData error:', err);
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// RENDER STREAK — DASHBOARD
+// ──────────────────────────────────────────────────────────────
+
+window.updateDashboardStreak = async function() {
+  try {
+    const data = await calculateStreaks();
+
+    const countEl   = document.getElementById('dash-streak-count');
+    const lottieSt  = document.getElementById('dash-lottie-status');
+    const jonnySt   = document.getElementById('dash-jonny-status');
+    const nudgeWrap = document.getElementById('dash-nudge-wrap');
+
+    if (countEl) {
+      countEl.textContent = data.currentStreak === 1
+        ? '1 day 🔥'
+        : data.currentStreak > 1
+          ? `${data.currentStreak} days 🔥`
+          : '0 days';
+    }
+
+    if (lottieSt) {
+      lottieSt.textContent = (data.lottieDone ? '✅' : '⭕') + ' Lottie';
+      lottieSt.style.color = data.lottieDone ? '#2E7D32' : 'var(--muted)';
+      lottieSt.style.fontWeight = '600';
+    }
+    if (jonnySt) {
+      jonnySt.textContent = (data.jonnyDone ? '✅' : '⭕') + ' Jonny';
+      jonnySt.style.color = data.jonnyDone ? '#1155AA' : 'var(--muted)';
+      jonnySt.style.fontWeight = '600';
+    }
+
+    if (nudgeWrap) {
+      nudgeWrap.innerHTML = '';
+      if (!data.todayComplete) {
+        const missing = !data.lottieDone ? 'Lottie' : 'Jonny';
+        const btn = document.createElement('button');
+        btn.style.cssText = `
+          background: var(--primary-light); color: var(--primary);
+          border: none; border-radius: 8px;
+          padding: 6px 14px; font-size: 12px; font-weight: 700;
+          cursor: pointer; margin-top: 4px;
+        `;
+        btn.textContent = `👉 Nudge ${missing}`;
+        btn.onclick = () => nudgePerson(missing);
+        nudgeWrap.appendChild(btn);
+      }
+    }
+  } catch (err) {
+    console.error('updateDashboardStreak error:', err);
+  }
+};
+
+// ──────────────────────────────────────────────────────────────
+// NUDGE
+// ──────────────────────────────────────────────────────────────
+
+function nudgePerson(name) {
+  // Use push notifications if the app already has that system wired up
+  if (typeof sendPushNotification === 'function') {
+    sendPushNotification(`👉 Hey ${name}! Time to add your Glimmer today 💜`);
+    showToast(`📣 Nudge sent to ${name}!`);
+    return;
+  }
+  // Fallback: friendly in-app toast
+  showToast(`👉 Hey ${name}! Don't forget your Glimmer today 💜`);
+}
+
+// ──────────────────────────────────────────────────────────────
+// UTILITY HELPERS
+// ──────────────────────────────────────────────────────────────
+
+let _toastTimer;
+window.showToast = function(msg) {
+  const t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+};
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function escapeAttr(str) {
+  return String(str).replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+}
+
+function formatRelativeTime(date) {
+  if (!date || !(date instanceof Date)) return '';
+  const diff = Date.now() - date.getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 2) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days === 1) return 'yesterday';
+  if (days < 7) return `${days} days ago`;
+  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+}
+
+// ──────────────────────────────────────────────────────────────
+// INIT — set "by" selector to current user, wire tab events
+// ──────────────────────────────────────────────────────────────
+
+function initGlimmerSection() {
+  const me = localStorage.getItem('jottie-name') || 'Lottie';
+  const sel = document.getElementById('glimmer-by');
+  if (sel) sel.value = me;
+}
+
+// Hook into tab switching (works alongside existing tab logic)
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const sec = tab.dataset.section;
+    if (sec === 'glimmers') {
+      initGlimmerSection();
+      loadGlimmersList();
+      loadStreakData();
+    }
+    if (sec === 'today') {
+      updateDashboardStreak();
+    }
+  });
+});
+
+// On load: dashboard streak + glimmers if active
+(function onLoad() {
+  updateDashboardStreak();
+  const glimSection = document.getElementById('glimmers') ||
+                      document.querySelector('[data-section="glimmers"]');
+  if (glimSection && glimSection.classList.contains('active')) {
+    initGlimmerSection();
+    loadGlimmersList();
+    loadStreakData();
+  }
+})();
+
+})(); // end IIFE
+
+</script>
+
 <script>
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js')
