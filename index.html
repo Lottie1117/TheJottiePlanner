@@ -540,6 +540,89 @@
     .dash-glimmer-text { font-size:13px; color:var(--text); line-height:1.4; }
     .dash-glimmer-meta { font-size:11px; color:var(--muted); margin-top:4px; }
 
+
+    /* ── Birthday Modal ─────────────────────────────────── */
+    #bday-modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 300;
+    }
+    #bday-modal-overlay.open { display: block; }
+    #bday-modal {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: var(--bg);
+      border-radius: 20px 20px 0 0;
+      padding: 12px 16px 36px;
+      z-index: 301;
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+      max-height: 88vh;
+      overflow-y: auto;
+    }
+    #bday-modal.open { transform: translateY(0); }
+    .bday-modal-handle {
+      width: 40px; height: 4px; border-radius: 2px;
+      background: var(--border); margin: 0 auto 14px;
+    }
+    .bday-modal-header {
+      display: flex; align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .bday-modal-name { font-size: 22px; font-weight: 800; color: var(--text); }
+    .bday-modal-meta { font-size: 13px; color: var(--muted); margin-top: 3px; }
+    .bday-modal-close {
+      background: none; border: none; font-size: 20px;
+      color: var(--muted); cursor: pointer; padding: 2px 4px;
+      line-height: 1; flex-shrink: 0;
+    }
+    /* ── Gift Items ─────────────────────────────────────── */
+    .bday-card { cursor: pointer; }
+    .bday-card:active { opacity: 0.8; }
+    .bday-gift-count {
+      font-size: 12px; color: var(--primary); font-weight: 700;
+      margin-top: 3px; display: flex; align-items: center; gap: 4px;
+    }
+    .gift-item {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .gift-status-btn {
+      background: none; border: 1.5px solid var(--border);
+      border-radius: 20px; padding: 3px 10px;
+      font-size: 12px; font-weight: 700; cursor: pointer;
+      white-space: nowrap; flex-shrink: 0;
+      transition: background 0.15s, border-color 0.15s;
+      color: var(--text);
+    }
+    .gift-status-btn:hover { border-color: var(--primary); color: var(--primary); }
+    .gift-status-idea      { background: #F5F3FA; border-color: var(--border); }
+    .gift-status-purchased { background: #E3F2FD; border-color: #90CAF9; color: #1155AA; }
+    .gift-status-gifted    { background: #E8F5E9; border-color: #A5D6A7; color: #2E7D32; }
+    .gift-body { flex: 1; min-width: 0; }
+    .gift-name { font-size: 14px; font-weight: 600; color: var(--text); word-break: break-word; }
+    .gift-meta { font-size: 11.5px; color: var(--muted); margin-top: 3px; display: flex; gap: 6px; flex-wrap: wrap; }
+    .gift-edit-btn {
+      background: none; border: none; font-size: 15px;
+      cursor: pointer; color: var(--muted); flex-shrink: 0;
+      padding: 2px; transition: color 0.15s;
+    }
+    .gift-edit-btn:hover { color: var(--primary); }
+    .gift-inline-edit {
+      width: 100%; padding: 8px 10px;
+      border: 1.5px solid var(--primary); border-radius: 8px;
+      font-size: 14px; font-family: inherit; background: white;
+      margin-top: 6px; outline: none;
+    }
+
     /* ── Birthdays ──────────────────────────────────────────────── */
     .bday-card { background:var(--card); border-radius:14px; padding:14px 16px; margin-bottom:10px;
       display:flex; align-items:center; gap:14px; }
@@ -1391,7 +1474,11 @@ function initFirebase() {
   if (typeof updateDashboardStreak === 'function') updateDashboardStreak();
   if (typeof loadGlimmersList === 'function') {
     const glimActive = document.querySelector('#glimmers-section.active');
-    if (glimActive) { if (typeof initGlimmerSection === 'function') initGlimmerSection(); loadGlimmersList(); loadStreakData(); }
+    if (glimActive) {
+      if (typeof initGlimmerSection === 'function') initGlimmerSection();
+      loadGlimmersList();
+      if (typeof loadStreakData === 'function') loadStreakData();
+    }
   }
   if (me) setTimeout(checkNotifStatus, 1200);
 }
@@ -2126,6 +2213,133 @@ function addBirthday() {
 }
 function delBirthday(id) { db.collection('birthdays').doc(id).delete(); }
 
+// ── Birthday Modal & Gift Ideas ───────────────────────────────────
+let _currentBdayId = null;
+let _giftsUnsubscribe = null;
+
+const GIFT_STATUS = {
+  idea:      { label: '☐ Idea',        cls: 'gift-status-idea',      next: 'purchased' },
+  purchased: { label: '🛍 Purchased',  cls: 'gift-status-purchased', next: 'gifted' },
+  gifted:    { label: '🎁 Gifted',      cls: 'gift-status-gifted',    next: 'idea' }
+};
+
+function openBirthday(id) {
+  const b = _birthdaysData.find(x => x.id === id);
+  if (!b) return;
+  _currentBdayId = id;
+  const { diffDays, dateLabel, ageStr } = getBirthdayInfo(b.date, b.birthYear);
+  const dayLabel = diffDays === 0 ? '🎉 Today!' : diffDays === 1 ? 'Tomorrow!' : `In ${diffDays} days`;
+  document.getElementById('bday-modal-name').textContent = b.name;
+  document.getElementById('bday-modal-meta').textContent = `${dateLabel} · ${dayLabel}${ageStr ? ' · ' + ageStr : ''}`;
+  document.getElementById('bday-modal-overlay').classList.add('open');
+  document.getElementById('bday-modal').classList.add('open');
+  document.getElementById('gift-name').value = '';
+  document.getElementById('gift-url').value = '';
+  document.getElementById('gift-price').value = '';
+  document.getElementById('gift-save-btn').textContent = 'Add Gift Idea';
+  document.getElementById('gift-save-btn').onclick = addGift;
+  listenGifts(id);
+  setTimeout(() => document.getElementById('gift-name').focus(), 320);
+}
+
+function closeBirthdayModal() {
+  document.getElementById('bday-modal-overlay').classList.remove('open');
+  document.getElementById('bday-modal').classList.remove('open');
+  if (_giftsUnsubscribe) { _giftsUnsubscribe(); _giftsUnsubscribe = null; }
+  _currentBdayId = null;
+}
+
+function listenGifts(bdayId) {
+  if (_giftsUnsubscribe) _giftsUnsubscribe();
+  const el = document.getElementById('gift-list');
+  if (!el) return;
+  el.innerHTML = '<div class="loading">Loading…</div>';
+  _giftsUnsubscribe = db.collection('birthdays').doc(bdayId)
+    .collection('gifts').orderBy('createdAt', 'asc')
+    .onSnapshot(snap => {
+      // Denormalise count onto parent for list display
+      db.collection('birthdays').doc(bdayId).update({ giftCount: snap.size }).catch(() => {});
+      // Update in-memory cache
+      const bIdx = _birthdaysData.findIndex(x => x.id === bdayId);
+      if (bIdx > -1) { _birthdaysData[bIdx].giftCount = snap.size; renderBirthdaysList(); }
+
+      if (snap.empty) {
+        el.innerHTML = '<div class="empty" style="padding:20px 0"><div class="emo" style="font-size:32px">🎁</div><p>No gift ideas yet — add the first one!</p></div>';
+        return;
+      }
+      el.innerHTML = snap.docs.map(doc => {
+        const g = { id: doc.id, ...doc.data() };
+        const st = GIFT_STATUS[g.status] || GIFT_STATUS.idea;
+        const domain = g.url ? (()=>{ try{return new URL(g.url).hostname.replace('www.','')}catch(e){return ''} })() : '';
+        return `<div class="gift-item" id="gift-item-${doc.id}">
+          <button class="gift-status-btn ${st.cls}" onclick="cycleGiftStatus('${bdayId}','${doc.id}','${g.status||'idea'}')" title="Change status">${st.label}</button>
+          <div class="gift-body">
+            <div class="gift-name" id="gift-name-display-${doc.id}">${esc(g.name)}</div>
+            <div class="gift-meta">
+              ${g.price ? `<span style="color:var(--primary);font-weight:700">£${esc(g.price)}</span>` : ''}
+              ${domain ? `<a class="wish-link" href="${esc(g.url)}" target="_blank">${esc(domain)}</a>` : ''}
+            </div>
+          </div>
+          <button class="gift-edit-btn" onclick="startEditGift('${bdayId}','${doc.id}')" aria-label="Edit gift">✏️</button>
+          <button class="del-btn" onclick="deleteGift('${bdayId}','${doc.id}')" aria-label="Delete gift">✕</button>
+        </div>`;
+      }).join('');
+    }, err => {
+      el.innerHTML = '<div class="empty"><p>Error loading gifts.</p></div>';
+    });
+}
+
+function addGift() {
+  const name  = document.getElementById('gift-name').value.trim();
+  const url   = document.getElementById('gift-url').value.trim();
+  const price = document.getElementById('gift-price').value.trim();
+  if (!name || !_currentBdayId || !db) return;
+  db.collection('birthdays').doc(_currentBdayId).collection('gifts').add({
+    name, url, price, status: 'idea', addedBy: me,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(() => {
+    document.getElementById('gift-name').value  = '';
+    document.getElementById('gift-url').value   = '';
+    document.getElementById('gift-price').value = '';
+    document.getElementById('gift-name').focus();
+  });
+}
+
+function cycleGiftStatus(bdayId, giftId, currentStatus) {
+  const next = (GIFT_STATUS[currentStatus] || GIFT_STATUS.idea).next;
+  db.collection('birthdays').doc(bdayId).collection('gifts').doc(giftId).update({ status: next });
+}
+
+function deleteGift(bdayId, giftId) {
+  db.collection('birthdays').doc(bdayId).collection('gifts').doc(giftId).delete();
+}
+
+function startEditGift(bdayId, giftId) {
+  const nameEl = document.getElementById('gift-name-display-' + giftId);
+  if (!nameEl) return;
+  const current = nameEl.textContent;
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = current;
+  input.className = 'gift-inline-edit';
+  input.setAttribute('aria-label', 'Edit gift name');
+  nameEl.replaceWith(input);
+  input.focus();
+  input.select();
+  const save = () => {
+    const newName = input.value.trim();
+    if (newName && newName !== current) {
+      db.collection('birthdays').doc(bdayId).collection('gifts').doc(giftId).update({ name: newName });
+    }
+    // snapshot listener will re-render
+  };
+  input.addEventListener('blur', save);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+    if (e.key === 'Escape') { input.value = current; input.blur(); }
+  });
+}
+
 function getBirthdayInfo(dateStr, birthYear) {
   // dateStr is like "2025-06-15" — we only care about MM-DD
   const [,month, day] = dateStr.split('-').map(Number);
@@ -2160,7 +2374,6 @@ function renderBirthdaysList() {
     el.innerHTML = '<div class="empty"><div class="emo">🎂</div><p>No birthdays saved yet!</p></div>';
     return;
   }
-  // Sort by next occurrence
   const sorted = [..._birthdaysData].sort((a,b) => {
     return getBirthdayInfo(a.date, a.birthYear).diffDays - getBirthdayInfo(b.date, b.birthYear).diffDays;
   });
@@ -2168,14 +2381,18 @@ function renderBirthdaysList() {
     const { diffDays, dateLabel, ageStr } = getBirthdayInfo(b.date, b.birthYear);
     const upcoming = diffDays <= 60;
     const dayLabel = diffDays === 0 ? '🎉 Today!' : diffDays === 1 ? 'Tomorrow!' : `In ${diffDays} days`;
-    return `<div class="bday-card${upcoming ? ' bday-upcoming' : ''}">
+    const giftCount = (b.giftCount || 0);
+    const giftLabel = giftCount === 0 ? '🎁 Add gift ideas'
+      : giftCount === 1 ? '🎁 1 Gift Idea' : `🎁 ${giftCount} Gift Ideas`;
+    return `<div class="bday-card${upcoming ? ' bday-upcoming' : ''}" onclick="openBirthday('${b.id}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter')openBirthday('${b.id}')">
       <div class="bday-emoji">${diffDays <= 7 ? '🎉' : '🎂'}</div>
       <div class="bday-body">
         <div class="bday-name">${esc(b.name)}</div>
         <div class="bday-date">${dateLabel} · ${dayLabel}</div>
         ${ageStr ? `<div class="bday-age">${ageStr}</div>` : ''}
+        <div class="bday-gift-count">${giftLabel}</div>
       </div>
-      <button class="del-btn" onclick="delBirthday('${b.id}')">✕</button>
+      <button class="del-btn" onclick="event.stopPropagation();delBirthday('${b.id}')" aria-label="Delete birthday">✕</button>
     </div>`;
   }).join('');
 }
@@ -2235,6 +2452,11 @@ function renderBirthdaysDash() {
 // ── Glimmers (Photo + Streak features loaded below) ──────────────
 
 // ── Enter-key support ────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const giftNameEl = document.getElementById('gift-name');
+  if (giftNameEl) giftNameEl.addEventListener('keydown', e => { if (e.key === 'Enter') addGift(); });
+});
+
 ['ev-title','sh-name','td-title'].forEach((id, idx) => {
   const fns = [addEvent, addShopItem, addTodo];
   document.getElementById(id).addEventListener('keydown', e => {
@@ -2904,6 +3126,34 @@ document.querySelectorAll('.tab').forEach(tab => {
 })();
 
 </script>
+
+
+<!-- ── Birthday Detail Modal ─────────────────────────────────────── -->
+<div id="bday-modal-overlay" onclick="closeBirthdayModal()"></div>
+<div id="bday-modal" role="dialog" aria-modal="true" aria-labelledby="bday-modal-name">
+  <div class="bday-modal-handle"></div>
+  <div class="bday-modal-header">
+    <div>
+      <div class="bday-modal-name" id="bday-modal-name">–</div>
+      <div class="bday-modal-meta" id="bday-modal-meta"></div>
+    </div>
+    <button class="bday-modal-close" onclick="closeBirthdayModal()" aria-label="Close">✕</button>
+  </div>
+
+  <!-- Add gift form -->
+  <div class="add-card" style="margin-bottom:14px">
+    <div class="add-card-title">🎁 Add Gift Idea</div>
+    <input type="text" id="gift-name" placeholder="Gift idea (e.g. Leather wallet)">
+    <div class="row">
+      <input type="url" id="gift-url" placeholder="Link (optional)">
+      <input type="text" id="gift-price" placeholder="£ Price" style="flex:0 0 90px">
+    </div>
+    <button class="btn-primary" id="gift-save-btn" onclick="addGift()">Add Gift Idea</button>
+  </div>
+
+  <div class="list-label">Gift Ideas</div>
+  <div id="gift-list"><div class="loading">Loading…</div></div>
+</div>
 
 <!-- ── FAB ───────────────────────────────────────────────────────── -->
 <div class="fab-overlay" id="fab-overlay" onclick="closeFab()" aria-hidden="true"></div>
