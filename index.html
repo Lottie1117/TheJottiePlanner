@@ -571,6 +571,86 @@
     .dice-btn:active { opacity:0.75; }
     .dice-result { background:var(--card); border-radius:14px; padding:14px; margin-bottom:12px;
       text-align:center; font-size:16px; font-weight:700; color:var(--primary); display:none; border:2px solid var(--primary); }
+
+    /* ── FAB ───────────────────────────────────────────────────── */
+    .fab-wrap {
+      position: fixed;
+      bottom: 80px;
+      right: 16px;
+      z-index: 250;
+      display: flex;
+      flex-direction: column-reverse;
+      align-items: center;
+      gap: 12px;
+    }
+    .fab-btn {
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: white;
+      border: none;
+      font-size: 26px;
+      line-height: 1;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(124,92,191,0.45);
+      display: flex; align-items: center; justify-content: center;
+      transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), background 0.2s;
+      flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .fab-btn:hover { background: #6a4daa; }
+    .fab-btn.open { transform: rotate(45deg); background: #6a4daa; }
+    .fab-btn:focus-visible { outline: 3px solid #B39DDB; outline-offset: 3px; }
+
+    .fab-items {
+      display: flex;
+      flex-direction: column-reverse;
+      align-items: center;
+      gap: 10px;
+      pointer-events: none;
+    }
+    .fab-item {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: var(--card);
+      border: none;
+      font-size: 22px;
+      cursor: pointer;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+      display: flex; align-items: center; justify-content: center;
+      transform: translateY(20px) scale(0.6);
+      opacity: 0;
+      transition: transform 0.22s cubic-bezier(0.34,1.56,0.64,1),
+                  opacity 0.18s ease,
+                  background 0.15s;
+      pointer-events: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .fab-item:hover { background: var(--primary-light); }
+    .fab-item:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+
+    .fab-wrap.open .fab-items { pointer-events: auto; }
+    .fab-wrap.open .fab-item {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .fab-wrap.open .fab-item:nth-child(1) { transition-delay: 0.00s; }
+    .fab-wrap.open .fab-item:nth-child(2) { transition-delay: 0.04s; }
+    .fab-wrap.open .fab-item:nth-child(3) { transition-delay: 0.08s; }
+    .fab-wrap.open .fab-item:nth-child(4) { transition-delay: 0.12s; }
+    .fab-wrap.open .fab-item:nth-child(5) { transition-delay: 0.16s; }
+    .fab-wrap.open .fab-item:nth-child(6) { transition-delay: 0.20s; }
+
+    .fab-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 249;
+      background: rgba(0,0,0,0.08);
+    }
+    .fab-overlay.open { display: block; }
+
     /* ── Glimmer Photo Upload ───────────────────────── */
     .photo-upload-area {
       border: 2px dashed var(--border);
@@ -1306,7 +1386,7 @@ function initFirebase() {
   listenWatchlist();
   listenDateIdeas();
   listenBirthdays();
-  listenGlimmers();
+  // Glimmers loaded on-demand via tab navigation (see loadGlimmersList)
   if (me) setTimeout(checkNotifStatus, 1200);
 }
 
@@ -2179,21 +2259,7 @@ window.addEventListener('load', () => {
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script>
-// ─────────────────────────────────────────────────────────────────
 // GLIMMER FEATURE — PHOTO UPLOADS + STREAKS
-// ─────────────────────────────────────────────────────────────────
-// ═══════════════════════════════════════════════════════════════
-// GLIMMER FEATURE — PHOTO UPLOADS + STREAKS
-// Add this entire block inside the main <script> tag,
-// AFTER firebase.initializeApp() and AFTER db is defined.
-// ═══════════════════════════════════════════════════════════════
-
-// Requires: Firebase Storage SDK loaded in <head>
-// Add to index.html <head> (after firebase-messaging-compat.js):
-// <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
-//
-// And after firebase.initializeApp(firebaseConfig):
-// const storage = firebase.storage();
 
 (function() {
 'use strict';
@@ -2371,7 +2437,7 @@ function loadGlimmersAndStreak() {
   updateDashboardStreak();
 }
 
-function loadGlimmersList() {
+window.loadGlimmersList = function loadGlimmersList() {
   const list = document.getElementById('glimmers-list');
   if (!list) return;
 
@@ -2764,7 +2830,108 @@ document.querySelectorAll('.tab').forEach(tab => {
 
 })(); // end IIFE
 
+
+// ── FAB ──────────────────────────────────────────────────────────
+(function() {
+  const SECTION_FOCUS = {
+    todos:     'td-title',
+    shopping:  'sh-name',
+    glimmers:  'glimmer-text',
+    birthdays: 'bd-name',
+    calendar:  'ev-title',
+    luna:      null
+  };
+
+  window.toggleFab = function() {
+    const wrap = document.getElementById('fab-wrap');
+    const btn  = document.getElementById('fab-btn');
+    const overlay = document.getElementById('fab-overlay');
+    const isOpen = wrap.classList.toggle('open');
+    btn.classList.toggle('open', isOpen);
+    overlay.classList.toggle('open', isOpen);
+    btn.setAttribute('aria-expanded', isOpen);
+
+    if (isOpen) {
+      // focus first menu item
+      const first = document.querySelector('.fab-item');
+      if (first) setTimeout(() => first.focus(), 50);
+    } else {
+      btn.focus();
+    }
+  };
+
+  window.closeFab = function() {
+    const wrap    = document.getElementById('fab-wrap');
+    const btn     = document.getElementById('fab-btn');
+    const overlay = document.getElementById('fab-overlay');
+    if (!wrap.classList.contains('open')) return;
+    wrap.classList.remove('open');
+    btn.classList.remove('open');
+    overlay.classList.remove('open');
+    btn.setAttribute('aria-expanded', 'false');
+    btn.focus();
+  };
+
+  window.fabAction = function(section) {
+    closeFab();
+    navTo(section);
+    // Luna: just log the chew directly
+    if (section === 'luna') {
+      setTimeout(logChew, 100);
+      return;
+    }
+    // All others: navigate then focus the first input
+    const inputId = SECTION_FOCUS[section];
+    if (inputId) {
+      setTimeout(() => {
+        const el = document.getElementById(inputId);
+        if (el) { el.focus(); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+      }, 120);
+    }
+  };
+
+  window.fabKeydown = function(e) {
+    if (e.key === 'Escape') { closeFab(); return; }
+  };
+
+  // Trap keyboard within FAB menu when open, Escape always closes
+  document.addEventListener('keydown', function(e) {
+    const wrap = document.getElementById('fab-wrap');
+    if (!wrap || !wrap.classList.contains('open')) return;
+    if (e.key === 'Escape') { closeFab(); return; }
+    if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+    const items = Array.from(document.querySelectorAll('.fab-item'));
+    const idx   = items.indexOf(document.activeElement);
+    if (e.key === 'ArrowUp')   { e.preventDefault(); items[(idx - 1 + items.length) % items.length].focus(); }
+    if (e.key === 'ArrowDown') { e.preventDefault(); items[(idx + 1) % items.length].focus(); }
+  });
+})();
+
 </script>
+
+<!-- ── FAB ───────────────────────────────────────────────────────── -->
+<div class="fab-overlay" id="fab-overlay" onclick="closeFab()" aria-hidden="true"></div>
+<div class="fab-wrap" id="fab-wrap" role="region" aria-label="Quick add menu">
+  <button class="fab-btn" id="fab-btn"
+          aria-label="Quick add" aria-expanded="false" aria-controls="fab-items-list"
+          onclick="toggleFab()"
+          onkeydown="fabKeydown(event)">+</button>
+  <div class="fab-items" id="fab-items-list" role="menu" aria-label="Quick add options">
+    <button class="fab-item" role="menuitem" aria-label="Add task"
+            onclick="fabAction('todos')" tabindex="-1">✅</button>
+    <button class="fab-item" role="menuitem" aria-label="Add shopping item"
+            onclick="fabAction('shopping')" tabindex="-1">🛒</button>
+    <button class="fab-item" role="menuitem" aria-label="Add glimmer"
+            onclick="fabAction('glimmers')" tabindex="-1">✨</button>
+    <button class="fab-item" role="menuitem" aria-label="Add birthday"
+            onclick="fabAction('birthdays')" tabindex="-1">🎂</button>
+    <button class="fab-item" role="menuitem" aria-label="Log Luna chew"
+            onclick="fabAction('luna')" tabindex="-1">🐶</button>
+    <button class="fab-item" role="menuitem" aria-label="Add plan"
+            onclick="fabAction('calendar')" tabindex="-1">📅</button>
+  </div>
+</div>
+
 
 <script>
 if ('serviceWorker' in navigator) {
