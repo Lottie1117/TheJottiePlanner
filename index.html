@@ -1246,6 +1246,7 @@ const firebaseConfig = {
 
 // ── State ───────────────────────────────────────────────────────
 let db;
+let storage;
 let me = localStorage.getItem('ourspace-user');
 const configured = firebaseConfig.apiKey !== 'YOUR_API_KEY';
 
@@ -1375,7 +1376,7 @@ function initFirebase() {
   }
   firebase.initializeApp(firebaseConfig);
   db = firebase.firestore();
-  const storage = firebase.storage();
+  storage = firebase.storage();
   initMessaging();
   listenCalendar();
   listenShopping();
@@ -1386,7 +1387,12 @@ function initFirebase() {
   listenWatchlist();
   listenDateIdeas();
   listenBirthdays();
-  // Glimmers loaded on-demand via tab navigation (see loadGlimmersList)
+  // Start glimmer/streak now that db is ready
+  if (typeof updateDashboardStreak === 'function') updateDashboardStreak();
+  if (typeof loadGlimmersList === 'function') {
+    const glimActive = document.querySelector('#glimmers-section.active');
+    if (glimActive) { if (typeof initGlimmerSection === 'function') initGlimmerSection(); loadGlimmersList(); loadStreakData(); }
+  }
   if (me) setTimeout(checkNotifStatus, 1200);
 }
 
@@ -2816,17 +2822,7 @@ document.querySelectorAll('.tab').forEach(tab => {
   });
 });
 
-// On load: dashboard streak + glimmers if active
-(function onLoad() {
-  updateDashboardStreak();
-  const glimSection = document.getElementById('glimmers') ||
-                      document.querySelector('[data-section="glimmers"]');
-  if (glimSection && glimSection.classList.contains('active')) {
-    initGlimmerSection();
-    loadGlimmersList();
-    loadStreakData();
-  }
-})();
+// Glimmer/streak startup is called from initFirebase() once db is ready.
 
 })(); // end IIFE
 
