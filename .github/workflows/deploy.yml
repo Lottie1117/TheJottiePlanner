@@ -1,5 +1,19 @@
-- name: Deploy to Firebase
-  run: |
-    echo '${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}' > /tmp/sa.json
-    export GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json
-    firebase deploy --only hosting --project jottieplans
+name: Deploy to Firebase
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Firebase
+        run: |
+          echo '${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}' > /tmp/sa.json
+          export GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json
+          firebase deploy --only hosting --project jottieplans
