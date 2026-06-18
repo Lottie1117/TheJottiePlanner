@@ -112,6 +112,9 @@ function navTo(sec, navItemEl) {
   const titleEl = document.getElementById('section-title');
   if (titleEl) titleEl.textContent = sectionNames[sec] || '';
 
+  // update centre FAB button for active section
+  updateFabForSection(sec);
+
   // section-specific hooks
   if (sec === 'birthdays') renderBirthdaysDash();
   if (sec === 'glimmers') {
@@ -1718,6 +1721,45 @@ document.querySelectorAll('.tab').forEach(tab => {
 
 })(); // end IIFE
 
+
+// ── Context-aware centre button ──────────────────────────────────
+(function() {
+  const SECTION_ICONS = {
+    todos:     '✅',
+    shopping:  '🛒',
+    glimmers:  '✨',
+    birthdays: '🎂',
+    calendar:  '📅',
+    luna:      '🦴',
+    lists:     '🎁'
+  };
+
+  window.updateFabForSection = function(sec) {
+    const navBtn  = document.getElementById('nav-fab-main');
+    const iconEl  = document.getElementById('nav-fab-icon');
+    if (!navBtn) return;
+
+    if (sec === 'today') {
+      // Restore Today behaviour: open quick-add arch
+      navBtn.setAttribute('onclick', 'toggleFab()');
+      navBtn.setAttribute('aria-label', 'Quick add');
+      if (iconEl) iconEl.textContent = '';
+    } else {
+      // Contextual: close arch if open, then directly open the section's form
+      if (typeof closeFab === 'function') closeFab();
+      const icon = SECTION_ICONS[sec] || '';
+      if (iconEl) iconEl.textContent = icon;
+      navBtn.setAttribute('onclick', `contextFabAction('${sec}')`);
+      navBtn.setAttribute('aria-label', 'Add to ' + sec);
+    }
+  };
+
+  window.contextFabAction = function(sec) {
+    // Never open the arch — go straight to the section's bottom sheet
+    if (typeof closeFab === 'function') closeFab();
+    openBottomSheet(sec);
+  };
+})();
 
 // ── FAB ──────────────────────────────────────────────────────────
 (function() {
