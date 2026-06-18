@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jottie Debug</title>
+  <style>
+    body { font-family: monospace; padding: 16px; background: #1a1a2e; color: #eee; font-size: 14px; }
+    h2 { color: #9B7DD4; margin-bottom: 12px; }
+    .card { background: #2a2a3e; border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+    .label { color: #aaa; font-size: 12px; margin-bottom: 4px; }
+    .value { color: #7dff9b; word-break: break-all; }
+    .value.bad { color: #ff7d7d; }
+    .value.warn { color: #ffd07d; }
+    button { background: #7C5CBF; color: white; border: none; border-radius: 8px; padding: 10px 16px; margin: 4px; font-size: 14px; cursor: pointer; }
+    button.red { background: #c0392b; }
+    #log { background: #111; border-radius: 8px; padding: 12px; margin-top: 12px; max-height: 300px; overflow-y: auto; font-size: 12px; }
+    .log-line { margin-bottom: 4px; border-bottom: 1px solid #222; padding-bottom: 4px; }
+    .log-line.ok { color: #7dff9b; }
+    .log-line.err { color: #ff7d7d; }
+    .log-line.info { color: #7dc8ff; }
+  </style>
+</head>
+<body>
+
+<h2>🔍 Jottie Debug</h2>
+
+<div class="card">
+  <div class="label">Page URL (origin)</div>
+  <div class="value" id="url-val">–</div>
+</div>
+
+<div class="card">
+  <div class="label">localStorage available?</div>
+  <div class="value" id="ls-avail">–</div>
+</div>
+
+<div class="card">
+  <div class="label">localStorage['jottie-name']</div>
+  <div class="value" id="ls-jottie">–</div>
+</div>
+
+<div class="card">
+  <div class="label">localStorage['ourspace-user'] (old key)</div>
+  <div class="value" id="ls-old">–</div>
+</div>
+
+<div class="card">
+  <div class="label">All localStorage keys</div>
+  <div class="value" id="ls-all">–</div>
+</div>
+
+<div class="card">
+  <div class="label">Write + read test</div>
+  <div class="value" id="ls-test">–</div>
+</div>
+
+<div class="card">
+  <div class="label">Storage estimate (quota)</div>
+  <div class="value" id="storage-quota">–</div>
+</div>
+
+<div>
+  <button onclick="setName('Lottie')">Set me = Lottie</button>
+  <button onclick="setName('Jonny')">Set me = Jonny</button>
+  <button onclick="runChecks()">🔄 Refresh checks</button>
+  <button class="red" onclick="clearAll()">🗑 Clear all localStorage</button>
+</div>
+
+<div id="log"></div>
+
+<script>
+  function log(msg, type='info') {
+    const el = document.getElementById('log');
+    const line = document.createElement('div');
+    line.className = 'log-line ' + type;
+    line.textContent = new Date().toLocaleTimeString() + ' — ' + msg;
+    el.prepend(line);
+  }
+
+  function runChecks() {
+    log('Running checks...', 'info');
+
+    // URL
+    document.getElementById('url-val').textContent = window.location.href;
+
+    // localStorage available?
+    let lsOk = false;
+    try {
+      localStorage.setItem('__test__', '1');
+      localStorage.removeItem('__test__');
+      lsOk = true;
+    } catch(e) {
+      log('localStorage blocked: ' + e.message, 'err');
+    }
+    const lsAvailEl = document.getElementById('ls-avail');
+    lsAvailEl.textContent = lsOk ? 'YES ✓' : 'NO — BLOCKED ✗';
+    lsAvailEl.className = 'value ' + (lsOk ? '' : 'bad');
+
+    // Read jottie-name
+    let jottieName = null;
+    try { jottieName = localStorage.getItem('jottie-name'); } catch(e) { log('getItem error: ' + e, 'err'); }
+    const jottieEl = document.getElementById('ls-jottie');
+    jottieEl.textContent = jottieName === null ? 'null (not set)' : '"' + jottieName + '"';
+    jottieEl.className = 'value ' + (jottieName ? '' : 'bad');
+
+    // Read old key
+    let oldName = null;
+    try { oldName = localStorage.getItem('ourspace-user'); } catch(e) {}
+    const oldEl = document.getElementById('ls-old');
+    oldEl.textContent = oldName === null ? 'null (not set)' : '"' + oldName + '" ← STALE KEY';
+    oldEl.className = 'value ' + (oldName ? 'warn' : '');
+
+    // All keys
+    try {
+      const keys = [];
+      for (let i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
+      document.getElementById('ls-all').textContent = keys.length ? keys.join(', ') : '(empty)';
+    } catch(e) { document.getElementById('ls-all').textContent = 'Error: ' + e; }
+
+    // Write+read test
+    try {
+      const testVal = 'test_' + Date.now();
+      localStorage.setItem('__jottie_test__', testVal);
+      const readBack = localStorage.getItem('__jottie_test__');
+      localStorage.removeItem('__jottie_test__');
+      const ok = readBack === testVal;
+      const testEl = document.getElementById('ls-test');
+      testEl.textContent = ok ? 'PASS ✓ (wrote and read back correctly)' : 'FAIL ✗ wrote "' + testVal + '" read "' + readBack + '"';
+      testEl.className = 'value ' + (ok ? '' : 'bad');
+      log('Write/read test: ' + (ok ? 'PASS' : 'FAIL'), ok ? 'ok' : 'err');
+    } catch(e) {
+      document.getElementById('ls-test').textContent = 'ERROR: ' + e.message;
+      document.getElementById('ls-test').className = 'value bad';
+    }
+
+    // Storage quota
+    if (navigator.storage && navigator.storage.estimate) {
+      navigator.storage.estimate().then(est => {
+        const used = (est.usage / 1024 / 1024).toFixed(2);
+        const quota = (est.quota / 1024 / 1024).toFixed(2);
+        document.getElementById('storage-quota').textContent = used + ' MB used of ' + quota + ' MB quota';
+        if (est.usage / est.quota > 0.9) log('Storage nearly full!', 'err');
+      });
+    } else {
+      document.getElementById('storage-quota').textContent = 'API not available';
+    }
+
+    log('Checks complete', 'ok');
+  }
+
+  function setName(name) {
+    try {
+      localStorage.setItem('jottie-name', name);
+      const readBack = localStorage.getItem('jottie-name');
+      if (readBack === name) {
+        log('Set jottie-name="' + name + '" — read back OK ✓', 'ok');
+      } else {
+        log('Set jottie-name="' + name + '" but read back "' + readBack + '" — MISMATCH ✗', 'err');
+      }
+    } catch(e) {
+      log('setItem FAILED: ' + e.message, 'err');
+    }
+    runChecks();
+  }
+
+  function clearAll() {
+    try {
+      localStorage.clear();
+      log('localStorage cleared', 'warn');
+    } catch(e) {
+      log('clear() failed: ' + e.message, 'err');
+    }
+    runChecks();
+  }
+
+  // Run on load
+  runChecks();
+</script>
+</body>
+</html>
