@@ -29,9 +29,11 @@ function openBottomSheet(section) {
   body.appendChild(document.importNode(tpl.content, true));
   if (overlay) overlay.classList.add('open');
   sheet.classList.add('open');
-  // Flip nav FAB to ✕
-  const navFab = document.getElementById('nav-fab-main');
-  if (navFab) navFab.innerHTML = '<span id="nav-fab-icon"></span>✕';
+  // Rotate nav FAB button to signal sheet is open (mirrors Today arch behaviour)
+  if (window._jottieActiveSection !== 'today') {
+    const navFab = document.getElementById('nav-fab-main');
+    if (navFab) navFab.classList.add('open');
+  }
   // Wire up Enter key for inputs injected from template
   ['ev-title','sh-name','td-title'].forEach((id, idx) => {
     const fns = [addEvent, addShopItem, addTodo];
@@ -50,11 +52,10 @@ function closeBottomSheet() {
   const overlay = document.getElementById('bs-overlay');
   if (sheet) sheet.classList.remove('open');
   if (overlay) overlay.classList.remove('open');
-  // Restore nav FAB to correct state for current section
-  if (typeof updateFabForSection === 'function') {
-    const activeSection = document.querySelector('.section.active');
-    const sec = activeSection ? activeSection.id.replace('-section', '') : 'today';
-    updateFabForSection(sec);
+  // Remove rotation from nav button (restore icon+ appearance)
+  if (window._jottieActiveSection && window._jottieActiveSection !== 'today') {
+    const navFab = document.getElementById('nav-fab-main');
+    if (navFab) navFab.classList.remove('open');
   }
 }
 
@@ -119,6 +120,8 @@ function navTo(sec, navItemEl) {
   const sectionNames = {"today":"Today","calendar":"Plans","shopping":"Shopping","todos":"To-Do","lists":"Lists","birthdays":"Birthdays","glimmers":"Glimmers","luna":"Luna 🐾"};
   const titleEl = document.getElementById('section-title');
   if (titleEl) titleEl.textContent = sectionNames[sec] || '';
+
+  if (typeof updateFabForSection === 'function') updateFabForSection(sec);
 
   // section-specific hooks
   if (sec === 'birthdays') renderBirthdaysDash();
@@ -1748,47 +1751,39 @@ document.querySelectorAll('.tab').forEach(tab => {
     lists:     '🎁'
   };
 
-  let _activeSection = 'today';
+  // Tracks active section. Global so openBottomSheet/closeBottomSheet can read it.
+  window._jottieActiveSection = 'today';
 
-  // Wire the nav FAB button once — behaviour depends on active section
-  document.addEventListener('DOMContentLoaded', function() {
-    const navBtn = document.getElementById('nav-fab-main');
-    if (!navBtn) return;
-    navBtn.addEventListener('click', function() {
-      // If the bottom sheet is open, this button acts as close (✕)
-      const sheet = document.getElementById('bottom-sheet');
-      if (sheet && sheet.classList.contains('open')) {
-        closeBottomSheet();
-        return;
-      }
-      if (_activeSection === 'today') {
-        toggleFab();
-      } else {
-        contextFabAction(_activeSection);
-      }
-    });
-  });
-
-  window.updateFabForSection = function(sec) {
-    _activeSection = sec;
-    const navBtn = document.getElementById('nav-fab-main');
-    const iconEl = document.getElementById('nav-fab-icon');
-    if (!navBtn) return;
-
-    if (sec === 'today') {
-      navBtn.setAttribute('aria-label', 'Quick add');
-      if (iconEl) iconEl.textContent = '';
-      navBtn.innerHTML = '<span id="nav-fab-icon"></span>+';
+  // Called by onclick="navFabTap()" hardcoded in HTML — always fires on mobile.
+  window.navFabTap = function() {
+    if (window._jottieActiveSection === 'today') {
+      toggleFab();
     } else {
-      // Close arch if somehow open
-      closeFab();
-      navBtn.setAttribute('aria-label', 'Add to ' + sec);
-      navBtn.innerHTML = `<span id="nav-fab-icon">${SECTION_ICONS[sec] || ''}</span>+`;
+      const sheet = document.getElementById('bottom-sheet');
+      const isOpen = sheet && sheet.classList.contains('open');
+      if (isOpen) {
+        closeBottomSheet();
+      } else {
+        openBottomSheet(window._jottieActiveSection);
+      }
     }
   };
 
-  window.contextFabAction = function(sec) {
-    openBottomSheet(sec);
+  window.updateFabForSection = function(sec) {
+    window._jottieActiveSection = sec;
+    const navBtn = document.getElementById('nav-fab-main');
+    if (!navBtn) return;
+    // Always close arch and sheet when switching sections
+    if (typeof closeFab === 'function') closeFab();
+    if (typeof closeBottomSheet === 'function') closeBottomSheet();
+    navBtn.classList.remove('open');
+    if (sec === 'today') {
+      navBtn.setAttribute('aria-label', 'Quick add');
+      navBtn.innerHTML = '<span id="nav-fab-icon"></span>+';
+    } else {
+      navBtn.setAttribute('aria-label', 'Add to ' + sec);
+      navBtn.innerHTML = '<span id="nav-fab-icon">' + (SECTION_ICONS[sec] || '') + '</span>+';
+    }
   };
 
   const SECTION_FOCUS = {
