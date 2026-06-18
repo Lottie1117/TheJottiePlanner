@@ -1,6 +1,7 @@
 
 // ── Global state ─────────────────────────────────────────────────
-let me = localStorage.getItem('jottie-name') || '';
+// me is declared in firebase.js; restore persisted value on load
+me = localStorage.getItem('jottie-name') || '';
 
 // ── fmtFullDate helper ───────────────────────────────────────────
 function fmtFullDate(d) {
