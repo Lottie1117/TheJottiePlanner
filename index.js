@@ -122,6 +122,8 @@ function navTo(sec, navItemEl) {
   const titleEl = document.getElementById('section-title');
   if (titleEl) titleEl.textContent = sectionNames[sec] || '';
 
+  if (typeof updateFabForSection === 'function') updateFabForSection(sec);
+
   // section-specific hooks
   if (sec === 'birthdays') renderBirthdaysDash();
   if (sec === 'glimmers') {
