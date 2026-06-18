@@ -113,7 +113,7 @@ function navTo(sec, navItemEl) {
   if (titleEl) titleEl.textContent = sectionNames[sec] || '';
 
   // update centre FAB button for active section
-  updateFabForSection(sec);
+  if (typeof updateFabForSection === 'function') updateFabForSection(sec);
 
   // section-specific hooks
   if (sec === 'birthdays') renderBirthdaysDash();
@@ -1722,7 +1722,7 @@ document.querySelectorAll('.tab').forEach(tab => {
 })(); // end IIFE
 
 
-// ── Context-aware centre button ──────────────────────────────────
+// ── FAB ──────────────────────────────────────────────────────────
 (function() {
   const SECTION_ICONS = {
     todos:     '✅',
@@ -1734,35 +1734,42 @@ document.querySelectorAll('.tab').forEach(tab => {
     lists:     '🎁'
   };
 
+  let _activeSection = 'today';
+
+  // Wire the nav FAB button once, decide behaviour based on _activeSection
+  document.addEventListener('DOMContentLoaded', function() {
+    const navBtn = document.getElementById('nav-fab-main');
+    if (!navBtn) return;
+    navBtn.addEventListener('click', function() {
+      if (_activeSection === 'today') {
+        toggleFab();
+      } else {
+        contextFabAction(_activeSection);
+      }
+    });
+  });
+
   window.updateFabForSection = function(sec) {
-    const navBtn  = document.getElementById('nav-fab-main');
-    const iconEl  = document.getElementById('nav-fab-icon');
+    _activeSection = sec;
+    const navBtn = document.getElementById('nav-fab-main');
+    const iconEl = document.getElementById('nav-fab-icon');
     if (!navBtn) return;
 
     if (sec === 'today') {
-      // Restore Today behaviour: open quick-add arch
-      navBtn.setAttribute('onclick', 'toggleFab()');
       navBtn.setAttribute('aria-label', 'Quick add');
       if (iconEl) iconEl.textContent = '';
     } else {
-      // Contextual: close arch if open, then directly open the section's form
-      if (typeof closeFab === 'function') closeFab();
-      const icon = SECTION_ICONS[sec] || '';
-      if (iconEl) iconEl.textContent = icon;
-      navBtn.setAttribute('onclick', `contextFabAction('${sec}')`);
+      // Close arch if somehow open
+      closeFab();
       navBtn.setAttribute('aria-label', 'Add to ' + sec);
+      if (iconEl) iconEl.textContent = SECTION_ICONS[sec] || '';
     }
   };
 
   window.contextFabAction = function(sec) {
-    // Never open the arch — go straight to the section's bottom sheet
-    if (typeof closeFab === 'function') closeFab();
     openBottomSheet(sec);
   };
-})();
 
-// ── FAB ──────────────────────────────────────────────────────────
-(function() {
   const SECTION_FOCUS = {
     todos:     'td-title',
     shopping:  'sh-name',
@@ -1803,14 +1810,12 @@ document.querySelectorAll('.tab').forEach(tab => {
 
   window.fabAction = function(section) {
     closeFab();
-    // Sections that have a bottom-sheet template: open the sheet
     const sheetSections = ['todos','shopping','calendar','birthdays','glimmers','luna','lists'];
     if (sheetSections.includes(section)) {
       navTo(section);
       openBottomSheet(section);
       return;
     }
-    // Luna: just log the chew directly
     if (section === 'luna') {
       setTimeout(logChew, 100);
       return;
@@ -1822,7 +1827,6 @@ document.querySelectorAll('.tab').forEach(tab => {
     if (e.key === 'Escape') { closeFab(); return; }
   };
 
-  // Trap keyboard within FAB menu when open, Escape always closes
   document.addEventListener('keydown', function(e) {
     const wrap = document.getElementById('fab-wrap');
     if (!wrap || !wrap.classList.contains('open')) return;
