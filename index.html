@@ -519,7 +519,9 @@
       <button type="button" class="emoji-opt" onclick="selectNoteEmoji(this,'💡')">💡</button>
       <button type="button" class="emoji-opt" onclick="selectNoteEmoji(this,'🎯')">🎯</button>
       <button type="button" class="emoji-opt" onclick="selectNoteEmoji(this,'🌿')">🌿</button>
+      <button type="button" class="emoji-opt emoji-custom-btn" onclick="toggleCustomEmoji(this)" title="Use your own emoji">+</button>
     </div>
+    <input type="text" id="new-note-emoji-custom" placeholder="Type an emoji…" style="display:none;margin-top:6px;width:100%;padding:8px 12px;border-radius:10px;border:1.5px solid var(--primary);background:var(--card);color:var(--text);font-size:20px;text-align:center;box-sizing:border-box;" maxlength="4" oninput="customEmojiInput(this)">
     <input type="hidden" id="new-note-emoji" value="📝">
   </div>
   <input type="text" id="new-note-first-item" placeholder="First item (optional)">

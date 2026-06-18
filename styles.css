@@ -37,7 +37,7 @@
     header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; }
     #header-greeting { font-size: 22px; font-weight: 800; letter-spacing: -0.3px; line-height: 1.2; }
     #header-date { font-size: 13px; opacity: 0.88; margin-top: 3px; }
-    #section-title { font-size: 13px; font-weight: 700; opacity: 0.9; letter-spacing: 0.2px; text-align:right; margin-top: 3px; }
+    #section-title { font-size: 22px; font-weight: 800; opacity: 0.9; letter-spacing: -0.3px; text-align:right; line-height: 1.2; }
 
     /* ── Bottom Nav ──────────────────────────────────── */
     .bottom-nav {
@@ -742,7 +742,7 @@
     }
     .notes-search-icon {
       position: absolute;
-      left: 12px;
+      right: 12px;
       top: 50%;
       transform: translateY(-50%);
       font-size: 16px;
@@ -750,7 +750,7 @@
     }
     .notes-search {
       width: 100%;
-      padding: 10px 12px 10px 38px;
+      padding: 10px 38px 10px 14px;
       border-radius: 14px;
       border: 1.5px solid var(--border);
       background: var(--card);
@@ -818,6 +818,12 @@
       background: var(--primary-light, #ede8f8);
     }
     .emoji-opt:active { transform: scale(0.92); }
+    .emoji-custom-btn {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--primary);
+      border-style: dashed;
+    }
 
     /* ── Note Detail Page ──────────────────────────────────────── */
     .note-detail-header {
@@ -827,6 +833,11 @@
       margin-bottom: 16px;
       padding-bottom: 12px;
       border-bottom: 1.5px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: var(--bg);
+      z-index: 10;
+      padding-top: 4px;
     }
     .note-back-btn {
       background: none;
@@ -958,7 +969,7 @@
     /* Row of icons evenly spaced above the nav bar */
     .fab-items {
       position: fixed;
-      bottom: 72px;
+      bottom: 100px;
       left: 0;
       right: 0;
       width: 100vw;
@@ -968,6 +979,16 @@
       align-items: center;
       pointer-events: none;
       z-index: 251;
+      padding: 10px 8px;
+      background: transparent;
+      transition: background 0.2s ease;
+    }
+    .fab-wrap.open .fab-items {
+      background: rgba(255,255,255,0.72);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-radius: 20px;
+      box-shadow: 0 4px 20px rgba(124,92,191,0.15);
     }
     .fab-item {
       width: 46px;

@@ -976,6 +976,31 @@ function selectNoteEmoji(btn, emoji) {
   btn.classList.add('selected');
   const hidden = document.getElementById('new-note-emoji');
   if (hidden) hidden.value = emoji;
+  // Hide custom input if a preset was chosen
+  const customInp = document.getElementById('new-note-emoji-custom');
+  if (customInp) customInp.style.display = 'none';
+}
+
+function toggleCustomEmoji(btn) {
+  const customInp = document.getElementById('new-note-emoji-custom');
+  if (!customInp) return;
+  const isVisible = customInp.style.display !== 'none';
+  if (isVisible) {
+    customInp.style.display = 'none';
+  } else {
+    document.querySelectorAll('.emoji-opt').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    customInp.style.display = 'block';
+    setTimeout(() => customInp.focus(), 50);
+  }
+}
+
+function customEmojiInput(inp) {
+  const val = inp.value.trim();
+  if (val) {
+    const hidden = document.getElementById('new-note-emoji');
+    if (hidden) hidden.value = val;
+  }
 }
 
 // ── Create a new note ──────────────────────────────────────────────
