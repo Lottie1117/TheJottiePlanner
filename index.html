@@ -61,7 +61,7 @@
   <button class="nav-btn active" id="nav-today-btn" onclick="navTo('today');setNavActive('nav-today-btn')">
     <span class="nav-icon">🏠</span><span>Today</span>
   </button>
-  <button class="nav-fab-btn" id="nav-fab-main" onclick="navFabTap()" aria-label="Quick add"><span id="nav-fab-icon"></span>+</button>
+  <button class="nav-fab-btn" id="nav-fab-main" onclick="toggleFab()" aria-label="Quick add"><span id="nav-fab-icon"></span>+</button>
   <button class="nav-btn" id="nav-more-btn" onclick="openDrawer()">
     <span class="nav-icon">☰</span><span>More</span>
   </button>
@@ -159,7 +159,7 @@
       <span class="luna-unlog" id="dash-luna-unlog" style="display:none" onclick="dashUnlogChew()">Undo</span>
     </div>
     <div class="dash-card-sm">
-      <div class="dash-hdr"><div class="dash-hdr-title">📅 Coming Up</div><span class="dash-count" id="dash-ev-count">-</span></div>
+      <div class="dash-hdr"><div class="dash-hdr-title">📅 This month..</div><span class="dash-count" id="dash-ev-count">-</span></div>
       <div id="dash-events"><div class="dash-empty">Loading…</div></div>
       <a class="view-all" onclick="navTo('calendar')">View all upcoming →</a>
     </div>
