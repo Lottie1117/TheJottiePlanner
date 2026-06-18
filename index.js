@@ -977,8 +977,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 ['ev-title','sh-name','td-title'].forEach((id, idx) => {
   const fns = [addEvent, addShopItem, addTodo];
-  const el = document.getElementById(id);
-  if (el) el.addEventListener('keydown', e => {
+  document.getElementById(id).addEventListener('keydown', e => {
     if (e.key === 'Enter') fns[idx]();
   });
 });
@@ -1046,7 +1045,8 @@ window.addEventListener('load', () => {
     if (src && dest) dest.src = src.src;
   })();
 
-  document.getElementById('ev-date').value = new Date().toISOString().split('T')[0];
+  const evDateEl = document.getElementById('ev-date');
+  if (evDateEl) evDateEl.value = new Date().toISOString().split('T')[0];
   initThinkingOfCard();
   initFirebase();
 });
