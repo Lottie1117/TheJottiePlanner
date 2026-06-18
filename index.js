@@ -29,11 +29,9 @@ function openBottomSheet(section) {
   body.appendChild(document.importNode(tpl.content, true));
   if (overlay) overlay.classList.add('open');
   sheet.classList.add('open');
-  // Rotate nav FAB button to signal sheet is open (mirrors Today arch behaviour)
-  if (window._jottieActiveSection !== 'today') {
-    const navFab = document.getElementById('nav-fab-main');
-    if (navFab) navFab.classList.add('open');
-  }
+  // Flip nav FAB to ✕
+  const navFab = document.getElementById('nav-fab-main');
+  if (navFab) navFab.innerHTML = '<span id="nav-fab-icon"></span>✕';
   // Wire up Enter key for inputs injected from template
   ['ev-title','sh-name','td-title'].forEach((id, idx) => {
     const fns = [addEvent, addShopItem, addTodo];
@@ -52,10 +50,11 @@ function closeBottomSheet() {
   const overlay = document.getElementById('bs-overlay');
   if (sheet) sheet.classList.remove('open');
   if (overlay) overlay.classList.remove('open');
-  // Remove rotation from nav button (restore icon+ appearance)
-  if (window._jottieActiveSection && window._jottieActiveSection !== 'today') {
-    const navFab = document.getElementById('nav-fab-main');
-    if (navFab) navFab.classList.remove('open');
+  // Restore nav FAB to correct state for current section
+  if (typeof updateFabForSection === 'function') {
+    const activeSection = document.querySelector('.section.active');
+    const sec = activeSection ? activeSection.id.replace('-section', '') : 'today';
+    updateFabForSection(sec);
   }
 }
 
@@ -120,8 +119,6 @@ function navTo(sec, navItemEl) {
   const sectionNames = {"today":"Today","calendar":"Plans","shopping":"Shopping","todos":"To-Do","lists":"Lists","birthdays":"Birthdays","glimmers":"Glimmers","luna":"Luna 🐾"};
   const titleEl = document.getElementById('section-title');
   if (titleEl) titleEl.textContent = sectionNames[sec] || '';
-
-  if (typeof updateFabForSection === 'function') updateFabForSection(sec);
 
   // section-specific hooks
   if (sec === 'birthdays') renderBirthdaysDash();
@@ -254,7 +251,16 @@ function listenCalendar() {
       if (upcoming.length === 0 && past.length > 0) {
         html += '<div class="empty"><div class="emo">📅</div><p>No upcoming events</p></div>';
       }
-      upcoming.forEach(ev => { html += evCard(ev, false); });
+      // Group upcoming by month
+      let lastMonth = null;
+      upcoming.forEach(ev => {
+        const monthLabel = new Date(ev.date + 'T00:00:00').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+        if (monthLabel !== lastMonth) {
+          html += `<div class="month-divider"><span>${monthLabel}</span></div>`;
+          lastMonth = monthLabel;
+        }
+        html += evCard(ev, false);
+      });
       if (past.length > 0) {
         html += `<div class="list-label" style="margin-top:16px;opacity:0.6">Past</div>`;
         [...past].reverse().forEach(ev => { html += evCard(ev, true); });
@@ -978,13 +984,23 @@ function renderBirthdaysList() {
   const sorted = [..._birthdaysData].sort((a,b) => {
     return getBirthdayInfo(a.date, a.birthYear).diffDays - getBirthdayInfo(b.date, b.birthYear).diffDays;
   });
-  el.innerHTML = sorted.map(b => {
+  let bdayHtml = '';
+  let lastBdayMonth = null;
+  sorted.forEach(b => {
     const { diffDays, dateLabel, ageStr } = getBirthdayInfo(b.date, b.birthYear);
     const upcoming = diffDays <= 60;
     const dayLabel = diffDays === 0 ? '🎉 Today!' : diffDays === 1 ? 'Tomorrow!' : `In ${diffDays} days`;
     const giftCount = (b.giftCount || 0);
     const giftLabel = giftCount === 0 ? 'No gift ideas yet' : giftCount === 1 ? '1 gift idea' : `${giftCount} gift ideas`;
-    return `<div class="bday-card${upcoming ? ' bday-upcoming' : ''}" onclick="openBirthday('${b.id}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter')openBirthday('${b.id}')">
+    // Group by the upcoming birthday month
+    const bdayDate = new Date(new Date().getFullYear() + '-' + b.date.slice(5) + 'T00:00:00');
+    if (bdayDate < new Date()) bdayDate.setFullYear(bdayDate.getFullYear() + 1);
+    const monthLabel = bdayDate.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+    if (monthLabel !== lastBdayMonth) {
+      bdayHtml += `<div class="month-divider"><span>${monthLabel}</span></div>`;
+      lastBdayMonth = monthLabel;
+    }
+    bdayHtml += `<div class="bday-card${upcoming ? ' bday-upcoming' : ''}" onclick="openBirthday('${b.id}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter')openBirthday('${b.id}')">
       <div class="bday-emoji">${diffDays <= 7 ? '🎉' : '🎂'}</div>
       <div class="bday-body">
         <div class="bday-name">${esc(b.name)}</div>
@@ -994,7 +1010,8 @@ function renderBirthdaysList() {
       </div>
       <button class="del-btn" onclick="event.stopPropagation();delBirthday('${b.id}')" aria-label="Delete birthday">✕</button>
     </div>`;
-  }).join('');
+  });
+  el.innerHTML = bdayHtml;
 }
 
 // ── Completed it mate feed ───────────────────────────────────────
@@ -1751,39 +1768,47 @@ document.querySelectorAll('.tab').forEach(tab => {
     lists:     '🎁'
   };
 
-  // Tracks active section. Global so openBottomSheet/closeBottomSheet can read it.
-  window._jottieActiveSection = 'today';
+  let _activeSection = 'today';
 
-  // Called by onclick="navFabTap()" hardcoded in HTML — always fires on mobile.
-  window.navFabTap = function() {
-    if (window._jottieActiveSection === 'today') {
-      toggleFab();
-    } else {
+  // Wire the nav FAB button once — behaviour depends on active section
+  document.addEventListener('DOMContentLoaded', function() {
+    const navBtn = document.getElementById('nav-fab-main');
+    if (!navBtn) return;
+    navBtn.addEventListener('click', function() {
+      // If the bottom sheet is open, this button acts as close (✕)
       const sheet = document.getElementById('bottom-sheet');
-      const isOpen = sheet && sheet.classList.contains('open');
-      if (isOpen) {
+      if (sheet && sheet.classList.contains('open')) {
         closeBottomSheet();
-      } else {
-        openBottomSheet(window._jottieActiveSection);
+        return;
       }
+      if (_activeSection === 'today') {
+        toggleFab();
+      } else {
+        contextFabAction(_activeSection);
+      }
+    });
+  });
+
+  window.updateFabForSection = function(sec) {
+    _activeSection = sec;
+    const navBtn = document.getElementById('nav-fab-main');
+    const iconEl = document.getElementById('nav-fab-icon');
+    if (!navBtn) return;
+
+    if (sec === 'today') {
+      navBtn.setAttribute('aria-label', 'Quick add');
+      if (iconEl) iconEl.textContent = '';
+      navBtn.innerHTML = '<span id="nav-fab-icon"></span>+';
+    } else {
+      // Close arch if somehow open
+      closeFab();
+      navBtn.setAttribute('aria-label', 'Add to ' + sec);
+      navBtn.innerHTML = `<span id="nav-fab-icon">${SECTION_ICONS[sec] || ''}</span>+`;
     }
   };
 
-  window.updateFabForSection = function(sec) {
-    window._jottieActiveSection = sec;
-    const navBtn = document.getElementById('nav-fab-main');
-    if (!navBtn) return;
-    // Always close arch and sheet when switching sections
-    if (typeof closeFab === 'function') closeFab();
-    if (typeof closeBottomSheet === 'function') closeBottomSheet();
-    navBtn.classList.remove('open');
-    if (sec === 'today') {
-      navBtn.setAttribute('aria-label', 'Quick add');
-      navBtn.innerHTML = '<span id="nav-fab-icon"></span>+';
-    } else {
-      navBtn.setAttribute('aria-label', 'Add to ' + sec);
-      navBtn.innerHTML = '<span id="nav-fab-icon">' + (SECTION_ICONS[sec] || '') + '</span>+';
-    }
+  window.contextFabAction = function(sec) {
+    openBottomSheet(sec);
   };
 
   const SECTION_FOCUS = {
