@@ -14,7 +14,11 @@ document.getElementById('name-lottie-btn').onclick = () => setUser('Lottie');
 document.getElementById('name-jonny-btn').onclick  = () => setUser('Jonny');
 
 // ── Navigation ───────────────────────────────────────────────────
+let _activeSection = 'today';
+
 function navTo(sec, navItemEl) {
+  _activeSection = sec;
+  updateFabIcon(sec);
   // Update new bottom nav active state
   if (sec === 'today') setNavActive('nav-today-btn');
   else setNavActive('nav-more-btn');
@@ -1204,6 +1208,7 @@ window.saveGlimmer = async function() {
 
     showToast('✨ Glimmer saved!');
     loadGlimmersAndStreak();
+    if (typeof closeBottomSheet === 'function') closeBottomSheet();
   } catch (err) {
     console.error('Save glimmer error:', err);
     showToast('⚠️ Save failed — check your connection');
@@ -1649,6 +1654,116 @@ document.querySelectorAll('.tab').forEach(tab => {
 })(); // end IIFE
 
 
+// ── FAB Icon & Bottom Sheet ──────────────────────────────────────
+const FAB_ICONS = {
+  today:     '',
+  todos:     '✅',
+  shopping:  '🛒',
+  birthdays: '🎂',
+  calendar:  '📅',
+  glimmers:  '✨',
+  luna:      '🦴',
+  lists:     '🎁'
+};
+
+const BS_TITLES = {
+  todos:     'Add Task',
+  shopping:  'Add Shopping Item',
+  birthdays: 'Add Birthday',
+  calendar:  'Add Plan',
+  glimmers:  'Add a Glimmer ✨',
+  luna:      'Luna Note',
+  lists:     'Add to List'
+};
+
+function updateFabIcon(sec) {
+  const iconEl = document.getElementById('nav-fab-icon');
+  if (!iconEl) return;
+  const icon = FAB_ICONS[sec] || '';
+  iconEl.textContent = icon ? icon + ' ' : '';
+}
+
+function openBottomSheet(sec) {
+  const tpl = document.getElementById('bs-tpl-' + sec);
+  if (!tpl) return;
+  const body = document.getElementById('bs-body');
+  const title = document.getElementById('bs-title');
+  const sheet = document.getElementById('bottom-sheet');
+  const overlay = document.getElementById('bs-overlay');
+  if (!body || !sheet || !overlay) return;
+
+  // Clone template content into body
+  body.innerHTML = '';
+  body.appendChild(tpl.content.cloneNode(true));
+
+  // Re-wire glimmer image input after clone
+  if (sec === 'glimmers') {
+    const inp = body.querySelector('#glimmer-img-input');
+    if (inp) {
+      inp.addEventListener('change', function() {
+        if (typeof handleGlimmerImageChange === 'function') handleGlimmerImageChange(this);
+        else if (typeof glimmerImgChanged === 'function') glimmerImgChanged(this);
+      });
+    }
+    // Set glimmer-by to current user
+    const sel = body.querySelector('#glimmer-by');
+    const savedName = localStorage.getItem('ourspace-user') || localStorage.getItem('jottie-name') || '';
+    if (sel && savedName) sel.value = savedName;
+  }
+
+  if (title) title.textContent = BS_TITLES[sec] || '';
+  overlay.classList.add('open');
+  sheet.classList.add('open');
+
+  // Focus first input
+  setTimeout(() => {
+    const first = body.querySelector('input[type=text], textarea, input[type=date]');
+    if (first) first.focus();
+  }, 320);
+}
+
+window.closeBottomSheet = function() {
+  const sheet = document.getElementById('bottom-sheet');
+  const overlay = document.getElementById('bs-overlay');
+  if (sheet) sheet.classList.remove('open');
+  if (overlay) overlay.classList.remove('open');
+};
+
+// Lists sub-tab switcher inside bottom sheet
+window.bsListTab = function(tab, el) {
+  document.querySelectorAll('#bs-lists-tabs .list-tab').forEach(t => t.classList.remove('active'));
+  if (el) el.classList.add('active');
+  document.querySelectorAll('.bs-list-panel').forEach(p => p.classList.remove('active'));
+  const panel = document.getElementById('bs-list-panel-' + tab);
+  if (panel) panel.classList.add('active');
+};
+
+// Drag-to-close for bottom sheet
+(function() {
+  let startY = 0, isDragging = false;
+  document.addEventListener('DOMContentLoaded', () => {
+    const sheet = document.getElementById('bottom-sheet');
+    if (!sheet) return;
+    sheet.addEventListener('touchstart', e => {
+      startY = e.touches[0].clientY;
+      isDragging = true;
+      sheet.style.transition = 'none';
+    }, {passive: true});
+    sheet.addEventListener('touchmove', e => {
+      if (!isDragging) return;
+      const dy = e.touches[0].clientY - startY;
+      if (dy > 0) sheet.style.transform = `translateY(${dy}px)`;
+    }, {passive: true});
+    sheet.addEventListener('touchend', e => {
+      isDragging = false;
+      sheet.style.transition = '';
+      sheet.style.transform = '';
+      const dy = e.changedTouches[0].clientY - startY;
+      if (dy > 80) closeBottomSheet();
+    });
+  });
+})();
+
 // ── FAB ──────────────────────────────────────────────────────────
 (function() {
   const SECTION_FOCUS = {
@@ -1661,6 +1776,11 @@ document.querySelectorAll('.tab').forEach(tab => {
   };
 
   window.toggleFab = function() {
+    // On non-Today sections, open the bottom sheet instead of the arch
+    if (typeof _activeSection !== 'undefined' && _activeSection && _activeSection !== 'today') {
+      openBottomSheet(_activeSection);
+      return;
+    }
     const wrap = document.getElementById('fab-wrap');
     const btn  = document.getElementById('fab-btn');
     const navBtn = document.getElementById('nav-fab-main');

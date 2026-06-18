@@ -940,6 +940,40 @@
     }
     #glimmer-lightbox-close:hover { background: rgba(255,255,255,0.28); }
     /* ── Toast notification ─────────────────────────── */
+    /* ── Bottom Sheet ──────────────────────────────────── */
+    .bs-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.35);
+      z-index: 194;
+    }
+    .bs-overlay.open { display: block; }
+    .bottom-sheet {
+      position: fixed;
+      bottom: 66px; left: 0; right: 0;
+      max-width: 600px; margin: 0 auto;
+      background: var(--bg);
+      border-radius: 20px 20px 0 0;
+      padding: 12px 16px 28px;
+      z-index: 195;
+      transform: translateY(120%);
+      transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: 0 -4px 24px rgba(0,0,0,0.12);
+    }
+    .bottom-sheet.open { transform: translateY(0); }
+    .bs-title {
+      font-size: 17px; font-weight: 800; color: var(--text);
+      margin-bottom: 14px; text-align: center;
+    }
+    .bs-list-panel { display: none; }
+    .bs-list-panel.active { display: block; }
+
+    /* ── Nav FAB icon ─────────────────────────────────── */
+    #nav-fab-icon { font-size: 16px; line-height: 1; vertical-align: middle; }
+
     #toast {
       position: fixed;
       bottom: 88px; left: 50%;
