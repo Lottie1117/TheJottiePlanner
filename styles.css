@@ -792,6 +792,33 @@
     .note-card-meta { font-size: 12px; color: var(--muted); margin-bottom: 2px; }
     .note-card-updated { font-size: 11px; color: var(--primary); opacity: 0.8; margin-top: 4px; }
 
+    /* ── Emoji picker ─────────────────────────────────────────────── */
+    .emoji-picker {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .emoji-opt {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      border: 2px solid var(--border);
+      background: var(--card);
+      font-size: 22px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.15s, background 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .emoji-opt.selected {
+      border-color: var(--primary);
+      background: var(--primary-light, #ede8f8);
+    }
+    .emoji-opt:active { transform: scale(0.92); }
+
     /* ── Note Detail Page ──────────────────────────────────────── */
     .note-detail-header {
       display: flex;

@@ -31,9 +31,20 @@ function openBottomSheet(section) {
   body.appendChild(document.importNode(tpl.content, true));
   if (overlay) overlay.classList.add('open');
   sheet.classList.add('open');
-  // Flip nav FAB to ✕
-  const navFab = document.getElementById('nav-fab-main');
-  if (navFab) navFab.innerHTML = '<span id="nav-fab-icon"></span>✕';
+  // Rotate nav button to signal open state
+  if (window._jottieActiveSection && window._jottieActiveSection !== 'today') {
+    const navFab = document.getElementById('nav-fab-main');
+    if (navFab) navFab.classList.add('open');
+  }
+  // For notes: render context-aware item form after template is inserted
+  if (section === 'lists') renderNoteItemForm();
+  // For new-note: select first emoji by default
+  if (section === 'new-note') {
+    setTimeout(() => {
+      const firstEmoji = document.querySelector('.emoji-opt');
+      if (firstEmoji) { firstEmoji.classList.add('selected'); }
+    }, 50);
+  }
   // Wire up Enter key for inputs injected from template
   ['ev-title','sh-name','td-title'].forEach((id, idx) => {
     const fns = [addEvent, addShopItem, addTodo];
@@ -52,12 +63,9 @@ function closeBottomSheet() {
   const overlay = document.getElementById('bs-overlay');
   if (sheet) sheet.classList.remove('open');
   if (overlay) overlay.classList.remove('open');
-  // Restore nav FAB to correct state for current section
-  if (typeof updateFabForSection === 'function') {
-    const activeSection = document.querySelector('.section.active');
-    const sec = activeSection ? activeSection.id.replace('-section', '') : 'today';
-    updateFabForSection(sec);
-  }
+  // Remove rotation from nav button
+  const navFab = document.getElementById('nav-fab-main');
+  if (navFab) navFab.classList.remove('open');
 }
 
 function bsListTab(name, btn) {
@@ -865,14 +873,89 @@ function renderNoteItems(snap) {
 }
 
 // ── Note item CRUD ─────────────────────────────────────────────────
+
+// Renders the correct add-item form based on which note is open
+function renderNoteItemForm() {
+  const wrap = document.getElementById('note-item-form-wrap');
+  if (!wrap || !_currentNoteId) return;
+
+  if (_currentNoteId === 'wishlist') {
+    wrap.innerHTML = `
+      <input type="text" id="note-item-text" placeholder="What is it? (e.g. Blue Nike trainers)">
+      <div class="row">
+        <input type="url" id="ni-link" placeholder="Paste a link (optional)" style="flex:2">
+        <input type="text" id="ni-price" placeholder="£ Price" style="flex:1">
+      </div>
+      <button class="btn-primary" onclick="addNoteItem();closeBottomSheet()">Add to Wishlist</button>`;
+  } else if (_currentNoteId === 'watchlist') {
+    wrap.innerHTML = `
+      <input type="text" id="note-item-text" placeholder="Title (e.g. The Bear)">
+      <div class="row">
+        <select id="ni-type" style="flex:1;padding:10px;border-radius:12px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-size:14px;">
+          <option value="TV Show">📺 TV Show</option>
+          <option value="Film">🎬 Film</option>
+          <option value="Documentary">🎥 Documentary</option>
+          <option value="Anime">⛩️ Anime</option>
+          <option value="Stand-up">🎤 Stand-up</option>
+          <option value="Mini-series">📺 Mini-series</option>
+          <option value="Reality">🌟 Reality</option>
+          <option value="Sport">⚽ Sport</option>
+          <option value="Kids">🧸 Kids</option>
+          <option value="Other">📽️ Other</option>
+        </select>
+        <select id="ni-genre" style="flex:1;padding:10px;border-radius:12px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-size:14px;">
+          <option value="">Genre</option>
+          <option>Comedy</option>
+          <option>Drama</option>
+          <option>Thriller</option>
+          <option>Horror</option>
+          <option>Romance</option>
+          <option>Action</option>
+          <option>Sci-Fi</option>
+          <option>Fantasy</option>
+          <option>Crime</option>
+          <option>Historical</option>
+        </select>
+      </div>
+      <button class="btn-primary" onclick="addNoteItem();closeBottomSheet()">Add to Watchlist</button>`;
+  } else {
+    wrap.innerHTML = `
+      <input type="text" id="note-item-text" placeholder="Add an item…">
+      <button class="btn-primary" onclick="addNoteItem();closeBottomSheet()">Add Item</button>`;
+  }
+
+  // Auto-focus the text input
+  setTimeout(() => {
+    const inp = document.getElementById('note-item-text');
+    if (inp) inp.focus();
+  }, 320);
+}
+
 function addNoteItem() {
   const textEl = document.getElementById('note-item-text');
   if (!textEl || !_currentNoteId || !db) return;
   const text = textEl.value.trim();
   if (!text) return;
   const now = firebase.firestore.FieldValue.serverTimestamp();
+
+  let link = '';
+  let notes = '';
+
+  if (_currentNoteId === 'wishlist') {
+    const linkEl  = document.getElementById('ni-link');
+    const priceEl = document.getElementById('ni-price');
+    link  = linkEl  ? linkEl.value.trim()  : '';
+    notes = priceEl && priceEl.value.trim() ? '£' + priceEl.value.trim() : '';
+  } else if (_currentNoteId === 'watchlist') {
+    const typeEl  = document.getElementById('ni-type');
+    const genreEl = document.getElementById('ni-genre');
+    const type    = typeEl  ? typeEl.value  : '';
+    const genre   = genreEl ? genreEl.value : '';
+    notes = [type, genre].filter(Boolean).join(' · ');
+  }
+
   db.collection('notes').doc(_currentNoteId).collection('items').add({
-    text, addedBy: me || '', createdAt: now, completed: false, link: '', notes: ''
+    text, addedBy: me || '', createdAt: now, completed: false, link, notes
   });
   db.collection('notes').doc(_currentNoteId).update({ updatedAt: now });
   textEl.value = '';
@@ -885,6 +968,14 @@ function deleteNoteItem(noteId, itemId) {
 
 function toggleNoteItem(noteId, itemId, completed) {
   db.collection('notes').doc(noteId).collection('items').doc(itemId).update({ completed });
+}
+
+// ── Emoji picker ───────────────────────────────────────────────────
+function selectNoteEmoji(btn, emoji) {
+  document.querySelectorAll('.emoji-opt').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  const hidden = document.getElementById('new-note-emoji');
+  if (hidden) hidden.value = emoji;
 }
 
 // ── Create a new note ──────────────────────────────────────────────
