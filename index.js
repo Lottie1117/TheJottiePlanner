@@ -1,7 +1,65 @@
 
+// ── Global state ─────────────────────────────────────────────────
+let me = localStorage.getItem('jottie-name') || '';
+
+// ── fmtFullDate helper ───────────────────────────────────────────
+function fmtFullDate(d) {
+  return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 18) return 'Good afternoon';
+  return 'Good evening';
+}
+
+// ── Bottom Sheet ─────────────────────────────────────────────────
+function openBottomSheet(section) {
+  const tplId = 'bs-tpl-' + section;
+  const tpl = document.getElementById(tplId);
+  const body = document.getElementById('bs-body');
+  const title = document.getElementById('bs-title');
+  const sheet = document.getElementById('bottom-sheet');
+  const overlay = document.getElementById('bs-overlay');
+  if (!tpl || !body || !sheet) return;
+  const sectionNames = { todos: 'Add Task', shopping: 'Add Item', calendar: 'Add Plan', birthdays: 'Add Birthday', glimmers: 'Add Glimmer', luna: 'Luna Note', lists: 'Add to Lists' };
+  if (title) title.textContent = sectionNames[section] || '';
+  body.innerHTML = '';
+  body.appendChild(document.importNode(tpl.content, true));
+  if (overlay) overlay.classList.add('open');
+  sheet.classList.add('open');
+  // Wire up Enter key for inputs injected from template
+  ['ev-title','sh-name','td-title'].forEach((id, idx) => {
+    const fns = [addEvent, addShopItem, addTodo];
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('keydown', e => { if (e.key === 'Enter') fns[idx](); });
+  });
+  const giftNameEl = document.getElementById('gift-name');
+  if (giftNameEl) giftNameEl.addEventListener('keydown', e => { if (e.key === 'Enter') addGift(); });
+  // Set calendar date default
+  const evDateEl = document.getElementById('ev-date');
+  if (evDateEl && !evDateEl.value) evDateEl.value = new Date().toISOString().split('T')[0];
+}
+
+function closeBottomSheet() {
+  const sheet = document.getElementById('bottom-sheet');
+  const overlay = document.getElementById('bs-overlay');
+  if (sheet) sheet.classList.remove('open');
+  if (overlay) overlay.classList.remove('open');
+}
+
+function bsListTab(name, btn) {
+  document.querySelectorAll('#bs-lists-tabs .list-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.bs-list-panel').forEach(p => p.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  const panel = document.getElementById('bs-list-panel-' + name);
+  if (panel) panel.classList.add('active');
+}
+
 // ── Name setup ──────────────────────────────────────────────────
 function setUser(name) {
-  localStorage.setItem('ourspace-user', name);
+  localStorage.setItem('jottie-name', name);
   me = name;
   document.getElementById('name-overlay').style.display = 'none';
   document.getElementById('header-greeting').textContent = `${getGreeting()}, ${name}! 💜`;
@@ -975,12 +1033,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (giftNameEl) giftNameEl.addEventListener('keydown', e => { if (e.key === 'Enter') addGift(); });
 });
 
-['ev-title','sh-name','td-title'].forEach((id, idx) => {
-  const fns = [addEvent, addShopItem, addTodo];
-  document.getElementById(id).addEventListener('keydown', e => {
-    if (e.key === 'Enter') fns[idx]();
-  });
-});
+// Enter-key listeners for template inputs are wired inside openBottomSheet().
 
 // ── New nav helper ────────────────────────────────────────────────
 function setNavActive(btnId) {
@@ -1692,20 +1745,19 @@ document.querySelectorAll('.tab').forEach(tab => {
 
   window.fabAction = function(section) {
     closeFab();
-    navTo(section);
+    // Sections that have a bottom-sheet template: open the sheet
+    const sheetSections = ['todos','shopping','calendar','birthdays','glimmers','luna','lists'];
+    if (sheetSections.includes(section)) {
+      navTo(section);
+      openBottomSheet(section);
+      return;
+    }
     // Luna: just log the chew directly
     if (section === 'luna') {
       setTimeout(logChew, 100);
       return;
     }
-    // All others: navigate then focus the first input
-    const inputId = SECTION_FOCUS[section];
-    if (inputId) {
-      setTimeout(() => {
-        const el = document.getElementById(inputId);
-        if (el) { el.focus(); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
-      }, 120);
-    }
+    navTo(section);
   };
 
   window.fabKeydown = function(e) {
