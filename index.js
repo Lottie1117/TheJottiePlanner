@@ -29,6 +29,9 @@ function openBottomSheet(section) {
   body.appendChild(document.importNode(tpl.content, true));
   if (overlay) overlay.classList.add('open');
   sheet.classList.add('open');
+  // Flip nav FAB to ✕
+  const navFab = document.getElementById('nav-fab-main');
+  if (navFab) navFab.innerHTML = '<span id="nav-fab-icon"></span>✕';
   // Wire up Enter key for inputs injected from template
   ['ev-title','sh-name','td-title'].forEach((id, idx) => {
     const fns = [addEvent, addShopItem, addTodo];
@@ -47,6 +50,12 @@ function closeBottomSheet() {
   const overlay = document.getElementById('bs-overlay');
   if (sheet) sheet.classList.remove('open');
   if (overlay) overlay.classList.remove('open');
+  // Restore nav FAB to correct state for current section
+  if (typeof updateFabForSection === 'function') {
+    const activeSection = document.querySelector('.section.active');
+    const sec = activeSection ? activeSection.id.replace('-section', '') : 'today';
+    updateFabForSection(sec);
+  }
 }
 
 function bsListTab(name, btn) {
@@ -1729,6 +1738,59 @@ document.querySelectorAll('.tab').forEach(tab => {
 
 // ── FAB ──────────────────────────────────────────────────────────
 (function() {
+  const SECTION_ICONS = {
+    todos:     '✅',
+    shopping:  '🛒',
+    glimmers:  '✨',
+    birthdays: '🎂',
+    calendar:  '📅',
+    luna:      '🦴',
+    lists:     '🎁'
+  };
+
+  let _activeSection = 'today';
+
+  // Wire the nav FAB button once — behaviour depends on active section
+  document.addEventListener('DOMContentLoaded', function() {
+    const navBtn = document.getElementById('nav-fab-main');
+    if (!navBtn) return;
+    navBtn.addEventListener('click', function() {
+      // If the bottom sheet is open, this button acts as close (✕)
+      const sheet = document.getElementById('bottom-sheet');
+      if (sheet && sheet.classList.contains('open')) {
+        closeBottomSheet();
+        return;
+      }
+      if (_activeSection === 'today') {
+        toggleFab();
+      } else {
+        contextFabAction(_activeSection);
+      }
+    });
+  });
+
+  window.updateFabForSection = function(sec) {
+    _activeSection = sec;
+    const navBtn = document.getElementById('nav-fab-main');
+    const iconEl = document.getElementById('nav-fab-icon');
+    if (!navBtn) return;
+
+    if (sec === 'today') {
+      navBtn.setAttribute('aria-label', 'Quick add');
+      if (iconEl) iconEl.textContent = '';
+      navBtn.innerHTML = '<span id="nav-fab-icon"></span>+';
+    } else {
+      // Close arch if somehow open
+      closeFab();
+      navBtn.setAttribute('aria-label', 'Add to ' + sec);
+      navBtn.innerHTML = `<span id="nav-fab-icon">${SECTION_ICONS[sec] || ''}</span>+`;
+    }
+  };
+
+  window.contextFabAction = function(sec) {
+    openBottomSheet(sec);
+  };
+
   const SECTION_FOCUS = {
     todos:     'td-title',
     shopping:  'sh-name',
@@ -1769,14 +1831,12 @@ document.querySelectorAll('.tab').forEach(tab => {
 
   window.fabAction = function(section) {
     closeFab();
-    // Sections that have a bottom-sheet template: open the sheet
     const sheetSections = ['todos','shopping','calendar','birthdays','glimmers','luna','lists'];
     if (sheetSections.includes(section)) {
       navTo(section);
       openBottomSheet(section);
       return;
     }
-    // Luna: just log the chew directly
     if (section === 'luna') {
       setTimeout(logChew, 100);
       return;
@@ -1788,7 +1848,6 @@ document.querySelectorAll('.tab').forEach(tab => {
     if (e.key === 'Escape') { closeFab(); return; }
   };
 
-  // Trap keyboard within FAB menu when open, Escape always closes
   document.addEventListener('keydown', function(e) {
     const wrap = document.getElementById('fab-wrap');
     if (!wrap || !wrap.classList.contains('open')) return;
