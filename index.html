@@ -74,10 +74,6 @@
   <div class="drawer-handle"></div>
   <div class="drawer-title">Go to...</div>
   <div class="drawer-grid">
-    <div class="drawer-tile active" data-section="today" onclick="navTo('today'); closeDrawer()">
-      <span class="tile-icon">🏠</span>
-      <span class="tile-label">Today</span>
-    </div>
     <div class="drawer-tile" data-section="calendar" onclick="navTo('calendar'); closeDrawer()">
       <span class="tile-icon">📅</span>
       <span class="tile-label">Plans</span>
@@ -160,7 +156,7 @@
       <span class="luna-unlog" id="dash-luna-unlog" style="display:none" onclick="dashUnlogChew()">Undo</span>
     </div>
     <div class="dash-card-sm">
-      <div class="dash-hdr"><div class="dash-hdr-title">📅 Coming Up</div><span class="dash-count" id="dash-ev-count">-</span></div>
+      <div class="dash-hdr"><div class="dash-hdr-title">Coming Up</div><span class="dash-count" id="dash-ev-count">-</span></div>
       <div id="dash-events"><div class="dash-empty">Loading…</div></div>
       <a class="view-all" onclick="navTo('calendar')">View all upcoming →</a>
     </div>
@@ -179,6 +175,9 @@
       <a class="view-all" onclick="navTo('shopping')">View all →</a>
     </div>
   </div>
+
+  <!-- Row 3b: Pinned Notes -->
+  <div id="dash-pinned-notes" style="display:none"></div>
 
   <!-- Row 4: Recent Glimmers -->
   <div id="dash-glimmer-section">

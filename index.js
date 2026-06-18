@@ -748,6 +748,40 @@ async function migrateOldCollections() {
   }
 }
 
+// ── Render pinned notes on Today dashboard ────────────────────────
+function renderDashPinnedNotes() {
+  const el = document.getElementById('dash-pinned-notes');
+  if (!el) return;
+  const pinned = _notesData.filter(n => n.pinned && !n.archived);
+  if (!pinned.length) {
+    el.style.display = 'none';
+    el.innerHTML = '';
+    return;
+  }
+  el.style.display = 'block';
+  el.innerHTML = `<div class="dash-pinned-card">
+    <div class="dash-hdr">
+      <div class="dash-hdr-title">📌 Pinned Notes</div>
+    </div>
+    <div class="dash-pinned-items" id="dash-pinned-items"></div>
+  </div>`;
+  const itemsEl = document.getElementById('dash-pinned-items');
+  pinned.forEach(n => {
+    const row = document.createElement('div');
+    row.className = 'dash-pinned-row';
+    row.innerHTML = `<span class="dash-pinned-emoji">${esc(n.emoji || '📝')}</span>
+      <span class="dash-pinned-title">${esc(n.title)}</span>
+      <span class="dash-pinned-count" id="dash-pin-count-${n.id}">…</span>`;
+    row.onclick = () => openNote(n.id);
+    itemsEl.appendChild(row);
+    // Load item count
+    db.collection('notes').doc(n.id).collection('items').get().then(snap => {
+      const countEl = document.getElementById('dash-pin-count-' + n.id);
+      if (countEl) countEl.textContent = snap.size + ' item' + (snap.size === 1 ? '' : 's');
+    });
+  });
+}
+
 // ── Listen to notes collection ─────────────────────────────────────
 function listenNotes() {
   db.collection('notes')
@@ -756,6 +790,7 @@ function listenNotes() {
     .onSnapshot(snap => {
       _notesData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       renderNotesGrid(_notesData);
+      renderDashPinnedNotes();
     });
 }
 
