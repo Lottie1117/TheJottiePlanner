@@ -1,4 +1,3 @@
-
 // ── Global state ─────────────────────────────────────────────────
 // me is declared in firebase.js; restore persisted value on load
 me = localStorage.getItem('jottie-name') || '';
@@ -111,8 +110,6 @@ function navTo(sec, navItemEl) {
   const sectionNames = {"today":"Today","calendar":"Plans","shopping":"Shopping","todos":"To-Do","lists":"Lists","birthdays":"Birthdays","glimmers":"Glimmers","luna":"Luna 🐾"};
   const titleEl = document.getElementById('section-title');
   if (titleEl) titleEl.textContent = sectionNames[sec] || '';
-
-  if (typeof updateFabForSection === 'function') updateFabForSection(sec);
 
   // section-specific hooks
   if (sec === 'birthdays') renderBirthdaysDash();
@@ -1533,12 +1530,15 @@ async function loadStreakData() {
     if (nudgeWrap) {
       nudgeWrap.innerHTML = '';
       if (!data.todayComplete) {
-        const missing = !data.lottieDone ? 'Lottie' : 'Jonny';
-        const btn = document.createElement('button');
-        btn.className = 'nudge-btn';
-        btn.textContent = `👉 Nudge ${missing}`;
-        btn.onclick = () => nudgePerson(missing);
-        nudgeWrap.appendChild(btn);
+        const other = (me === 'Lottie') ? 'Jonny' : 'Lottie';
+        const otherDone = (other === 'Lottie') ? data.lottieDone : data.jonnyDone;
+        if (!otherDone) {
+          const btn = document.createElement('button');
+          btn.className = 'nudge-btn';
+          btn.textContent = '👉 Nudge ' + other;
+          btn.onclick = () => nudgePerson(other);
+          nudgeWrap.appendChild(btn);
+        }
       }
     }
   } catch (err) {
@@ -1578,9 +1578,15 @@ window.updateDashboardStreak = async function() {
       nudgeWrap.innerHTML = '';
       const btn = document.createElement('button');
       if (!data.todayComplete) {
-        const missing = !data.lottieDone ? 'Lottie' : 'Jonny';
-        btn.textContent = `👉 Nudge ${missing}`;
-        btn.onclick = () => { window.nudgePersonGlobal ? window.nudgePersonGlobal(missing) : nudgePerson(missing); };
+        const other = (me === 'Lottie') ? 'Jonny' : 'Lottie';
+        const otherDone = (other === 'Lottie') ? data.lottieDone : data.jonnyDone;
+        if (!otherDone) {
+          btn.textContent = '👉 Nudge ' + other;
+          btn.onclick = () => { window.nudgePersonGlobal ? window.nudgePersonGlobal(other) : nudgePerson(other); };
+        } else {
+          btn.textContent = 'All done today! ✨';
+          btn.onclick = () => navTo('glimmers');
+        }
       } else {
         btn.textContent = `See today's Glimmers →`;
         btn.onclick = () => navTo('glimmers');
@@ -1723,44 +1729,13 @@ document.querySelectorAll('.tab').forEach(tab => {
 
 // ── FAB ──────────────────────────────────────────────────────────
 (function() {
-  const SECTION_ICONS = {
-    todos:     '✅',
-    shopping:  '🛒',
-    glimmers:  '✨',
-    birthdays: '🎂',
-    calendar:  '📅',
-    luna:      '🦴',
-    lists:     '🎁'
-  };
-
-  // Tracks which section is active so navFabTap() knows what to do.
-  // Starts as 'today' to match the default visible section.
-  window._jottieActiveSection = 'today';
-
-  // Called by onclick="navFabTap()" on the nav FAB button in HTML.
-  // This inline onclick always fires reliably on mobile.
-  window.navFabTap = function() {
-    if (window._jottieActiveSection === 'today') {
-      toggleFab();
-    } else {
-      closeFab();
-      openBottomSheet(window._jottieActiveSection);
-    }
-  };
-
-  // Called from navTo() whenever the section changes.
-  window.updateFabForSection = function(sec) {
-    window._jottieActiveSection = sec;
-    const iconEl = document.getElementById('nav-fab-icon');
-    const navBtn = document.getElementById('nav-fab-main');
-    if (sec === 'today') {
-      if (iconEl) iconEl.textContent = '';
-      if (navBtn) navBtn.setAttribute('aria-label', 'Quick add');
-    } else {
-      closeFab();
-      if (iconEl) iconEl.textContent = SECTION_ICONS[sec] || '';
-      if (navBtn) navBtn.setAttribute('aria-label', 'Add to ' + sec);
-    }
+  const SECTION_FOCUS = {
+    todos:     'td-title',
+    shopping:  'sh-name',
+    glimmers:  'glimmer-text',
+    birthdays: 'bd-name',
+    calendar:  'ev-title',
+    luna:      null
   };
 
   window.toggleFab = function() {
@@ -1794,12 +1769,14 @@ document.querySelectorAll('.tab').forEach(tab => {
 
   window.fabAction = function(section) {
     closeFab();
+    // Sections that have a bottom-sheet template: open the sheet
     const sheetSections = ['todos','shopping','calendar','birthdays','glimmers','luna','lists'];
     if (sheetSections.includes(section)) {
       navTo(section);
       openBottomSheet(section);
       return;
     }
+    // Luna: just log the chew directly
     if (section === 'luna') {
       setTimeout(logChew, 100);
       return;
@@ -1811,6 +1788,7 @@ document.querySelectorAll('.tab').forEach(tab => {
     if (e.key === 'Escape') { closeFab(); return; }
   };
 
+  // Trap keyboard within FAB menu when open, Escape always closes
   document.addEventListener('keydown', function(e) {
     const wrap = document.getElementById('fab-wrap');
     if (!wrap || !wrap.classList.contains('open')) return;
@@ -1822,4 +1800,3 @@ document.querySelectorAll('.tab').forEach(tab => {
     if (e.key === 'ArrowDown') { e.preventDefault(); items[(idx + 1) % items.length].focus(); }
   });
 })();
-
