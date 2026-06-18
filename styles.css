@@ -736,13 +736,9 @@
     .fab-wrap {
       position: fixed;
       bottom: 70px;
-      left: 50%;
-      transform: translateX(-50%);
+      left: 0;
+      right: 0;
       z-index: 250;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
       pointer-events: none;
     }
     /* hide the old separate fab-btn — nav button acts as trigger */
