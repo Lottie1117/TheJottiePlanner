@@ -135,8 +135,21 @@
     }
 
     /* ── Sections ────────────────────────────────────── */
-    .section { display: none; padding: 14px 14px 84px; }
+    .section { display: none; padding: 14px 14px 84px; scroll-margin-top: 100px; }
     .section.active { display: block; }
+    /* Note detail gets its own scroll so app header never overlaps */
+    #note-detail-section.active {
+      display: flex;
+      flex-direction: column;
+      padding: 0 0 84px;
+    }
+    #note-detail-section .note-detail-header {
+      padding: 14px 14px 12px;
+      margin-bottom: 0;
+    }
+    #note-detail-section #note-items-list {
+      padding: 12px 14px 0;
+    }
 
     /* ── Add Card ────────────────────────────────────── */
     .add-card {
@@ -862,7 +875,7 @@
       top: 0;
       background: var(--bg);
       z-index: 10;
-      padding-top: 4px;
+      padding-top: 2px;
     }
     .note-back-btn {
       background: none;
