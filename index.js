@@ -69,8 +69,20 @@ function setUser(name) {
   setTimeout(checkNotifStatus, 600);
 }
 
-document.getElementById('name-lottie-btn').onclick = () => setUser('Lottie');
-document.getElementById('name-jonny-btn').onclick  = () => setUser('Jonny');
+// Wire up name buttons safely (guard against null if DOM not ready)
+(function() {
+  function wireNameBtns() {
+    const lottieBtn = document.getElementById('name-lottie-btn');
+    const jonnyBtn  = document.getElementById('name-jonny-btn');
+    if (lottieBtn) lottieBtn.onclick = () => setUser('Lottie');
+    if (jonnyBtn)  jonnyBtn.onclick  = () => setUser('Jonny');
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', wireNameBtns);
+  } else {
+    wireNameBtns();
+  }
+})();
 
 // ── Navigation ───────────────────────────────────────────────────
 function navTo(sec, navItemEl) {
@@ -1085,7 +1097,10 @@ function renderDashGlimmers() {
 
 // ── Boot ─────────────────────────────────────────────────────────
 window.addEventListener('load', () => {
-  if (me) {
+  // Re-read from localStorage directly at load time as the safest approach
+  const savedName = localStorage.getItem('jottie-name');
+  if (savedName) {
+    me = savedName;
     document.getElementById('name-overlay').style.display = 'none';
     document.getElementById('header-greeting').textContent = `Hi ${me}! 💜`;
   }
