@@ -1,4 +1,3 @@
-
 // ── Global state ─────────────────────────────────────────────────
 // me is declared in firebase.js; restore persisted value on load
 me = localStorage.getItem('jottie-name') || '';
@@ -112,7 +111,6 @@ function navTo(sec, navItemEl) {
   const titleEl = document.getElementById('section-title');
   if (titleEl) titleEl.textContent = sectionNames[sec] || '';
 
-  // update centre FAB button for active section
   if (typeof updateFabForSection === 'function') updateFabForSection(sec);
 
   // section-specific hooks
@@ -1736,47 +1734,31 @@ document.querySelectorAll('.tab').forEach(tab => {
 
   let _activeSection = 'today';
 
-  // Wire the nav FAB button once, decide behaviour based on _activeSection
-  document.addEventListener('DOMContentLoaded', function() {
-    const navBtn = document.getElementById('nav-fab-main');
-    if (!navBtn) return;
-    navBtn.addEventListener('click', function() {
+  // Script loads after the DOM (bottom of index.html) so button exists now.
+  const _navBtn = document.getElementById('nav-fab-main');
+  if (_navBtn) {
+    _navBtn.addEventListener('click', function() {
       if (_activeSection === 'today') {
         toggleFab();
       } else {
-        contextFabAction(_activeSection);
+        closeFab();
+        openBottomSheet(_activeSection);
       }
     });
-  });
+  }
 
   window.updateFabForSection = function(sec) {
     _activeSection = sec;
-    const navBtn = document.getElementById('nav-fab-main');
     const iconEl = document.getElementById('nav-fab-icon');
-    if (!navBtn) return;
-
+    const navBtn = document.getElementById('nav-fab-main');
     if (sec === 'today') {
-      navBtn.setAttribute('aria-label', 'Quick add');
       if (iconEl) iconEl.textContent = '';
+      if (navBtn) navBtn.setAttribute('aria-label', 'Quick add');
     } else {
-      // Close arch if somehow open
       closeFab();
-      navBtn.setAttribute('aria-label', 'Add to ' + sec);
       if (iconEl) iconEl.textContent = SECTION_ICONS[sec] || '';
+      if (navBtn) navBtn.setAttribute('aria-label', 'Add to ' + sec);
     }
-  };
-
-  window.contextFabAction = function(sec) {
-    openBottomSheet(sec);
-  };
-
-  const SECTION_FOCUS = {
-    todos:     'td-title',
-    shopping:  'sh-name',
-    glimmers:  'glimmer-text',
-    birthdays: 'bd-name',
-    calendar:  'ev-title',
-    luna:      null
   };
 
   window.toggleFab = function() {
@@ -1810,12 +1792,14 @@ document.querySelectorAll('.tab').forEach(tab => {
 
   window.fabAction = function(section) {
     closeFab();
+    // Sections that have a bottom-sheet template: open the sheet
     const sheetSections = ['todos','shopping','calendar','birthdays','glimmers','luna','lists'];
     if (sheetSections.includes(section)) {
       navTo(section);
       openBottomSheet(section);
       return;
     }
+    // Luna: just log the chew directly
     if (section === 'luna') {
       setTimeout(logChew, 100);
       return;
@@ -1827,6 +1811,7 @@ document.querySelectorAll('.tab').forEach(tab => {
     if (e.key === 'Escape') { closeFab(); return; }
   };
 
+  // Trap keyboard within FAB menu when open, Escape always closes
   document.addEventListener('keydown', function(e) {
     const wrap = document.getElementById('fab-wrap');
     if (!wrap || !wrap.classList.contains('open')) return;
@@ -1838,4 +1823,3 @@ document.querySelectorAll('.tab').forEach(tab => {
     if (e.key === 'ArrowDown') { e.preventDefault(); items[(idx + 1) % items.length].focus(); }
   });
 })();
-
