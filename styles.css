@@ -763,14 +763,14 @@
       z-index: 251;
     }
     .fab-item {
-      width: 54px;
-      height: 54px;
-      min-width: 54px;
-      min-height: 54px;
+      width: 46px;
+      height: 46px;
+      min-width: 46px;
+      min-height: 46px;
       border-radius: 50%;
       background: white;
       border: none;
-      font-size: 26px;
+      font-size: 22px;
       cursor: pointer;
       box-shadow: 0 4px 18px rgba(0,0,0,0.25);
       display: flex;
@@ -796,8 +796,7 @@
       opacity: 1;
       pointer-events: auto;
     }
-
-    .fab-overlay {
+        .fab-overlay {
       display: none;
       position: fixed;
       inset: 0;
