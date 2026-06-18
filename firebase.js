@@ -16,7 +16,7 @@ const firebaseConfig = {
 // ── State ───────────────────────────────────────────────────────
 let db;
 let storage;
-let me = localStorage.getItem('ourspace-user');
+let me = localStorage.getItem('jottie-name');
 const configured = firebaseConfig.apiKey !== 'YOUR_API_KEY';
 
 
