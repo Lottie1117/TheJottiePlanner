@@ -12,6 +12,14 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
+// ── Required for PWA install prompt ──────────────────────────────
+// Chrome won't show the "Add to Home Screen" prompt without a fetch handler.
+// This one passes requests straight through to the network (no offline caching),
+// which is fine — it just needs to exist.
+self.addEventListener('fetch', event => {
+  event.respondWith(fetch(event.request));
+});
+
 // Receives push when app is in the background or closed
 messaging.onBackgroundMessage(payload => {
   const title = payload.notification?.title || 'The Jottie Planner';
