@@ -159,9 +159,7 @@ function initFirebase() {
   listenTodos();
   listenLuna();
   listenLunaNotes();
-  listenWishlist();
-  listenWatchlist();
-  listenDateIdeas();
+  initNotes();
   listenBirthdays();
   // Start glimmer/streak now that db is ready
   if (typeof updateDashboardStreak === 'function') updateDashboardStreak();

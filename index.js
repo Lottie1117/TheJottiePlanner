@@ -16,6 +16,8 @@ function getGreeting() {
 
 // ── Bottom Sheet ─────────────────────────────────────────────────
 function openBottomSheet(section) {
+  // 'new-note' opens the create note form
+  // 'lists' when inside a note opens add item form
   const tplId = 'bs-tpl-' + section;
   const tpl = document.getElementById(tplId);
   const body = document.getElementById('bs-body');
@@ -23,7 +25,7 @@ function openBottomSheet(section) {
   const sheet = document.getElementById('bottom-sheet');
   const overlay = document.getElementById('bs-overlay');
   if (!tpl || !body || !sheet) return;
-  const sectionNames = { todos: 'Add Task', shopping: 'Add Item', calendar: 'Add Plan', birthdays: 'Add Birthday', glimmers: 'Add Glimmer', luna: 'Luna Note', lists: 'Add to Lists' };
+  const sectionNames = { todos: 'Add Task', shopping: 'Add Item', calendar: 'Add Plan', birthdays: 'Add Birthday', glimmers: 'Add Glimmer', luna: 'Luna Note', lists: 'Add Item', 'new-note': 'New Note' };
   if (title) title.textContent = sectionNames[section] || '';
   body.innerHTML = '';
   body.appendChild(document.importNode(tpl.content, true));
@@ -116,7 +118,7 @@ function navTo(sec, navItemEl) {
   if (drawerMatch) drawerMatch.classList.add('active');
 
   // update header section title
-  const sectionNames = {"today":"Today","calendar":"Plans","shopping":"Shopping","todos":"To-Do","lists":"Lists","birthdays":"Birthdays","glimmers":"Glimmers","luna":"Luna 🐾"};
+  const sectionNames = {"today":"Today","calendar":"Plans","shopping":"Shopping","todos":"To-Do","lists":"Notes","birthdays":"Birthdays","glimmers":"Glimmers","luna":"Luna 🐾"};
   const titleEl = document.getElementById('section-title');
   if (titleEl) titleEl.textContent = sectionNames[sec] || '';
 
@@ -665,150 +667,316 @@ function switchListTab(name, btn) {
 }
 
 // ── Wishlist ─────────────────────────────────────────────────────
-function addWishItem() {
-  const name  = document.getElementById('wl-name').value.trim();
-  const url   = document.getElementById('wl-url').value.trim();
-  const price = document.getElementById('wl-price').value.trim();
-  const emoji = document.getElementById('wl-emoji').value.trim() || '🎁';
-  if (!name) return;
-  if (!db) return;
-  db.collection('wishlist').add({
-    name, url, price, emoji, addedBy: me,
-    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-  }).then(() => {
-    sendNotification('🎁 Wishlist', `${me} added "${name}"${price?' ('+price+')':''}`);
-    document.getElementById('wl-name').value  = '';
-    document.getElementById('wl-url').value   = '';
-    document.getElementById('wl-price').value = '';
-    document.getElementById('wl-emoji').value = '';
+// ════════════════════════════════════════════════════════════════
+// NOTES HUB
+// ════════════════════════════════════════════════════════════════
+
+const PROTECTED_NOTES = ['wishlist', 'watchlist', 'dateideas']; // slugs used as doc IDs
+let _notesData = [];
+let _currentNoteId = null;
+let _noteItemsUnsub = null;
+
+// ── Default notes (created once if collection is empty) ───────────
+const DEFAULT_NOTES = [
+  { id: 'wishlist',   title: 'Wishlist',   emoji: '🛍️', pinned: false },
+  { id: 'watchlist',  title: 'Watchlist',  emoji: '🎬', pinned: false },
+  { id: 'dateideas',  title: 'Date Ideas', emoji: '🌷', pinned: false },
+];
+
+async function maybeCreateDefaultNotes() {
+  const col = db.collection('notes');
+  const snap = await col.limit(1).get();
+  if (!snap.empty) return; // already has notes, don't touch
+  const batch = db.batch();
+  const now = firebase.firestore.FieldValue.serverTimestamp();
+  DEFAULT_NOTES.forEach(n => {
+    batch.set(col.doc(n.id), {
+      title: n.title, emoji: n.emoji, pinned: n.pinned,
+      archived: false, createdAt: now, updatedAt: now,
+      protected: true
+    });
   });
-}
-function delWishItem(id) { db.collection('wishlist').doc(id).delete(); }
-function listenWishlist() {
-  db.collection('wishlist').orderBy('createdAt','desc').onSnapshot(snap => {
-    const el = document.getElementById('wishlist-list');
-    if (snap.empty) {
-      el.innerHTML = '<div class="empty"><div class="emo">🎁</div><p>No wishlist items yet!</p></div>';
-      return;
-    }
-    el.innerHTML = snap.docs.map(doc => {
-      const i = {id:doc.id,...doc.data()};
-      const domain = i.url ? (()=>{ try{return new URL(i.url).hostname.replace('www.','')}catch(e){return ''} })() : '';
-      return `<div class="item-card">
-        <div style="font-size:24px;flex-shrink:0">${esc(i.emoji||'🎁')}</div>
-        <div class="item-body">
-          <div class="item-title">${esc(i.name)}</div>
-          ${i.price?`<span class="wish-price">£${esc(i.price)}</span>`:''}
-          ${domain?`<div class="wish-domain">${esc(domain)}</div>`:''}
-          <div class="item-meta">
-            ${i.url?`<a class="wish-link" href="${esc(i.url)}" target="_blank">Open link →</a> · `:''}
-            ${badge(i.addedBy)} · ${ago(i.createdAt)}
-          </div>
-        </div>
-        <button class="del-btn" onclick="delWishItem('${i.id}')">✕</button>
-      </div>`;
-    }).join('');
-  });
+  await batch.commit();
 }
 
-// ── Watchlist ─────────────────────────────────────────────────────
-function addWatchItem() {
-  const title = document.getElementById('wt-title').value.trim();
-  const type  = document.getElementById('wt-type').value;
-  const genre = document.getElementById('wt-genre').value.trim();
-  if (!title || !db) return;
-  db.collection('watchlist').add({
-    title, type, genre, addedBy: me,
-    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-  }).then(() => {
-    document.getElementById('wt-title').value = '';
-    document.getElementById('wt-genre').value = '';
-  });
-}
-function delWatchItem(id) { db.collection('watchlist').doc(id).delete(); }
-function listenWatchlist() {
-  db.collection('watchlist').orderBy('createdAt','desc').onSnapshot(snap => {
-    const el = document.getElementById('watchlist-list');
-    if (!el) return;
-    if (snap.empty) {
-      el.innerHTML = '<div class="empty"><div class="emo">🎬</div><p>Nothing on the watchlist yet!</p></div>';
-      return;
+// ── Migrate existing wishlist/watchlist/dateideas items ────────────
+async function migrateOldCollections() {
+  const migrations = [
+    {
+      col: 'wishlist', noteId: 'wishlist',
+      map: d => ({ text: d.name || '', addedBy: d.addedBy || '', createdAt: d.createdAt,
+                   completed: false, link: d.url || '', notes: d.price ? '£'+d.price : '',
+                   emoji: d.emoji || '🎁' })
+    },
+    {
+      col: 'watchlist', noteId: 'watchlist',
+      map: d => ({ text: d.title || '', addedBy: d.addedBy || '', createdAt: d.createdAt,
+                   completed: false, link: '', notes: [d.type, d.genre].filter(Boolean).join(' · '),
+                   emoji: {Film:'🎬','TV Show':'📺',Documentary:'🎥',Anime:'⛩️',Other:'📽️'}[d.type] || '📽️' })
+    },
+    {
+      col: 'dateideas', noteId: 'dateideas',
+      map: d => ({ text: d.title || '', addedBy: d.addedBy || '', createdAt: d.createdAt,
+                   completed: false, link: '', notes: d.notes || '', emoji: '🌷' })
     }
-    el.innerHTML = snap.docs.map(doc => {
-      const i = {id:doc.id,...doc.data()};
-      const typeEmoji = {Film:'🎬','TV Show':'📺',Documentary:'🎥',Anime:'⛩️',Other:'📽️'}[i.type]||'📽️';
-      return `<div class="item-card">
-        <div style="font-size:24px;flex-shrink:0">${typeEmoji}</div>
-        <div class="item-body">
-          <div class="item-title">${esc(i.title)}</div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
-            <span class="watch-genre">${esc(i.type)}</span>
-            ${i.genre?`<span class="watch-genre" style="background:#E3F2FD;color:#1155AA">${esc(i.genre)}</span>`:''}
-          </div>
-          <div class="item-meta">${badge(i.addedBy)} · ${ago(i.createdAt)}</div>
-        </div>
-        <button class="del-btn" onclick="delWatchItem('${i.id}')">✕</button>
-      </div>`;
-    }).join('');
-  });
-}
-
-// ── Date Ideas ────────────────────────────────────────────────────
-function addDateIdea() {
-  const title = document.getElementById('di-title').value.trim();
-  const notes = document.getElementById('di-notes').value.trim();
-  if (!title || !db) return;
-  db.collection('dateideas').add({
-    title, notes, addedBy: me,
-    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-  }).then(() => {
-    document.getElementById('di-title').value = '';
-    document.getElementById('di-notes').value = '';
-  });
-}
-function delDateIdea(id) { db.collection('dateideas').doc(id).delete(); }
-let _watchData = [], _dateIdeasData = [];
-function listenDateIdeas() {
-  db.collection('dateideas').orderBy('createdAt','desc').onSnapshot(snap => {
-    _dateIdeasData = snap.docs.map(d => ({id:d.id,...d.data()}));
-    const el = document.getElementById('dateideas-list');
-    if (!el) return;
-    if (!_dateIdeasData.length) {
-      el.innerHTML = '<div class="empty"><div class="emo">💑</div><p>No date ideas yet — add one!</p></div>';
-      return;
-    }
-    el.innerHTML = _dateIdeasData.map(i =>
-      `<div class="item-card">
-        <div style="font-size:24px;flex-shrink:0">💑</div>
-        <div class="item-body">
-          <div class="item-title">${esc(i.title)}</div>
-          ${i.notes?`<div class="item-meta" style="color:var(--text)">${esc(i.notes)}</div>`:''}
-          <div class="item-meta">${badge(i.addedBy)} · ${ago(i.createdAt)}</div>
-        </div>
-        <button class="del-btn" onclick="delDateIdea('${i.id}')">✕</button>
-      </div>`
-    ).join('');
-  });
-}
-
-// ── 🎲 Random Picker ──────────────────────────────────────────────
-function rollDice(listType) {
-  let items = [];
-  let resultEl;
-  if (listType === 'watchlist') {
-    const nodes = document.querySelectorAll('#watchlist-list .item-card .item-title');
-    items = Array.from(nodes).map(n => n.textContent.trim()).filter(Boolean);
-    resultEl = document.getElementById('watch-dice-result');
-  } else {
-    items = _dateIdeasData.map(i => i.title).filter(Boolean);
-    resultEl = document.getElementById('dateideas-dice-result');
+  ];
+  for (const m of migrations) {
+    const oldSnap = await db.collection(m.col).get();
+    if (oldSnap.empty) continue;
+    const newSnap = await db.collection('notes').doc(m.noteId).collection('items').limit(1).get();
+    if (!newSnap.empty) continue; // already migrated
+    const batch = db.batch();
+    const itemsCol = db.collection('notes').doc(m.noteId).collection('items');
+    oldSnap.docs.forEach(doc => {
+      batch.set(itemsCol.doc(doc.id), m.map(doc.data()));
+    });
+    // update note's updatedAt
+    batch.update(db.collection('notes').doc(m.noteId), {
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    await batch.commit();
   }
-  if (!items.length || !resultEl) return;
-  const pick = items[Math.floor(Math.random() * items.length)];
-  resultEl.textContent = '🎲 ' + pick;
-  resultEl.style.display = 'block';
-  resultEl.style.animation = 'none';
-  requestAnimationFrame(() => { resultEl.style.animation = ''; });
+}
+
+// ── Listen to notes collection ─────────────────────────────────────
+function listenNotes() {
+  db.collection('notes')
+    .where('archived', '==', false)
+    .orderBy('updatedAt', 'desc')
+    .onSnapshot(snap => {
+      _notesData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderNotesGrid(_notesData);
+    });
+}
+
+function renderNotesGrid(notes) {
+  const el = document.getElementById('notes-grid');
+  if (!el) return;
+  if (!notes.length) {
+    el.innerHTML = '<div class="empty"><div class="emo">📝</div><p>No notes yet<br>Tap + to create a new note.</p></div>';
+    return;
+  }
+  // Pinned first, then by updatedAt
+  const sorted = [...notes].sort((a, b) => {
+    if (a.pinned && !b.pinned) return -1;
+    if (!a.pinned && b.pinned) return 1;
+    const at = a.updatedAt ? a.updatedAt.toMillis() : 0;
+    const bt = b.updatedAt ? b.updatedAt.toMillis() : 0;
+    return bt - at;
+  });
+  el.innerHTML = sorted.map(n => {
+    const updLabel = n.updatedAt ? relativeDay(n.updatedAt) : '';
+    return `<div class="note-card" onclick="openNote('${n.id}')">
+      <div class="note-card-top">
+        <span class="note-card-emoji">${esc(n.emoji || '📝')}</span>
+        ${n.pinned ? '<span class="note-pin">📌</span>' : ''}
+      </div>
+      <div class="note-card-title">${esc(n.title)}</div>
+      <div class="note-card-meta" id="note-meta-${n.id}">…</div>
+      ${updLabel ? `<div class="note-card-updated">${updLabel}</div>` : ''}
+    </div>`;
+  }).join('');
+  // Load item counts async
+  sorted.forEach(n => loadNoteCount(n.id));
+}
+
+function relativeDay(ts) {
+  if (!ts) return '';
+  const d = ts.toDate();
+  const now = new Date();
+  const diffMs = now - d;
+  const diffDays = Math.floor(diffMs / 86400000);
+  if (diffDays === 0) return 'Updated today';
+  if (diffDays === 1) return 'Updated yesterday';
+  if (diffDays < 7)  return `Updated ${diffDays} days ago`;
+  return 'Updated ' + d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+}
+
+function loadNoteCount(noteId) {
+  db.collection('notes').doc(noteId).collection('items').get().then(snap => {
+    const el = document.getElementById('note-meta-' + noteId);
+    if (el) el.textContent = snap.size === 1 ? '1 item' : snap.size + ' items';
+  });
+}
+
+function filterNotes(q) {
+  const filtered = q
+    ? _notesData.filter(n => n.title.toLowerCase().includes(q.toLowerCase()))
+    : _notesData;
+  renderNotesGrid(filtered);
+}
+
+// ── Open a note ────────────────────────────────────────────────────
+function openNote(noteId) {
+  const note = _notesData.find(n => n.id === noteId);
+  if (!note) return;
+  _currentNoteId = noteId;
+  // Update header
+  const titleEl = document.getElementById('note-detail-title');
+  if (titleEl) titleEl.textContent = (note.emoji || '') + ' ' + note.title;
+  // Show/hide delete in menu
+  const delBtn = document.getElementById('note-menu-delete-btn');
+  if (delBtn) delBtn.style.display = note.protected ? 'none' : '';
+  // Navigate to note detail
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('note-detail-section').classList.add('active');
+  document.getElementById('section-title').textContent = note.title;
+  // Update FAB
+  if (typeof updateFabForSection === 'function') updateFabForSection('note-detail');
+  // Listen to items
+  if (_noteItemsUnsub) { _noteItemsUnsub(); _noteItemsUnsub = null; }
+  _noteItemsUnsub = db.collection('notes').doc(noteId).collection('items')
+    .orderBy('createdAt', 'asc')
+    .onSnapshot(snap => renderNoteItems(snap));
+}
+
+function closeNoteDetail() {
+  if (_noteItemsUnsub) { _noteItemsUnsub(); _noteItemsUnsub = null; }
+  _currentNoteId = null;
+  navTo('lists');
+}
+
+function renderNoteItems(snap) {
+  const el = document.getElementById('note-items-list');
+  if (!el) return;
+  if (snap.empty) {
+    el.innerHTML = '<div class="empty"><div class="emo">💬</div><p>No items yet — tap + to add one!</p></div>';
+    return;
+  }
+  el.innerHTML = snap.docs.map(doc => {
+    const it = { id: doc.id, ...doc.data() };
+    const domain = it.link ? (()=>{ try { return new URL(it.link).hostname.replace('www.',''); } catch(e) { return ''; } })() : '';
+    const metaParts = [it.addedBy ? badge(it.addedBy) : '', it.createdAt ? ago(it.createdAt) : ''].filter(Boolean);
+    return `<div class="item-card note-item-card${it.completed ? ' done' : ''}">
+      <div class="note-item-body">
+        <div class="item-title">${esc(it.text)}</div>
+        ${it.notes ? `<div class="item-meta" style="color:var(--text)">${esc(it.notes)}</div>` : ''}
+        ${domain ? `<div class="item-meta"><a class="wish-link" href="${esc(it.link)}" target="_blank">${esc(domain)} — Open link →</a></div>` : ''}
+        ${metaParts.length ? `<div class="item-meta">${metaParts.join(' · ')}</div>` : ''}
+      </div>
+      <div class="note-item-actions">
+        <button class="note-item-check${it.completed ? ' checked' : ''}" onclick="toggleNoteItem('${_currentNoteId}','${it.id}',${!it.completed})" aria-label="Complete">${it.completed ? '✓' : '○'}</button>
+        <button class="del-btn" onclick="deleteNoteItem('${_currentNoteId}','${it.id}')">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Note item CRUD ─────────────────────────────────────────────────
+function addNoteItem() {
+  const textEl = document.getElementById('note-item-text');
+  if (!textEl || !_currentNoteId || !db) return;
+  const text = textEl.value.trim();
+  if (!text) return;
+  const now = firebase.firestore.FieldValue.serverTimestamp();
+  db.collection('notes').doc(_currentNoteId).collection('items').add({
+    text, addedBy: me || '', createdAt: now, completed: false, link: '', notes: ''
+  });
+  db.collection('notes').doc(_currentNoteId).update({ updatedAt: now });
+  textEl.value = '';
+}
+
+function deleteNoteItem(noteId, itemId) {
+  db.collection('notes').doc(noteId).collection('items').doc(itemId).delete();
+  db.collection('notes').doc(noteId).update({ updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+}
+
+function toggleNoteItem(noteId, itemId, completed) {
+  db.collection('notes').doc(noteId).collection('items').doc(itemId).update({ completed });
+}
+
+// ── Create a new note ──────────────────────────────────────────────
+function createNote() {
+  const titleEl = document.getElementById('new-note-title');
+  const emojiEl = document.getElementById('new-note-emoji');
+  const firstEl = document.getElementById('new-note-first-item');
+  const pinnedEl = document.getElementById('new-note-pinned');
+  if (!titleEl) return;
+  const title = titleEl.value.trim();
+  if (!title || !db) return;
+  const emoji = emojiEl ? emojiEl.value.trim() || '📝' : '📝';
+  const pinned = pinnedEl ? pinnedEl.checked : false;
+  const now = firebase.firestore.FieldValue.serverTimestamp();
+  db.collection('notes').add({
+    title, emoji, pinned, archived: false,
+    createdAt: now, updatedAt: now, protected: false
+  }).then(ref => {
+    const firstItem = firstEl ? firstEl.value.trim() : '';
+    if (firstItem) {
+      ref.collection('items').add({
+        text: firstItem, addedBy: me || '', createdAt: now,
+        completed: false, link: '', notes: ''
+      });
+    }
+    titleEl.value = '';
+    if (emojiEl) emojiEl.value = '';
+    if (firstEl) firstEl.value = '';
+    if (pinnedEl) pinnedEl.checked = false;
+  });
+}
+
+// ── Note menu ──────────────────────────────────────────────────────
+function openNoteMenu() {
+  document.getElementById('note-menu-overlay').classList.add('open');
+  document.getElementById('note-menu').classList.add('open');
+}
+function closeNoteMenu() {
+  document.getElementById('note-menu-overlay').classList.remove('open');
+  document.getElementById('note-menu').classList.remove('open');
+}
+function noteMenuRename() {
+  closeNoteMenu();
+  const note = _notesData.find(n => n.id === _currentNoteId);
+  if (!note) return;
+  const newTitle = prompt('Rename note:', note.title);
+  if (newTitle && newTitle.trim()) {
+    db.collection('notes').doc(_currentNoteId).update({ title: newTitle.trim(), updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    document.getElementById('note-detail-title').textContent = (note.emoji || '') + ' ' + newTitle.trim();
+    document.getElementById('section-title').textContent = newTitle.trim();
+  }
+}
+function noteMenuChangeEmoji() {
+  closeNoteMenu();
+  const note = _notesData.find(n => n.id === _currentNoteId);
+  if (!note) return;
+  const newEmoji = prompt('Change emoji:', note.emoji || '📝');
+  if (newEmoji && newEmoji.trim()) {
+    db.collection('notes').doc(_currentNoteId).update({ emoji: newEmoji.trim() });
+    document.getElementById('note-detail-title').textContent = newEmoji.trim() + ' ' + note.title;
+  }
+}
+function noteMenuTogglePin() {
+  closeNoteMenu();
+  const note = _notesData.find(n => n.id === _currentNoteId);
+  if (!note) return;
+  db.collection('notes').doc(_currentNoteId).update({ pinned: !note.pinned });
+  showToast(note.pinned ? 'Note unpinned' : '📌 Note pinned');
+}
+function noteMenuArchive() {
+  closeNoteMenu();
+  if (!confirm('Archive this note? It will be hidden from your Notes hub.')) return;
+  db.collection('notes').doc(_currentNoteId).update({ archived: true });
+  closeNoteDetail();
+}
+function noteMenuDelete() {
+  closeNoteMenu();
+  const note = _notesData.find(n => n.id === _currentNoteId);
+  if (!note || note.protected) return;
+  if (!confirm('Delete this note permanently? This cannot be undone.')) return;
+  // Delete all items first then the note
+  db.collection('notes').doc(_currentNoteId).collection('items').get().then(snap => {
+    const batch = db.batch();
+    snap.docs.forEach(d => batch.delete(d.ref));
+    batch.delete(db.collection('notes').doc(_currentNoteId));
+    return batch.commit();
+  }).then(() => closeNoteDetail());
+}
+
+// ── Init notes (called from initFirebase) ──────────────────────────
+async function initNotes() {
+  await maybeCreateDefaultNotes();
+  await migrateOldCollections();
+  listenNotes();
 }
 
 // ── Birthdays ─────────────────────────────────────────────────────
@@ -1759,51 +1927,53 @@ document.querySelectorAll('.tab').forEach(tab => {
 // ── FAB ──────────────────────────────────────────────────────────
 (function() {
   const SECTION_ICONS = {
-    todos:     '✅',
-    shopping:  '🛒',
-    glimmers:  '✨',
-    birthdays: '🎂',
-    calendar:  '📅',
-    luna:      '🦴',
-    lists:     '🎁'
+    todos:       '✅',
+    shopping:    '🛒',
+    glimmers:    '✨',
+    birthdays:   '🎂',
+    calendar:    '📅',
+    luna:        '🦴',
+    lists:       '📝',
+    'note-detail': '+'
   };
 
   let _activeSection = 'today';
 
-  // Wire the nav FAB button once — behaviour depends on active section
-  document.addEventListener('DOMContentLoaded', function() {
-    const navBtn = document.getElementById('nav-fab-main');
-    if (!navBtn) return;
-    navBtn.addEventListener('click', function() {
-      // If the bottom sheet is open, this button acts as close (✕)
-      const sheet = document.getElementById('bottom-sheet');
-      if (sheet && sheet.classList.contains('open')) {
-        closeBottomSheet();
-        return;
-      }
-      if (_activeSection === 'today') {
-        toggleFab();
-      } else {
-        contextFabAction(_activeSection);
-      }
-    });
-  });
+  // navFabTap is called by onclick="navFabTap()" in HTML — always fires on mobile.
+  window.navFabTap = function() {
+    const sheet = document.getElementById('bottom-sheet');
+    const isOpen = sheet && sheet.classList.contains('open');
+    if (_activeSection === 'today') {
+      if (isOpen) { closeBottomSheet(); return; }
+      toggleFab();
+    } else if (_activeSection === 'note-detail') {
+      if (isOpen) { closeBottomSheet(); return; }
+      openBottomSheet('lists'); // Add Item form
+    } else if (_activeSection === 'lists') {
+      if (isOpen) { closeBottomSheet(); return; }
+      openBottomSheet('new-note'); // New Note form
+    } else {
+      if (isOpen) { closeBottomSheet(); return; }
+      contextFabAction(_activeSection);
+    }
+  };
 
   window.updateFabForSection = function(sec) {
     _activeSection = sec;
+    window._jottieActiveSection = sec;
     const navBtn = document.getElementById('nav-fab-main');
-    const iconEl = document.getElementById('nav-fab-icon');
     if (!navBtn) return;
-
+    closeFab();
+    navBtn.classList.remove('open');
     if (sec === 'today') {
       navBtn.setAttribute('aria-label', 'Quick add');
-      if (iconEl) iconEl.textContent = '';
+      navBtn.innerHTML = '<span id="nav-fab-icon"></span>+';
+    } else if (sec === 'note-detail') {
+      navBtn.setAttribute('aria-label', 'Add item');
       navBtn.innerHTML = '<span id="nav-fab-icon"></span>+';
     } else {
-      // Close arch if somehow open
-      closeFab();
-      navBtn.setAttribute('aria-label', 'Add to ' + sec);
-      navBtn.innerHTML = `<span id="nav-fab-icon">${SECTION_ICONS[sec] || ''}</span>+`;
+      navBtn.setAttribute('aria-label', sec === 'lists' ? 'New note' : 'Add to ' + sec);
+      navBtn.innerHTML = '<span id="nav-fab-icon">' + (SECTION_ICONS[sec] || '') + '</span>+';
     }
   };
 
@@ -1851,7 +2021,7 @@ document.querySelectorAll('.tab').forEach(tab => {
 
   window.fabAction = function(section) {
     closeFab();
-    const sheetSections = ['todos','shopping','calendar','birthdays','glimmers','luna','lists'];
+    const sheetSections = ['todos','shopping','calendar','birthdays','glimmers','luna'];
     if (sheetSections.includes(section)) {
       navTo(section);
       openBottomSheet(section);
@@ -1859,6 +2029,11 @@ document.querySelectorAll('.tab').forEach(tab => {
     }
     if (section === 'luna') {
       setTimeout(logChew, 100);
+      return;
+    }
+    if (section === 'lists') {
+      navTo('lists');
+      openBottomSheet('new-note');
       return;
     }
     navTo(section);

@@ -91,8 +91,8 @@
       <span class="tile-label">To-Do</span>
     </div>
     <div class="drawer-tile" data-section="lists" onclick="navTo('lists'); closeDrawer()">
-      <span class="tile-icon">📋</span>
-      <span class="tile-label">Lists</span>
+      <span class="tile-icon">📝</span>
+      <span class="tile-label">Notes</span>
     </div>
     <div class="drawer-tile" data-section="birthdays" onclick="navTo('birthdays'); closeDrawer()">
       <span class="tile-icon">🎂</span>
@@ -215,33 +215,33 @@
   <div id="todo-list"><div class="loading">Loading…</div></div>
 </div>
 
-<!-- ── Lists Hub ─────────────────────────────────────────────────── -->
+<!-- ── Notes Hub ─────────────────────────────────────────────────── -->
 <div id="lists-section" class="section">
-  <!-- Sub-tab nav -->
-  <div class="lists-tabs">
-    <button class="list-tab active" onclick="switchListTab('wishlist', this)">🎁 Wishlist</button>
-    <button class="list-tab" onclick="switchListTab('watchlist', this)">🎬 Watchlist</button>
-    <button class="list-tab" onclick="switchListTab('dateideas', this)">💑 Date Ideas</button>
+  <div class="notes-search-wrap">
+    <span class="notes-search-icon">🔍</span>
+    <input type="text" id="notes-search" class="notes-search" placeholder="Search notes…" oninput="filterNotes(this.value)">
   </div>
+  <div id="notes-grid"><div class="loading">Loading…</div></div>
+</div>
 
-  <!-- Wishlist panel -->
-  <div id="list-panel-wishlist" class="list-panel active">
-    <div id="wishlist-list"><div class="loading">Loading…</div></div>
+<!-- ── Note Detail Page ──────────────────────────────────────────── -->
+<div id="note-detail-section" class="section">
+  <div class="note-detail-header">
+    <button class="note-back-btn" onclick="closeNoteDetail()" aria-label="Back to Notes">‹ Notes</button>
+    <div class="note-detail-title" id="note-detail-title"></div>
+    <button class="note-menu-btn" onclick="openNoteMenu()" aria-label="Note options">⋮</button>
   </div>
+  <div id="note-items-list"><div class="loading">Loading…</div></div>
+</div>
 
-  <!-- Watchlist panel -->
-  <div id="list-panel-watchlist" class="list-panel">
-    <div class="dice-result" id="watch-dice-result"></div>
-    <button class="dice-btn" onclick="rollDice('watchlist')">🎲 Pick one for us!</button>
-    <div id="watchlist-list"><div class="loading">Loading…</div></div>
-  </div>
-
-  <!-- Date Ideas panel -->
-  <div id="list-panel-dateideas" class="list-panel">
-    <div class="dice-result" id="dateideas-dice-result"></div>
-    <button class="dice-btn" onclick="rollDice('dateideas')">🎲 Surprise us!</button>
-    <div id="dateideas-list"><div class="loading">Loading…</div></div>
-  </div>
+<!-- Note options menu -->
+<div class="note-menu-overlay" id="note-menu-overlay" onclick="closeNoteMenu()"></div>
+<div class="note-menu" id="note-menu">
+  <button onclick="noteMenuRename()">✏️ Rename</button>
+  <button onclick="noteMenuChangeEmoji()">😊 Change emoji</button>
+  <button onclick="noteMenuTogglePin()">📌 Pin / Unpin</button>
+  <button onclick="noteMenuArchive()">📦 Archive</button>
+  <button id="note-menu-delete-btn" onclick="noteMenuDelete()" class="note-menu-danger">🗑️ Delete</button>
 </div>
 
 <!-- ── Birthdays ────────────────────────────────────────────────── -->
@@ -495,39 +495,22 @@
 </template>
 
 <template id="bs-tpl-lists">
-  <div class="lists-tabs" id="bs-lists-tabs">
-    <button class="list-tab active" onclick="bsListTab('wishlist',this)">🎁 Wishlist</button>
-    <button class="list-tab" onclick="bsListTab('watchlist',this)">🎬 Watchlist</button>
-    <button class="list-tab" onclick="bsListTab('dateideas',this)">💑 Date Ideas</button>
+  <input type="text" id="note-item-text" placeholder="Add an item…">
+  <button class="btn-primary" onclick="addNoteItem();closeBottomSheet()">Add Item</button>
+</template>
+
+<template id="bs-tpl-new-note">
+  <input type="text" id="new-note-title" placeholder="Note title (e.g. Recipe Ideas)">
+  <div class="row">
+    <input type="text" id="new-note-emoji" placeholder="Emoji" style="flex:0 0 70px;text-align:center;font-size:24px;">
+    <input type="text" id="new-note-first-item" placeholder="First item (optional)" style="flex:2">
   </div>
-  <div id="bs-list-panel-wishlist" class="bs-list-panel active">
-    <input type="text" id="wl-name" placeholder="What is it? (e.g. Blue Nike trainers)">
-    <div class="row">
-      <input type="text" id="wl-emoji" placeholder="Emoji (e.g. 👟)" style="flex:0 0 70px;text-align:center;font-size:20px;">
-      <input type="url" id="wl-url" placeholder="Paste a link (optional)" style="flex:2">
-      <input type="text" id="wl-price" placeholder="£ Price" style="flex:1">
-    </div>
-    <button class="btn-primary" onclick="addWishItem();closeBottomSheet()">Add to Wishlist</button>
+  <div class="row" style="align-items:center;gap:10px;padding:4px 0">
+    <label style="display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted);cursor:pointer">
+      <input type="checkbox" id="new-note-pinned" style="width:18px;height:18px;accent-color:var(--primary)"> 📌 Pin this note
+    </label>
   </div>
-  <div id="bs-list-panel-watchlist" class="bs-list-panel">
-    <input type="text" id="wt-title" placeholder="Title (e.g. The Bear)">
-    <div class="row">
-      <select id="wt-type" style="flex:1;padding:10px;border-radius:12px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-size:14px;">
-        <option value="TV Show">📺 TV Show</option>
-        <option value="Film">🎬 Film</option>
-        <option value="Documentary">🎥 Documentary</option>
-        <option value="Anime">⛩️ Anime</option>
-        <option value="Other">📽️ Other</option>
-      </select>
-      <input type="text" id="wt-genre" placeholder="Genre (e.g. Comedy)" style="flex:1">
-    </div>
-    <button class="btn-primary" onclick="addWatchItem();closeBottomSheet()">Add to Watchlist</button>
-  </div>
-  <div id="bs-list-panel-dateideas" class="bs-list-panel">
-    <input type="text" id="di-title" placeholder="e.g. Pottery class in Shoreditch">
-    <input type="text" id="di-notes" placeholder="Notes (optional, e.g. book in advance)">
-    <button class="btn-primary" onclick="addDateIdea();closeBottomSheet()">Add Idea</button>
-  </div>
+  <button class="btn-primary" onclick="createNote();closeBottomSheet()">Create Note</button>
 </template>
 
 <script src="firebase.js"></script>
