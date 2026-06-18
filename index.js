@@ -1,3 +1,4 @@
+
 // ── Global state ─────────────────────────────────────────────────
 // me is declared in firebase.js; restore persisted value on load
 me = localStorage.getItem('jottie-name') || '';
@@ -1732,23 +1733,24 @@ document.querySelectorAll('.tab').forEach(tab => {
     lists:     '🎁'
   };
 
-  let _activeSection = 'today';
+  // Tracks which section is active so navFabTap() knows what to do.
+  // Starts as 'today' to match the default visible section.
+  window._jottieActiveSection = 'today';
 
-  // Script loads after the DOM (bottom of index.html) so button exists now.
-  const _navBtn = document.getElementById('nav-fab-main');
-  if (_navBtn) {
-    _navBtn.addEventListener('click', function() {
-      if (_activeSection === 'today') {
-        toggleFab();
-      } else {
-        closeFab();
-        openBottomSheet(_activeSection);
-      }
-    });
-  }
+  // Called by onclick="navFabTap()" on the nav FAB button in HTML.
+  // This inline onclick always fires reliably on mobile.
+  window.navFabTap = function() {
+    if (window._jottieActiveSection === 'today') {
+      toggleFab();
+    } else {
+      closeFab();
+      openBottomSheet(window._jottieActiveSection);
+    }
+  };
 
+  // Called from navTo() whenever the section changes.
   window.updateFabForSection = function(sec) {
-    _activeSection = sec;
+    window._jottieActiveSection = sec;
     const iconEl = document.getElementById('nav-fab-icon');
     const navBtn = document.getElementById('nav-fab-main');
     if (sec === 'today') {
@@ -1792,14 +1794,12 @@ document.querySelectorAll('.tab').forEach(tab => {
 
   window.fabAction = function(section) {
     closeFab();
-    // Sections that have a bottom-sheet template: open the sheet
     const sheetSections = ['todos','shopping','calendar','birthdays','glimmers','luna','lists'];
     if (sheetSections.includes(section)) {
       navTo(section);
       openBottomSheet(section);
       return;
     }
-    // Luna: just log the chew directly
     if (section === 'luna') {
       setTimeout(logChew, 100);
       return;
@@ -1811,7 +1811,6 @@ document.querySelectorAll('.tab').forEach(tab => {
     if (e.key === 'Escape') { closeFab(); return; }
   };
 
-  // Trap keyboard within FAB menu when open, Escape always closes
   document.addEventListener('keydown', function(e) {
     const wrap = document.getElementById('fab-wrap');
     if (!wrap || !wrap.classList.contains('open')) return;
@@ -1823,3 +1822,4 @@ document.querySelectorAll('.tab').forEach(tab => {
     if (e.key === 'ArrowDown') { e.preventDefault(); items[(idx + 1) % items.length].focus(); }
   });
 })();
+
