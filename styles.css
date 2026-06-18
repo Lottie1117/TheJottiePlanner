@@ -199,6 +199,25 @@
     .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
     /* ── Item Cards ──────────────────────────────────── */
+    .month-divider {
+      display: flex;
+      align-items: center;
+      margin: 18px 0 10px;
+      gap: 10px;
+      color: var(--primary);
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+    }
+    .month-divider::before,
+    .month-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(to right, transparent, var(--primary-light), transparent);
+    }
+    .month-divider:first-child { margin-top: 4px; }
+
     .item-card {
       background: var(--card);
       border-radius: 14px;
