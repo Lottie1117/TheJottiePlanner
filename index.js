@@ -673,6 +673,7 @@ function renderTaskSubtasks(taskId, subtasks) {
       <div class="td-subtask-row">
         <div class="checkbox${s.completed ? ' checked' : ''}" onclick="toggleSubtask('${taskId}','${s.id}',${s.completed})"></div>
         <span class="td-subtask-title${s.completed ? ' done-text' : ''}">${esc(s.title)}</span>
+        <button class="td-subtask-del" onclick="deleteSubtask('${taskId}','${s.id}')" aria-label="Remove subtask">✕</button>
       </div>`;
   });
   html += `
@@ -682,6 +683,10 @@ function renderTaskSubtasks(taskId, subtasks) {
     </div>`;
 
   el.innerHTML = html;
+}
+
+function deleteSubtask(taskId, subtaskId) {
+  db.collection('todos').doc(taskId).collection('subtasks').doc(subtaskId).delete();
 }
 
 function toggleSubtask(taskId, subtaskId, done) {
