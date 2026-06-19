@@ -65,15 +65,16 @@
     }
     .notif-overlay.open { display: block; }
     .notif-panel {
-      position: fixed; top: 0; right: -110%; bottom: 0;
+      position: fixed; top: 0; right: 0; bottom: 0;
       width: 55vw; max-width: 320px; min-width: 240px;
       background: var(--card); z-index: 301;
       display: flex; flex-direction: column;
       box-shadow: -4px 0 24px rgba(0,0,0,0.18);
       border-radius: 16px 0 0 16px;
-      transition: right 0.28s cubic-bezier(0.4,0,0.2,1);
+      transform: translateX(110%);
+      transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
     }
-    .notif-panel.open { right: 0; }
+    .notif-panel.open { transform: translateX(0); }
     .notif-panel-header {
       display: flex; align-items: center; justify-content: space-between;
       padding: 18px 16px 12px;
