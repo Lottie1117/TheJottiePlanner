@@ -1275,12 +1275,12 @@
 
     /* ── Glimmer Detail View ────────────────────────────────────── */
     .glimmer-detail-section { padding: 0 !important; }
-    /* Topbar sits in normal flow — visible below app header */
+    /* Topbar: sticky so it stays visible on scroll */
     .glimmer-detail-topbar {
       display: flex; justify-content: space-between; align-items: center;
       padding: 10px 14px; background: var(--bg);
       border-bottom: 1px solid var(--border);
-      position: sticky; top: 0; z-index: 10;
+      position: sticky; top: 0; z-index: 50;
     }
     .glimmer-detail-back, .glimmer-detail-menu-btn {
       background: none; border: none; color: var(--primary);
@@ -1288,14 +1288,14 @@
       border-radius: 50%; cursor: pointer; display: flex; align-items: center;
       justify-content: center; -webkit-tap-highlight-color: transparent;
     }
-    /* For photo glimmers: overlay buttons on image */
+    /* Photo glimmers: keep topbar in flow but style it dark */
     .glimmer-detail-section.has-photo .glimmer-detail-topbar {
-      position: absolute; top: 0; left: 0; right: 0;
-      background: transparent; border-bottom: none; z-index: 20;
+      background: #1a1a2a;
+      border-bottom-color: rgba(255,255,255,0.1);
     }
     .glimmer-detail-section.has-photo .glimmer-detail-back,
     .glimmer-detail-section.has-photo .glimmer-detail-menu-btn {
-      background: rgba(0,0,0,0.35); color: white; backdrop-filter: blur(4px);
+      color: white;
     }
     #glimmer-detail-body { display: flex; flex-direction: column; }
     /* Photo glimmer: image fills top */
