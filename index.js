@@ -4,12 +4,23 @@ me = localStorage.getItem('jottie-name') || '';
 
 // ── Apply SETTINGS to display text ───────────────────────────────
 // Replaces hardcoded name labels with values from settings.js.
+// devSettings (localStorage) takes precedence over settings.js defaults.
 // Only touches display text — no data, IDs, or Firestore fields.
 function applySettings() {
-  const s = (typeof SETTINGS !== 'undefined') ? SETTINGS : {};
-  const u1 = s.user1Name || 'Lottie';
-  const u2 = s.user2Name || 'Jonny';
-  const pet = s.petName  || 'Luna';
+  const base = (typeof SETTINGS !== 'undefined') ? SETTINGS : {};
+  let dev = {};
+  try { dev = JSON.parse(localStorage.getItem('devSettings') || '{}'); } catch(e) {}
+  const u1  = dev.user1Name || base.user1Name || 'Lottie';
+  const u2  = dev.user2Name || base.user2Name || 'Jonny';
+  const pet = dev.petName   || base.petName   || 'Luna';
+
+  // Merge back into SETTINGS so other code reading SETTINGS gets live values
+  if (typeof SETTINGS !== 'undefined') {
+    SETTINGS.user1Name = u1;
+    SETTINGS.user2Name = u2;
+    SETTINGS.petName   = pet;
+    SETTINGS.petType   = dev.petType || base.petType || 'dog';
+  }
 
   // Name overlay buttons
   const lottieBtn = document.getElementById('name-lottie-btn');
@@ -31,9 +42,9 @@ function applySettings() {
   document.querySelectorAll('option[value="Lottie"]').forEach(o => { o.textContent = `👩 ${u1}`; });
   document.querySelectorAll('option[value="Jonny"]').forEach(o => { o.textContent = `👨 ${u2}`; });
 
-  // Section name for Luna in nav/header
-  const sectionNameMap = document.querySelector('[data-section-name-luna]');
-  if (sectionNameMap) sectionNameMap.textContent = `${pet} 🐾`;
+  // Show dev settings tile only for the original Lottie household
+  const devTile = document.getElementById('dev-settings-tile');
+  if (devTile) devTile.style.display = (base.user1Name === 'Lottie') ? '' : 'none';
 }
 
 (function() {
@@ -43,6 +54,36 @@ function applySettings() {
     applySettings();
   }
 })();
+
+// ── Developer Settings ────────────────────────────────────────────
+function openDevSettings() {
+  let dev = {};
+  try { dev = JSON.parse(localStorage.getItem('devSettings') || '{}'); } catch(e) {}
+  const base = (typeof SETTINGS !== 'undefined') ? SETTINGS : {};
+  document.getElementById('dev-user1').value   = dev.user1Name || base.user1Name || 'Lottie';
+  document.getElementById('dev-user2').value   = dev.user2Name || base.user2Name || 'Jonny';
+  document.getElementById('dev-pet').value     = dev.petName   || base.petName   || 'Luna';
+  document.getElementById('dev-pettype').value = dev.petType   || base.petType   || 'dog';
+}
+
+function saveDevSettings() {
+  const dev = {
+    user1Name: document.getElementById('dev-user1').value.trim()   || 'Lottie',
+    user2Name: document.getElementById('dev-user2').value.trim()   || 'Jonny',
+    petName:   document.getElementById('dev-pet').value.trim()     || 'Luna',
+    petType:   document.getElementById('dev-pettype').value        || 'dog',
+  };
+  localStorage.setItem('devSettings', JSON.stringify(dev));
+  applySettings();
+  showToast('🧪 Dev settings saved!');
+}
+
+function resetDevSettings() {
+  localStorage.removeItem('devSettings');
+  applySettings();
+  openDevSettings(); // refresh displayed values
+  showToast('↩️ Reset to defaults');
+}
 
 // ── fmtFullDate helper ───────────────────────────────────────────
 function fmtFullDate(d) {
@@ -171,7 +212,7 @@ function navTo(sec, navItemEl) {
 
   // update header section title
   const _petName = (typeof SETTINGS !== 'undefined' && SETTINGS.petName) || 'Luna';
-  const sectionNames = {"today":"Today","calendar":"Plans","shopping":"Shopping","todos":"To-Do","lists":"Notes","birthdays":"Birthdays","glimmers":"Glimmers","luna":`${_petName} 🐾`};
+  const sectionNames = {"today":"Today","calendar":"Plans","shopping":"Shopping","todos":"To-Do","lists":"Notes","birthdays":"Birthdays","glimmers":"Glimmers","luna":`${_petName} 🐾`,"dev-settings":"🧪 Dev Settings"};
   const titleEl = document.getElementById('section-title');
   if (titleEl) titleEl.textContent = sectionNames[sec] || '';
   // Toggle greeting (today) vs section title (all others)
@@ -201,6 +242,7 @@ function navTo(sec, navItemEl) {
     if (typeof loadGlimmersList === 'function') loadGlimmersList();
     if (typeof loadStreakData === 'function') loadStreakData();
   }
+  if (sec === 'dev-settings') openDevSettings();
 }
 
 function openDrawer() {
