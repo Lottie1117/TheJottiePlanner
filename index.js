@@ -628,8 +628,7 @@ function todoDuePill(due) {
   else                      label = fmtDate(due);
 
   let cls = 'due-pill-green';
-  if (diffDays <= 0)      cls = 'due-pill-red';
-  else if (diffDays <= 3) cls = 'due-pill-red';
+  if (diffDays <= 3)      cls = 'due-pill-red';
   else if (diffDays <= 7) cls = 'due-pill-amber';
 
   return `<span class="due-pill ${cls}">${label}</span>`;
@@ -1819,12 +1818,12 @@ function startEditGift(bdayId, giftId) {
 function getBirthdayInfo(dateStr, birthYear) {
   // dateStr is like "2025-06-15" — we only care about MM-DD
   const [,month, day] = dateStr.split('-').map(Number);
-  const today = new Date();
+  const today = new Date(); today.setHours(0, 0, 0, 0);
   const thisYear = today.getFullYear();
   let next = new Date(thisYear, month - 1, day);
   if (next < today) next = new Date(thisYear + 1, month - 1, day);
   const diffMs = next - today;
-  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
   const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const dateLabel = `${day} ${monthNames[month-1]}`;
   let ageStr = '';
