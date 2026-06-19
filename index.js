@@ -1061,6 +1061,73 @@ function sendShoppingNotification(itemName) {
   sendNotification('🛒 Shopping List', `${me} added ${itemName}`);
 }
 
+// ── Notification Settings (delivery preferences) ──────────────────
+// Stored per-user at settings/{me}.notificationSettings so the
+// Cloud Function can check the *recipient's* preference before
+// sending a push (see functions.js). Structure is intentionally
+// generic (mode + times map) so future phases — categories, custom
+// times, generated summaries — can extend it without a rewrite.
+function _defaultNotifSettings() {
+  return { mode: 'roundup', times: { morning: true, lunch: false, evening: true } };
+}
+
+async function loadNotificationSettings() {
+  if (!db || !me) return _defaultNotifSettings();
+  try {
+    const doc = await db.collection('settings').doc(me).get();
+    return (doc.exists && doc.data().notificationSettings) || _defaultNotifSettings();
+  } catch(e) { console.warn('loadNotificationSettings:', e); return _defaultNotifSettings(); }
+}
+
+function saveNotificationSettings() {
+  if (!db || !me) return;
+  const mode = document.getElementById('notif-mode-roundup').checked ? 'roundup' : 'instant';
+  const settings = {
+    mode,
+    times: {
+      morning: document.getElementById('notif-time-morning').checked,
+      lunch:   document.getElementById('notif-time-lunch').checked,
+      evening: document.getElementById('notif-time-evening').checked,
+    }
+  };
+  db.collection('settings').doc(me).set({ notificationSettings: settings }, { merge: true })
+    .catch(e => console.warn('saveNotificationSettings:', e));
+}
+
+function _updateRoundupCardsVisibility() {
+  const isRoundup = document.getElementById('notif-mode-roundup').checked;
+  const display = isRoundup ? '' : 'none';
+  document.getElementById('notif-roundup-times-card').style.display = display;
+  document.getElementById('notif-roundup-preview-card').style.display = display;
+}
+
+function onNotifModeChange() {
+  _updateRoundupCardsVisibility();
+  saveNotificationSettings();
+}
+
+let _notifSettingsFrom = 'today';
+
+async function openNotificationSettings() {
+  closeNotifPanel();
+  const activeSection = document.querySelector('.section.active');
+  if (activeSection) _notifSettingsFrom = activeSection.id.replace('-section', '');
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('notification-settings-section').classList.add('active');
+
+  const settings = await loadNotificationSettings();
+  document.getElementById('notif-mode-' + settings.mode).checked = true;
+  document.getElementById('notif-time-morning').checked = !!settings.times.morning;
+  document.getElementById('notif-time-lunch').checked   = !!settings.times.lunch;
+  document.getElementById('notif-time-evening').checked = !!settings.times.evening;
+  _updateRoundupCardsVisibility();
+}
+
+function closeNotificationSettings() {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById((_notifSettingsFrom || 'today') + '-section').classList.add('active');
+}
+
 // ── Notification Centre ─────────────────────────────────────────
 
 let _notifUnsub = null;

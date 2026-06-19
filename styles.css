@@ -112,6 +112,7 @@
       display: block; text-align: center;
       margin-top: 12px;
       font-size: 13px; font-weight: 600; color: var(--muted);
+      cursor: pointer; -webkit-tap-highlight-color: transparent;
     }
 
     /* ── Notification group label ────────────────────── */
