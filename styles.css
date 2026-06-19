@@ -1362,12 +1362,15 @@
 
     /* ── Glimmer Detail View ────────────────────────────────────── */
     .glimmer-detail-section { padding: 0 !important; }
-    /* Topbar: sticky so it stays visible on scroll */
+    /* Topbar: fixed at bottom above nav bar */
     .glimmer-detail-topbar {
       display: flex; justify-content: space-between; align-items: center;
-      padding: 10px 14px; background: var(--bg);
-      border-bottom: 1px solid var(--border);
-      position: sticky; top: 0; z-index: 50;
+      padding: 10px 14px 24px;
+      background: var(--card);
+      border-top: 1px solid var(--border);
+      position: fixed; bottom: 64px; left: 0; right: 0;
+      max-width: 600px; margin: 0 auto;
+      z-index: 50;
     }
     .glimmer-detail-back, .glimmer-detail-menu-btn {
       background: none; border: none; color: var(--primary);
@@ -1375,10 +1378,10 @@
       border-radius: 50%; cursor: pointer; display: flex; align-items: center;
       justify-content: center; -webkit-tap-highlight-color: transparent;
     }
-    /* Photo glimmers: keep topbar in flow but style it dark */
+    /* Photo glimmers: keep topbar dark */
     .glimmer-detail-section.has-photo .glimmer-detail-topbar {
       background: #1a1a2a;
-      border-bottom-color: rgba(255,255,255,0.1);
+      border-top-color: rgba(255,255,255,0.1);
     }
     .glimmer-detail-section.has-photo .glimmer-detail-back,
     .glimmer-detail-section.has-photo .glimmer-detail-menu-btn {
@@ -1396,7 +1399,7 @@
       background: linear-gradient(to top, rgba(0,0,0,0.5), transparent);
     }
     .glimmer-detail-caption {
-      background: var(--bg); padding: 20px 20px 100px; flex: 1;
+      background: var(--bg); padding: 20px 20px 160px; flex: 1;
     }
     /* Text-only glimmer detail: full-screen background with overlay */
     .glimmer-detail-bg-screen {
@@ -1404,7 +1407,7 @@
       min-height: calc(100vh - 60px);
       background-size: cover; background-position: center;
       display: flex; flex-direction: column; justify-content: flex-end;
-      padding-bottom: 84px;
+      padding-bottom: 160px;
     }
     .glimmer-detail-bg-screen .glimmer-detail-caption {
       background: transparent;
@@ -1435,6 +1438,22 @@
       background: var(--card); border-radius: 16px; overflow: hidden;
       box-shadow: var(--shadow); border: 1px solid var(--border);
       cursor: pointer; -webkit-tap-highlight-color: transparent;
+    }
+    /* Text-only pinned glimmer: full gradient bg with overlay text */
+    .dash-pinned-glimmer-text-card {
+      border: none;
+      min-height: 140px;
+      display: flex; flex-direction: column; justify-content: flex-end;
+      position: relative;
+    }
+    .dash-pinned-glimmer-text-overlay {
+      padding: 12px 12px 10px;
+      background: linear-gradient(to top, rgba(0,0,0,0.45) 0%, transparent 100%);
+      border-radius: 0 0 16px 16px;
+    }
+    .dash-pinned-glimmer-text-only {
+      color: white !important;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.4);
     }
     .dash-pinned-glimmer-img-wrap, .dash-pinned-glimmer-bg {
       width: 100%; height: 120px; position: relative; overflow: hidden;

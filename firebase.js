@@ -164,12 +164,9 @@ function initFirebase() {
   // Start glimmer/streak now that db is ready
   if (typeof updateDashboardStreak === 'function') updateDashboardStreak();
   if (typeof loadGlimmersList === 'function') {
-    const glimActive = document.querySelector('#glimmers-section.active');
-    if (glimActive) {
-      if (typeof initGlimmerSection === 'function') initGlimmerSection();
-      loadGlimmersList();
-      if (typeof loadStreakData === 'function') loadStreakData();
-    }
+    if (typeof initGlimmerSection === 'function') initGlimmerSection();
+    loadGlimmersList();
+    if (typeof loadStreakData === 'function') loadStreakData();
   }
   if (me) setTimeout(checkNotifStatus, 1200);
 }

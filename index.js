@@ -1938,33 +1938,47 @@ function renderDashPinnedGlimmer() {
 
     const images = g.images && g.images.length ? g.images : (g.imageUrl ? [g.imageUrl] : []);
     const imgUrl = images[0] || null;
-    const bg = imgUrl ? '' : getGlimmerBg(g.id);
+    const bg = getGlimmerBg(g.id);
     const isOwn = g.by === me;
     const liked = g.likedBy && g.likedBy.includes(me);
     const heartIcon = liked ? '💜' : '🤍';
-    const mediaHtml = imgUrl
-      ? `<div class="dash-pinned-glimmer-img-wrap">
+
+    let cardHtml;
+    if (imgUrl) {
+      // Photo glimmer: image with gradient overlay
+      cardHtml = `<div class="dash-pinned-glimmer-card" onclick="openGlimmerDetail('${g.id}', 'today')">
+        <div class="dash-pinned-glimmer-img-wrap">
           <img src="${escapeAttr(imgUrl)}" alt="Pinned glimmer" class="dash-pinned-glimmer-img">
           <div class="dash-pinned-glimmer-gradient"></div>
-        </div>`
-      : `<div class="dash-pinned-glimmer-bg" style="background:${bg}">
-          <div class="dash-pinned-glimmer-gradient"></div>
-        </div>`;
+        </div>
+        <div class="dash-pinned-glimmer-caption">
+          <span class="dash-pinned-glimmer-text">${escapeHtml(g.text || '')}</span>
+          <div class="dash-pinned-glimmer-footer">
+            <span class="dash-pinned-glimmer-author">${escapeHtml(g.by || '')}</span>
+            <button class="glimmer-heart-btn${liked ? ' liked' : ''}" ${isOwn ? 'disabled' : ''}
+              onclick="event.stopPropagation(); toggleGlimmerHeart('${g.id}', ${liked})"
+              aria-label="${liked ? 'Unlike' : 'Like'}">${heartIcon}</button>
+          </div>
+        </div>
+      </div>`;
+    } else {
+      // Text-only glimmer: text overlaid on gradient background
+      cardHtml = `<div class="dash-pinned-glimmer-card dash-pinned-glimmer-text-card" onclick="openGlimmerDetail('${g.id}', 'today')" style="background:${bg}">
+        <div class="dash-pinned-glimmer-text-overlay">
+          <span class="dash-pinned-glimmer-text dash-pinned-glimmer-text-only">${escapeHtml(g.text || '')}</span>
+          <div class="dash-pinned-glimmer-footer">
+            <span class="dash-pinned-glimmer-author" style="color:rgba(255,255,255,0.8)">${escapeHtml(g.by || '')}</span>
+            <button class="glimmer-heart-btn${liked ? ' liked' : ''}" ${isOwn ? 'disabled' : ''}
+              onclick="event.stopPropagation(); toggleGlimmerHeart('${g.id}', ${liked})"
+              aria-label="${liked ? 'Unlike' : 'Like'}">${heartIcon}</button>
+          </div>
+        </div>
+      </div>`;
+    }
 
     el.style.display = 'block';
     if (slot) slot.style.display = '';
-    el.innerHTML = `<div class="dash-pinned-glimmer-card" onclick="openGlimmerDetail('${g.id}', 'today')">
-      ${mediaHtml}
-      <div class="dash-pinned-glimmer-caption">
-        <span class="dash-pinned-glimmer-text">${escapeHtml(g.text || '')}</span>
-        <div class="dash-pinned-glimmer-footer">
-          <span class="dash-pinned-glimmer-author">${escapeHtml(g.by || '')}</span>
-          <button class="glimmer-heart-btn${liked ? ' liked' : ''}" ${isOwn ? 'disabled' : ''}
-            onclick="event.stopPropagation(); toggleGlimmerHeart('${g.id}', ${liked})"
-            aria-label="${liked ? 'Unlike' : 'Like'}">${heartIcon}</button>
-        </div>
-      </div>
-    </div>`;
+    el.innerHTML = cardHtml;
   }
 }
 
