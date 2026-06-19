@@ -134,6 +134,7 @@ function navTo(sec, navItemEl) {
 
   // section-specific hooks
   if (sec === 'birthdays') renderBirthdaysDash();
+  if (sec === 'glimmer-detail') return; // handled by openGlimmerDetail directly
   if (sec === 'glimmers') {
     if (typeof initGlimmerSection === 'function') initGlimmerSection();
     if (typeof loadGlimmersList === 'function') loadGlimmersList();
@@ -1424,23 +1425,19 @@ function renderDashGlimmers() {
   const el = document.getElementById('dash-glimmer-scroll');
   if (!el) return;
   if (_dashGlimmerUnsub) { _dashGlimmerUnsub(); _dashGlimmerUnsub = null; }
-  _dashGlimmerUnsub = db.collection('glimmers').orderBy('createdAt','desc').limit(8)
+  _dashGlimmerUnsub = db.collection('glimmers').orderBy('createdAt','desc').limit(10)
     .onSnapshot(snap => {
       if (!el) return;
       if (snap.empty) {
         el.innerHTML = '<div class="dash-empty" style="padding:8px 0">No glimmers yet ✨</div>';
         return;
       }
-      el.innerHTML = snap.docs.map(doc => {
-        const g = doc.data();
-        const imgs = g.images && g.images.length ? g.images : (g.imageUrl ? [g.imageUrl] : []);
-        const safeUrl = imgs.length ? imgs[0].replace(/'/g, '%27') : '';
-        const media = imgs.length
-          ? '<img src="' + safeUrl + '" alt="glimmer" loading="lazy" style="width:100%;height:80px;object-fit:cover;display:block" onclick="openGlimmerLightbox(\'' + safeUrl + '\')">'
-          : '<div class="glimmer-tile-emoji">✨</div>';
-        const text = (g.text||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-        return '<div class="glimmer-tile">' + media + '<div class="glimmer-tile-text">' + text + '</div></div>';
-      }).join('');
+      el.innerHTML = '';
+      snap.docs.filter(d => !d.data().archived).slice(0, 8).forEach(doc => {
+        const card = buildGlimmerCard(doc, { mode: 'dash-tile', from: 'today' });
+        if (card) el.appendChild(card);
+      });
+      renderDashPinnedGlimmer();
     }, () => {});
 }
 
@@ -1639,6 +1636,22 @@ window.saveGlimmer = async function() {
 // ──────────────────────────────────────────────────────────────
 
 let glimmersUnsubscribe = null;
+let _glimmersCache = []; // in-memory cache for detail view navigation
+let _glimmerDetailFrom = 'glimmers'; // tracks where detail was opened from
+
+// ── Background options for text-only glimmers ─────────────────────
+const GLIMMER_BACKGROUNDS = [
+  'linear-gradient(135deg, #7C5CBF 0%, #9B7DD4 100%)',
+  'linear-gradient(135deg, #9B7DD4 0%, #C9A9E0 60%, #D4829A 100%)',
+  'linear-gradient(160deg, #6B4C9A 0%, #8B6BB5 50%, #B8A0D0 100%)',
+  'linear-gradient(135deg, #C9B8E8 0%, #E8D5F0 100%)',
+  'linear-gradient(135deg, #7C5CBF 0%, #5B4A8A 100%)',
+];
+function getGlimmerBg(id) {
+  // Deterministic bg based on doc id so it doesn't change on re-render
+  const idx = id ? (id.charCodeAt(0) + (id.charCodeAt(1) || 0)) % GLIMMER_BACKGROUNDS.length : 0;
+  return GLIMMER_BACKGROUNDS[idx];
+}
 
 function loadGlimmersAndStreak() {
   loadGlimmersList();
@@ -1646,64 +1659,280 @@ function loadGlimmersAndStreak() {
   updateDashboardStreak();
 }
 
+// ── Shared glimmer card builder ───────────────────────────────────
+// Used by glimmers tile grid, dash recent tiles, and dash pinned card.
+function buildGlimmerCard(doc, opts = {}) {
+  const g = doc.data ? doc.data() : doc;
+  const id = doc.id || g.id;
+  const images = g.images && g.images.length ? g.images : (g.imageUrl ? [g.imageUrl] : []);
+  const imgUrl = images[0] || null;
+  const bg = imgUrl ? '' : getGlimmerBg(id);
+  const isOwn = g.by === me;
+  const liked = g.likedBy && g.likedBy.includes(me);
+  const heartIcon = liked ? '💜' : '🤍';
+  const heartDisabled = isOwn ? 'disabled' : '';
+
+  if (opts.mode === 'tile') {
+    // Full tile card for glimmers grid
+    const el = document.createElement('div');
+    el.className = 'glimmer-tile-card';
+    el.onclick = () => openGlimmerDetail(id, opts.from || 'glimmers');
+    if (imgUrl) {
+      el.style.backgroundImage = `url('${escapeAttr(imgUrl)}')`;
+      el.classList.add('has-image');
+    } else {
+      el.style.background = bg;
+    }
+    el.innerHTML = `
+      <div class="glimmer-tile-overlay">
+        <div class="glimmer-tile-text">${escapeHtml(g.text || '')}</div>
+        <div class="glimmer-tile-footer">
+          <span class="glimmer-tile-author">${escapeHtml(g.by || '')}</span>
+          <button class="glimmer-heart-btn${liked ? ' liked' : ''}" ${heartDisabled}
+            onclick="event.stopPropagation(); toggleGlimmerHeart('${id}', ${liked})"
+            aria-label="${liked ? 'Unlike' : 'Like'}">${heartIcon}</button>
+        </div>
+      </div>`;
+    return el;
+  }
+
+  if (opts.mode === 'dash-tile') {
+    // Small horizontal tile for Recent Glimmers scroll
+    const el = document.createElement('div');
+    el.className = 'glimmer-tile';
+    el.onclick = () => openGlimmerDetail(id, 'today');
+    if (imgUrl) {
+      el.innerHTML = `<img src="${escapeAttr(imgUrl)}" alt="glimmer" loading="lazy" style="width:100%;height:80px;object-fit:cover;display:block">
+        <div class="glimmer-tile-text">${escapeHtml((g.text || '').substring(0, 40))}</div>`;
+    } else {
+      el.innerHTML = `<div class="glimmer-tile-emoji" style="background:${bg}">✨</div>
+        <div class="glimmer-tile-text">${escapeHtml((g.text || '').substring(0, 40))}</div>`;
+    }
+    return el;
+  }
+
+  return null;
+}
+
+// ── Tile grid on Glimmers page ────────────────────────────────────
 window.loadGlimmersList = function loadGlimmersList() {
   const list = document.getElementById('glimmers-list');
   if (!list) return;
-
-  // Unsubscribe previous listener if any
   if (glimmersUnsubscribe) { glimmersUnsubscribe(); glimmersUnsubscribe = null; }
-
   list.innerHTML = '<div class="loading">Loading glimmers…</div>';
 
   glimmersUnsubscribe = db.collection('glimmers')
     .orderBy('createdAt', 'desc')
-    .limit(40)
+    .limit(60)
     .onSnapshot((snap) => {
       if (snap.empty) {
         list.innerHTML = '<div class="empty"><div class="emo">✨</div><p>No glimmers yet — add your first one!</p></div>';
         return;
       }
+
+      // Filter archived
+      const docs = snap.docs.filter(d => !d.data().archived);
+      _glimmersCache = docs.map(d => ({ id: d.id, ...d.data() }));
+
+      // Group by month
       list.innerHTML = '';
-      snap.forEach(doc => {
+      let lastMonth = null;
+      docs.forEach(doc => {
         const g = doc.data();
-        // Backward-compat: support old imageUrl field AND new images array
-        const images = g.images && g.images.length
-          ? g.images
-          : (g.imageUrl ? [g.imageUrl] : []);
-
-        const thumb = images.length
-          ? `<img class="glimmer-thumb" src="${escapeAttr(images[0])}" alt="Glimmer photo"
-               onclick="openGlimmerLightbox('${escapeAttr(images[0])}')" loading="lazy">`
-          : '';
-
-        const byChip = g.by === 'Lottie'
-          ? '<span class="badge badge-a">👩 Lottie</span>'
-          : '<span class="badge badge-b">👨 Jonny</span>';
-
-        const timeStr = g.createdAt ? formatRelativeTime(g.createdAt.toDate()) : '';
-
-        // Encode images array for delete button (escape quotes)
-        const imagesJson = escapeAttr(JSON.stringify(images));
-
-        const card = document.createElement('div');
-        card.className = 'item-card';
-        card.innerHTML = `
-          ${thumb}
-          <div class="item-body">
-            <div class="item-title">${escapeHtml(g.text)}</div>
-            <div class="item-meta">${byChip} <span>${timeStr}</span></div>
-          </div>
-          <button class="del-btn" onclick="deleteGlimmer('${doc.id}', '${imagesJson}')"
-            title="Delete glimmer" aria-label="Delete">🗑</button>`;
-        list.appendChild(card);
+        if (!g.archived) {
+          const monthLabel = g.createdAt
+            ? g.createdAt.toDate().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
+            : '';
+          if (monthLabel && monthLabel !== lastMonth) {
+            const div = document.createElement('div');
+            div.className = 'month-divider';
+            div.innerHTML = `<span>${monthLabel}</span>`;
+            list.appendChild(div);
+            lastMonth = monthLabel;
+          }
+          const wrapper = document.createElement('div');
+          wrapper.className = 'glimmer-tile-row';
+          wrapper.appendChild(buildGlimmerCard(doc, { mode: 'tile', from: 'glimmers' }));
+          list.appendChild(wrapper);
+        }
       });
-      // After list updates, recalculate streak
+
       loadStreakData();
       updateDashboardStreak();
+      renderDashPinnedGlimmer();
     }, (err) => {
       console.error('Glimmer listener error:', err);
       list.innerHTML = '<div class="empty"><p>Error loading glimmers — please reload.</p></div>';
     });
+};
+
+// ── Heart toggle ──────────────────────────────────────────────────
+window.toggleGlimmerHeart = async function(id, currentlyLiked) {
+  if (!db || !me) return;
+  const ref = db.collection('glimmers').doc(id);
+  if (currentlyLiked) {
+    await ref.update({ likedBy: firebase.firestore.FieldValue.arrayRemove(me) });
+  } else {
+    await ref.update({ likedBy: firebase.firestore.FieldValue.arrayUnion(me) });
+  }
+};
+
+// ── Glimmer Detail View ───────────────────────────────────────────
+let _currentGlimmerId = null;
+
+function openGlimmerDetail(id, from) {
+  _currentGlimmerId = id;
+  _glimmerDetailFrom = from || 'glimmers';
+
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('glimmer-detail-section').classList.add('active');
+  document.getElementById('section-title').textContent = '';
+  if (typeof updateFabForSection === 'function') updateFabForSection('glimmer-detail');
+
+  renderGlimmerDetail(id);
+
+  // Live updates for hearts etc.
+  if (window._glimmerDetailUnsub) { window._glimmerDetailUnsub(); }
+  window._glimmerDetailUnsub = db.collection('glimmers').doc(id).onSnapshot(snap => {
+    if (snap.exists) {
+      const cached = _glimmersCache.find(g => g.id === id);
+      if (cached) Object.assign(cached, snap.data());
+      renderGlimmerDetail(id);
+    }
+  });
+}
+
+function renderGlimmerDetail(id) {
+  const g = _glimmersCache.find(g => g.id === id);
+  if (!g) return;
+  const el = document.getElementById('glimmer-detail-body');
+  if (!el) return;
+
+  const images = g.images && g.images.length ? g.images : (g.imageUrl ? [g.imageUrl] : []);
+  const imgUrl = images[0] || null;
+  const bg = imgUrl ? '' : getGlimmerBg(id);
+  const isOwn = g.by === me;
+  const liked = g.likedBy && g.likedBy.includes(me);
+  const heartIcon = liked ? '💜' : '🤍';
+  const dateStr = g.createdAt
+    ? g.createdAt.toDate().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+    : '';
+
+  const imgHtml = imgUrl
+    ? `<div class="glimmer-detail-img-wrap">
+        <img src="${escapeAttr(imgUrl)}" alt="Glimmer" class="glimmer-detail-img">
+        <div class="glimmer-detail-gradient"></div>
+      </div>`
+    : `<div class="glimmer-detail-bg" style="background:${bg}">
+        <div class="glimmer-detail-gradient"></div>
+      </div>`;
+
+  el.innerHTML = `
+    ${imgHtml}
+    <div class="glimmer-detail-caption">
+      <div class="glimmer-detail-text">${escapeHtml(g.text || '')}</div>
+      <div class="glimmer-detail-meta">
+        <span class="glimmer-detail-author">${escapeHtml(g.by || '')}</span>
+        <span class="glimmer-detail-date">${dateStr}</span>
+      </div>
+      <button class="glimmer-detail-heart${liked ? ' liked' : ''}"
+        ${isOwn ? 'disabled' : ''}
+        onclick="toggleGlimmerHeart('${id}', ${liked})"
+        aria-label="${liked ? 'Unlike' : 'Like'}">${heartIcon}</button>
+    </div>`;
+
+  // Update pin button label
+  const pinBtn = document.getElementById('glimmer-menu-pin-btn');
+  if (pinBtn) pinBtn.textContent = g.pinned ? '📌 Unpin' : '📌 Pin';
+}
+
+function closeGlimmerDetail() {
+  if (window._glimmerDetailUnsub) { window._glimmerDetailUnsub(); window._glimmerDetailUnsub = null; }
+  _currentGlimmerId = null;
+  if (_glimmerDetailFrom === 'today') {
+    navTo('today');
+  } else {
+    navTo('glimmers');
+  }
+}
+
+// ── Glimmer detail menu ───────────────────────────────────────────
+function openGlimmerDetailMenu() {
+  document.getElementById('glimmer-detail-menu-overlay').classList.add('open');
+  document.getElementById('glimmer-detail-menu').classList.add('open');
+}
+function closeGlimmerDetailMenu() {
+  document.getElementById('glimmer-detail-menu-overlay').classList.remove('open');
+  document.getElementById('glimmer-detail-menu').classList.remove('open');
+}
+window.glimmerMenuEdit = function() {
+  closeGlimmerDetailMenu();
+  const g = _glimmersCache.find(g => g.id === _currentGlimmerId);
+  if (!g) return;
+  const newText = prompt('Edit caption:', g.text || '');
+  if (newText !== null && newText.trim()) {
+    db.collection('glimmers').doc(_currentGlimmerId).update({ text: newText.trim() });
+  }
+};
+window.glimmerMenuTogglePin = function() {
+  closeGlimmerDetailMenu();
+  const g = _glimmersCache.find(g => g.id === _currentGlimmerId);
+  if (!g) return;
+  const newPinned = !g.pinned;
+  db.collection('glimmers').doc(_currentGlimmerId).update({ pinned: newPinned });
+  g.pinned = newPinned;
+  showToast(newPinned ? '📌 Glimmer pinned' : 'Glimmer unpinned');
+  renderDashPinnedGlimmer();
+};
+window.glimmerMenuArchive = function() {
+  closeGlimmerDetailMenu();
+  if (!confirm('Archive this glimmer? It will be hidden from your feeds.')) return;
+  db.collection('glimmers').doc(_currentGlimmerId).update({ archived: true });
+  showToast('📦 Glimmer archived');
+  closeGlimmerDetail();
+};
+
+// ── Pinned Glimmer on Today dashboard ────────────────────────────
+function renderDashPinnedGlimmer() {
+  const el = document.getElementById('dash-pinned-glimmer');
+  if (!el) return;
+  const pinned = _glimmersCache.filter(g => g.pinned && !g.archived);
+  if (!pinned.length) { el.style.display = 'none'; return; }
+
+  // Pick randomly from pinned on each load
+  const g = pinned[Math.floor(Math.random() * pinned.length)];
+  const images = g.images && g.images.length ? g.images : (g.imageUrl ? [g.imageUrl] : []);
+  const imgUrl = images[0] || null;
+  const bg = imgUrl ? '' : getGlimmerBg(g.id);
+  const isOwn = g.by === me;
+  const liked = g.likedBy && g.likedBy.includes(me);
+  const heartIcon = liked ? '💜' : '🤍';
+
+  const mediaHtml = imgUrl
+    ? `<div class="dash-pinned-glimmer-img-wrap">
+        <img src="${escapeAttr(imgUrl)}" alt="Pinned glimmer" class="dash-pinned-glimmer-img">
+        <div class="dash-pinned-glimmer-gradient"></div>
+      </div>`
+    : `<div class="dash-pinned-glimmer-bg" style="background:${bg}">
+        <div class="dash-pinned-glimmer-gradient"></div>
+      </div>`;
+
+  el.style.display = 'block';
+  el.innerHTML = `<div class="dash-pinned-glimmer-card" onclick="openGlimmerDetail('${g.id}', 'today')">
+    <div class="dash-hdr">
+      <div class="dash-hdr-title">📌 Pinned Glimmer</div>
+    </div>
+    ${mediaHtml}
+    <div class="dash-pinned-glimmer-caption">
+      <span class="dash-pinned-glimmer-text">${escapeHtml(g.text || '')}</span>
+      <div class="dash-pinned-glimmer-footer">
+        <span class="dash-pinned-glimmer-author">${escapeHtml(g.by || '')}</span>
+        <button class="glimmer-heart-btn${liked ? ' liked' : ''}" ${isOwn ? 'disabled' : ''}
+          onclick="event.stopPropagation(); toggleGlimmerHeart('${g.id}', ${liked})"
+          aria-label="${liked ? 'Unlike' : 'Like'}">${heartIcon}</button>
+      </div>
+    </div>
+  </div>`;
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -2085,14 +2314,15 @@ document.querySelectorAll('.tab').forEach(tab => {
 // ── FAB ──────────────────────────────────────────────────────────
 (function() {
   const SECTION_ICONS = {
-    todos:       '✅',
-    shopping:    '🛒',
-    glimmers:    '✨',
-    birthdays:   '🎂',
-    calendar:    '📅',
-    luna:        '🦴',
-    lists:       '📝',
-    'note-detail': '+'
+    todos:          '✅',
+    shopping:       '🛒',
+    glimmers:       '✨',
+    birthdays:      '🎂',
+    calendar:       '📅',
+    luna:           '🦴',
+    lists:          '📝',
+    'note-detail':  '+',
+    'glimmer-detail': ''
   };
 
   let _activeSection = 'today';
@@ -2123,12 +2353,15 @@ document.querySelectorAll('.tab').forEach(tab => {
     if (!navBtn) return;
     closeFab();
     navBtn.classList.remove('open');
+    navBtn.style.display = '';
     if (sec === 'today') {
       navBtn.setAttribute('aria-label', 'Quick add');
       navBtn.innerHTML = '<span id="nav-fab-icon"></span>+';
     } else if (sec === 'note-detail') {
       navBtn.setAttribute('aria-label', 'Add item');
       navBtn.innerHTML = '<span id="nav-fab-icon"></span>+';
+    } else if (sec === 'glimmer-detail') {
+      navBtn.style.display = 'none';
     } else {
       navBtn.setAttribute('aria-label', sec === 'lists' ? 'New note' : 'Add to ' + sec);
       navBtn.innerHTML = '<span id="nav-fab-icon">' + (SECTION_ICONS[sec] || '') + '</span>+';

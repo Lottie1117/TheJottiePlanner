@@ -162,6 +162,9 @@
   <!-- Row 3b: Pinned Notes -->
   <div id="dash-pinned-notes" style="display:none"></div>
 
+  <!-- Row 3c: Pinned Glimmer -->
+  <div id="dash-pinned-glimmer" style="display:none"></div>
+
   <!-- Row 4: Recent Glimmers -->
   <div id="dash-glimmer-section">
     <div class="dash-glimmer-hdr">
@@ -234,16 +237,29 @@
 
 <!-- ── Glimmers ──────────────────────────────────────────────────── -->
 <div id="glimmers-section" class="section">
-
-
   <!-- Sparkle streak card -->
   <div id="sparkle-card-glimmers" class="sparkle-card"><!-- rendered by renderSparkleCard --></div>
-
-  <!-- Glimmers list -->
-  <div class="list-label">Recent Glimmers</div>
+  <!-- Glimmer tile grid (grouped by month) -->
   <div id="glimmers-list">
     <div class="loading">Loading glimmers…</div>
   </div>
+</div>
+
+<!-- ── Glimmer Detail View ──────────────────────────────────────── -->
+<div id="glimmer-detail-section" class="section glimmer-detail-section">
+  <div class="glimmer-detail-topbar">
+    <button class="glimmer-detail-back" onclick="closeGlimmerDetail()" aria-label="Back">‹</button>
+    <button class="glimmer-detail-menu-btn" onclick="openGlimmerDetailMenu()" aria-label="Options">⋮</button>
+  </div>
+  <div id="glimmer-detail-body"></div>
+</div>
+
+<!-- Glimmer detail options menu -->
+<div class="note-menu-overlay" id="glimmer-detail-menu-overlay" onclick="closeGlimmerDetailMenu()"></div>
+<div class="note-menu" id="glimmer-detail-menu">
+  <button onclick="glimmerMenuEdit()">✏️ Edit caption</button>
+  <button id="glimmer-menu-pin-btn" onclick="glimmerMenuTogglePin()">📌 Pin</button>
+  <button onclick="glimmerMenuArchive()">📦 Archive</button>
 </div>
 
 <!-- ── Luna ───────────────────────────────────────────────── -->

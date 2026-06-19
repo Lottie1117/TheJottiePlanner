@@ -1216,6 +1216,93 @@
     #dash-streak-mini { padding: 2px 0; }
     #dash-lottie-status, #dash-jonny-status { font-weight: 600; }
     #dash-nudge-wrap { margin-top: 4px; }
+    /* ── Glimmer Tile Grid ────────────────────────────────────────── */
+    .glimmer-tile-row { margin-bottom: 12px; }
+    .glimmer-tile-card {
+      width: 100%; aspect-ratio: 4 / 3;
+      border-radius: 16px; overflow: hidden; position: relative;
+      cursor: pointer; background-size: cover; background-position: center;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.15);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .glimmer-tile-card.has-image { background-color: #000; }
+    .glimmer-tile-overlay {
+      position: absolute; inset: 0; display: flex;
+      flex-direction: column; justify-content: flex-end;
+      background: linear-gradient(to top, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.1) 50%, transparent 100%);
+      padding: 14px;
+    }
+    .glimmer-tile-text {
+      font-size: 15px; font-weight: 600; color: white;
+      line-height: 1.3; margin-bottom: 8px;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    }
+    .glimmer-tile-footer { display: flex; align-items: center; justify-content: space-between; }
+    .glimmer-tile-author { font-size: 12px; color: rgba(255,255,255,0.85); font-weight: 600; }
+    .glimmer-heart-btn {
+      background: none; border: none; font-size: 20px;
+      cursor: pointer; padding: 4px; line-height: 1;
+      -webkit-tap-highlight-color: transparent; opacity: 0.85;
+    }
+    .glimmer-heart-btn:disabled { opacity: 0.4; cursor: default; }
+    .glimmer-heart-btn.liked { opacity: 1; }
+
+    /* ── Glimmer Detail View ────────────────────────────────────── */
+    .glimmer-detail-section { padding: 0 !important; display: flex; flex-direction: column; min-height: 100vh; }
+    .glimmer-detail-topbar {
+      position: absolute; top: 0; left: 0; right: 0; z-index: 20;
+      display: flex; justify-content: space-between; align-items: center; padding: 14px 16px;
+    }
+    .glimmer-detail-back, .glimmer-detail-menu-btn {
+      background: rgba(0,0,0,0.35); border: none; color: white;
+      font-size: 22px; font-weight: 700; width: 38px; height: 38px;
+      border-radius: 50%; cursor: pointer; display: flex; align-items: center;
+      justify-content: center; backdrop-filter: blur(4px);
+      -webkit-tap-highlight-color: transparent;
+    }
+    #glimmer-detail-body { flex: 1; display: flex; flex-direction: column; }
+    .glimmer-detail-img-wrap, .glimmer-detail-bg {
+      width: 100%; aspect-ratio: 1 / 1; position: relative;
+      background-size: cover; background-position: center; flex-shrink: 0;
+    }
+    .glimmer-detail-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .glimmer-detail-gradient {
+      position: absolute; bottom: 0; left: 0; right: 0; height: 40%;
+      background: linear-gradient(to top, rgba(0,0,0,0.5), transparent);
+    }
+    .glimmer-detail-caption { background: var(--bg); padding: 20px 20px 100px; flex: 1; }
+    .glimmer-detail-text { font-size: 18px; font-weight: 700; color: var(--text); line-height: 1.4; margin-bottom: 12px; }
+    .glimmer-detail-meta { display: flex; gap: 12px; align-items: center; margin-bottom: 14px; }
+    .glimmer-detail-author { font-size: 14px; font-weight: 600; color: var(--primary); }
+    .glimmer-detail-date { font-size: 13px; color: var(--muted); }
+    .glimmer-detail-heart {
+      background: none; border: none; font-size: 28px;
+      cursor: pointer; padding: 0; line-height: 1;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .glimmer-detail-heart:disabled { opacity: 0.35; cursor: default; }
+
+    /* ── Pinned Glimmer on Today dashboard ──────────────────────── */
+    #dash-pinned-glimmer { margin-bottom: 12px; }
+    .dash-pinned-glimmer-card {
+      background: var(--card); border-radius: 16px; overflow: hidden;
+      box-shadow: var(--shadow); border: 1px solid var(--border);
+      cursor: pointer; -webkit-tap-highlight-color: transparent;
+    }
+    .dash-pinned-glimmer-card .dash-hdr { padding: 12px 14px 0; }
+    .dash-pinned-glimmer-img-wrap, .dash-pinned-glimmer-bg {
+      width: 100%; height: 160px; position: relative; overflow: hidden;
+    }
+    .dash-pinned-glimmer-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .dash-pinned-glimmer-gradient {
+      position: absolute; bottom: 0; left: 0; right: 0; height: 50%;
+      background: linear-gradient(to top, rgba(0,0,0,0.5), transparent);
+    }
+    .dash-pinned-glimmer-caption { padding: 10px 14px 14px; }
+    .dash-pinned-glimmer-text { font-size: 14px; font-weight: 600; color: var(--text); display: block; margin-bottom: 8px; line-height: 1.3; }
+    .dash-pinned-glimmer-footer { display: flex; justify-content: space-between; align-items: center; }
+    .dash-pinned-glimmer-author { font-size: 12px; font-weight: 600; color: var(--muted); }
+
     /* ── Lightbox ───────────────────────────────────── */
     #glimmer-lightbox {
       display: none;
