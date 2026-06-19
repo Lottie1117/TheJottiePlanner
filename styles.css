@@ -108,6 +108,11 @@
       -webkit-tap-highlight-color: transparent;
     }
     .notif-mark-all-btn:active { opacity: 0.8; }
+    .notif-settings-link {
+      display: block; text-align: center;
+      margin-top: 12px;
+      font-size: 13px; font-weight: 600; color: var(--muted);
+    }
 
     /* ── Notification group label ────────────────────── */
     .notif-group-label {
