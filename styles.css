@@ -646,21 +646,30 @@
       margin-bottom: 10px;
       align-items: start;
     }
-    /* Top row: streak (~75%) + thinking of you (~25%) */
+    /* Streak card: full width */
+    #dash-streak-card {
+      margin-bottom: 10px;
+    }
+    /* Row 2: Luna + Thinking of You (50/50) */
     .dash-top-row {
       display: grid;
-      grid-template-columns: 3fr 1fr;
+      grid-template-columns: 1fr 1fr;
       gap: 10px;
       margin-bottom: 10px;
       align-items: stretch;
     }
-    /* Streak card */
-    #dash-streak-card {
-      background: linear-gradient(135deg, #7C5CBF 0%, #9B7DD4 100%);
-      color: white;
-      border-radius: 18px;
-      padding: 14px 16px;
-      box-shadow: 0 4px 20px rgba(124,92,191,0.35);
+    /* Middle section: 2-column dynamic layout */
+    .dash-col-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+      align-items: start;
+    }
+    .dash-col {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
     #dash-streak-card .dash-hdr-title { color: white; font-size: 17px; font-weight: 800; }
     #dash-streak-card .dash-hdr { margin-bottom: 10px; }
@@ -1343,26 +1352,30 @@
     }
     .glimmer-detail-heart:disabled { opacity: 0.35; cursor: default; }
 
-    /* ── Pinned Glimmer on Today dashboard ──────────────────────── */
+    /* ── Pinned Glimmers on Today dashboard ──────────────────────── */
     #dash-pinned-glimmer { margin-bottom: 12px; }
+    .dash-pinned-glimmer-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
     .dash-pinned-glimmer-card {
       background: var(--card); border-radius: 16px; overflow: hidden;
       box-shadow: var(--shadow); border: 1px solid var(--border);
       cursor: pointer; -webkit-tap-highlight-color: transparent;
     }
-    .dash-pinned-glimmer-card .dash-hdr { padding: 12px 14px 0; }
     .dash-pinned-glimmer-img-wrap, .dash-pinned-glimmer-bg {
-      width: 100%; height: 160px; position: relative; overflow: hidden;
+      width: 100%; height: 120px; position: relative; overflow: hidden;
     }
     .dash-pinned-glimmer-img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .dash-pinned-glimmer-gradient {
       position: absolute; bottom: 0; left: 0; right: 0; height: 50%;
       background: linear-gradient(to top, rgba(0,0,0,0.5), transparent);
     }
-    .dash-pinned-glimmer-caption { padding: 10px 14px 14px; }
-    .dash-pinned-glimmer-text { font-size: 14px; font-weight: 600; color: var(--text); display: block; margin-bottom: 8px; line-height: 1.3; }
+    .dash-pinned-glimmer-caption { padding: 8px 10px 10px; }
+    .dash-pinned-glimmer-text { font-size: 12px; font-weight: 600; color: var(--text); display: block; margin-bottom: 6px; line-height: 1.3; }
     .dash-pinned-glimmer-footer { display: flex; justify-content: space-between; align-items: center; }
-    .dash-pinned-glimmer-author { font-size: 12px; font-weight: 600; color: var(--muted); }
+    .dash-pinned-glimmer-author { font-size: 11px; font-weight: 600; color: var(--muted); }
 
     /* ── Lightbox ───────────────────────────────────── */
     #glimmer-lightbox {

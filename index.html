@@ -113,21 +113,13 @@
     <button class="btn-notif" onclick="requestNotifPermission()">Enable</button>
   </div>
 
-  <!-- Row 1: Streak + Thinking of You -->
-  <div class="dash-top-row">
-    <div id="dash-streak-card">
-      <div id="sparkle-card-dash"><!-- rendered by renderSparkleCard --></div>
-    </div>
-    <div id="dash-thinking-card" onclick="sendThinkingOf()">
-      <div class="thinking-title">💗 Thinking of You</div>
-      <button class="thinking-heart" id="thinking-heart-btn" onclick="sendThinkingOf(); event.stopPropagation()">💗</button>
-      <div class="thinking-sub" id="thinking-sub">Tap to send love</div>
-      <div class="thinking-last" id="thinking-last" style="display:none"></div>
-    </div>
+  <!-- Row 1: Streak (full width) -->
+  <div id="dash-streak-card">
+    <div id="sparkle-card-dash"><!-- rendered by renderSparkleCard --></div>
   </div>
 
-  <!-- Row 2: Luna + Coming Up -->
-  <div class="dash-grid-2">
+  <!-- Row 2: Luna + Thinking of You (50/50) -->
+  <div class="dash-top-row">
     <div class="dash-card-sm">
       <div class="dash-hdr"><div class="dash-hdr-title">Luna</div></div>
       <div class="luna-dash-hero">
@@ -138,31 +130,40 @@
       <div class="luna-chew-logged" id="dash-luna-logged"></div>
       <span class="luna-unlog" id="dash-luna-unlog" style="display:none" onclick="dashUnlogChew()">Undo</span>
     </div>
-    <div class="dash-card-sm">
-      <div class="dash-hdr"><div class="dash-hdr-title">Coming Up</div><span class="dash-count" id="dash-ev-count">-</span></div>
-      <div id="dash-events"><div class="dash-empty">Loading…</div></div>
-      <a class="view-all" onclick="navTo('calendar')">View all upcoming →</a>
+    <div id="dash-thinking-card" onclick="sendThinkingOf()">
+      <div class="thinking-title">💗 Thinking of You</div>
+      <button class="thinking-heart" id="thinking-heart-btn" onclick="sendThinkingOf(); event.stopPropagation()">💗</button>
+      <div class="thinking-sub" id="thinking-sub">Tap to send love</div>
+      <div class="thinking-last" id="thinking-last" style="display:none"></div>
     </div>
   </div>
 
-  <!-- Row 3: Tasks + Shopping -->
-  <div class="dash-grid-2">
-    <div class="dash-card-sm">
-      <div class="dash-hdr"><div class="dash-hdr-title">Tasks</div><span class="dash-count" id="dash-todo-count">-</span></div>
-      <div id="dash-todos"><div class="dash-empty">Loading…</div></div>
-      <a class="view-all" onclick="navTo('todos')">View all tasks →</a>
+  <!-- Middle columns: dynamic 2-col layout -->
+  <div class="dash-col-layout">
+    <div class="dash-col" id="dash-col-left">
+      <div class="dash-card-sm">
+        <div class="dash-hdr"><div class="dash-hdr-title">Coming Up</div><span class="dash-count" id="dash-ev-count">-</span></div>
+        <div id="dash-events"><div class="dash-empty">Loading…</div></div>
+        <a class="view-all" onclick="navTo('calendar')">View all upcoming →</a>
+      </div>
+      <div class="dash-card-sm">
+        <div class="dash-hdr"><div class="dash-hdr-title">Shopping</div><span class="dash-count" id="dash-shop-count">-</span></div>
+        <div id="dash-shop"><div class="dash-empty">Loading…</div></div>
+        <a class="view-all" onclick="navTo('shopping')">View all →</a>
+      </div>
     </div>
-    <div class="dash-card-sm">
-      <div class="dash-hdr"><div class="dash-hdr-title">Shopping</div><span class="dash-count" id="dash-shop-count">-</span></div>
-      <div id="dash-shop"><div class="dash-empty">Loading…</div></div>
-      <a class="view-all" onclick="navTo('shopping')">View all →</a>
+    <div class="dash-col" id="dash-col-right">
+      <div class="dash-card-sm">
+        <div class="dash-hdr"><div class="dash-hdr-title">Tasks</div><span class="dash-count" id="dash-todo-count">-</span></div>
+        <div id="dash-todos"><div class="dash-empty">Loading…</div></div>
+        <a class="view-all" onclick="navTo('todos')">View all tasks →</a>
+      </div>
+      <!-- Pinned Notes -->
+      <div id="dash-pinned-notes" style="display:none"></div>
     </div>
   </div>
 
-  <!-- Row 3b: Pinned Notes -->
-  <div id="dash-pinned-notes" style="display:none"></div>
-
-  <!-- Row 3c: Pinned Glimmer -->
+  <!-- Pinned Glimmers (up to 4, 2x2 grid) -->
   <div id="dash-pinned-glimmer" style="display:none"></div>
 
   <!-- Row 4: Recent Glimmers -->

@@ -1897,6 +1897,13 @@ window.glimmerMenuTogglePin = function() {
   const g = _glimmersCache.find(g => g.id === _currentGlimmerId);
   if (!g) return;
   const newPinned = !g.pinned;
+  if (newPinned) {
+    const currentPinned = _glimmersCache.filter(x => x.pinned && !x.archived).length;
+    if (currentPinned >= 4) {
+      showToast('📌 Max 4 glimmers can be pinned — unpin one first');
+      return;
+    }
+  }
   db.collection('glimmers').doc(_currentGlimmerId).update({ pinned: newPinned });
   g.pinned = newPinned;
   showToast(newPinned ? '📌 Glimmer pinned' : 'Glimmer unpinned');
@@ -1910,46 +1917,51 @@ window.glimmerMenuArchive = function() {
   closeGlimmerDetail();
 };
 
-// ── Pinned Glimmer on Today dashboard ────────────────────────────
+// ── Pinned Glimmers on Today dashboard (up to 4, 2-col grid) ──────
 function renderDashPinnedGlimmer() {
   const el = document.getElementById('dash-pinned-glimmer');
   if (!el) return;
-  const pinned = _glimmersCache.filter(g => g.pinned && !g.archived);
-  if (!pinned.length) { el.style.display = 'none'; return; }
+  const allPinned = _glimmersCache.filter(g => g.pinned && !g.archived);
+  if (!allPinned.length) { el.style.display = 'none'; return; }
 
-  // Pick randomly from pinned on each load
-  const g = pinned[Math.floor(Math.random() * pinned.length)];
-  const images = g.images && g.images.length ? g.images : (g.imageUrl ? [g.imageUrl] : []);
-  const imgUrl = images[0] || null;
-  const bg = imgUrl ? '' : getGlimmerBg(g.id);
-  const isOwn = g.by === me;
-  const liked = g.likedBy && g.likedBy.includes(me);
-  const heartIcon = liked ? '💜' : '🤍';
+  // Show up to 4 pinned glimmers
+  const pinned = allPinned.slice(0, 4);
 
-  const mediaHtml = imgUrl
-    ? `<div class="dash-pinned-glimmer-img-wrap">
-        <img src="${escapeAttr(imgUrl)}" alt="Pinned glimmer" class="dash-pinned-glimmer-img">
-        <div class="dash-pinned-glimmer-gradient"></div>
-      </div>`
-    : `<div class="dash-pinned-glimmer-bg" style="background:${bg}">
-        <div class="dash-pinned-glimmer-gradient"></div>
-      </div>`;
+  function glimmerCardHtml(g) {
+    const images = g.images && g.images.length ? g.images : (g.imageUrl ? [g.imageUrl] : []);
+    const imgUrl = images[0] || null;
+    const bg = imgUrl ? '' : getGlimmerBg(g.id);
+    const isOwn = g.by === me;
+    const liked = g.likedBy && g.likedBy.includes(me);
+    const heartIcon = liked ? '💜' : '🤍';
+    const mediaHtml = imgUrl
+      ? `<div class="dash-pinned-glimmer-img-wrap">
+          <img src="${escapeAttr(imgUrl)}" alt="Pinned glimmer" class="dash-pinned-glimmer-img">
+          <div class="dash-pinned-glimmer-gradient"></div>
+        </div>`
+      : `<div class="dash-pinned-glimmer-bg" style="background:${bg}">
+          <div class="dash-pinned-glimmer-gradient"></div>
+        </div>`;
+    return `<div class="dash-pinned-glimmer-card" onclick="openGlimmerDetail('${g.id}', 'today')">
+      ${mediaHtml}
+      <div class="dash-pinned-glimmer-caption">
+        <span class="dash-pinned-glimmer-text">${escapeHtml(g.text || '')}</span>
+        <div class="dash-pinned-glimmer-footer">
+          <span class="dash-pinned-glimmer-author">${escapeHtml(g.by || '')}</span>
+          <button class="glimmer-heart-btn${liked ? ' liked' : ''}" ${isOwn ? 'disabled' : ''}
+            onclick="event.stopPropagation(); toggleGlimmerHeart('${g.id}', ${liked})"
+            aria-label="${liked ? 'Unlike' : 'Like'}">${heartIcon}</button>
+        </div>
+      </div>
+    </div>`;
+  }
 
   el.style.display = 'block';
-  el.innerHTML = `<div class="dash-pinned-glimmer-card" onclick="openGlimmerDetail('${g.id}', 'today')">
-    <div class="dash-hdr">
-      <div class="dash-hdr-title">📌 Pinned Glimmer</div>
-    </div>
-    ${mediaHtml}
-    <div class="dash-pinned-glimmer-caption">
-      <span class="dash-pinned-glimmer-text">${escapeHtml(g.text || '')}</span>
-      <div class="dash-pinned-glimmer-footer">
-        <span class="dash-pinned-glimmer-author">${escapeHtml(g.by || '')}</span>
-        <button class="glimmer-heart-btn${liked ? ' liked' : ''}" ${isOwn ? 'disabled' : ''}
-          onclick="event.stopPropagation(); toggleGlimmerHeart('${g.id}', ${liked})"
-          aria-label="${liked ? 'Unlike' : 'Like'}">${heartIcon}</button>
-      </div>
-    </div>
+  el.innerHTML = `<div class="dash-hdr" style="margin-bottom:8px">
+    <div class="dash-hdr-title">📌 Pinned Glimmers</div>
+  </div>
+  <div class="dash-pinned-glimmer-grid">
+    ${pinned.map(g => glimmerCardHtml(g)).join('')}
   </div>`;
 }
 
