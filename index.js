@@ -991,9 +991,8 @@ function initMessaging() {
   try {
     messaging = firebase.messaging();
     messaging.onMessage(payload => {
-      const t = payload.notification?.title || '';
-      const b = payload.notification?.body  || '';
-      if (t) _showInAppToast(t, b);
+      // Notification bell handles foreground updates via Firestore listener
+      // No toast needed here to avoid duplicate with the OS push notification
     });
   } catch(e) { console.warn('FCM init:', e); }
 }
