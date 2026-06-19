@@ -1750,10 +1750,8 @@ window.loadGlimmersList = function loadGlimmersList() {
             list.appendChild(div);
             lastMonth = monthLabel;
           }
-          const wrapper = document.createElement('div');
-          wrapper.className = 'glimmer-tile-row';
-          wrapper.appendChild(buildGlimmerCard(doc, { mode: 'tile', from: 'glimmers' }));
-          list.appendChild(wrapper);
+          const card = buildGlimmerCard(doc, { mode: 'tile', from: 'glimmers' });
+          if (card) list.appendChild(card);
         }
       });
 
@@ -1818,28 +1816,46 @@ function renderGlimmerDetail(id) {
     ? g.createdAt.toDate().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
     : '';
 
-  const imgHtml = imgUrl
-    ? `<div class="glimmer-detail-img-wrap">
+  const detailSection = document.getElementById('glimmer-detail-section');
+
+  if (imgUrl) {
+    // Photo glimmer: image on top, caption below
+    if (detailSection) detailSection.classList.add('has-photo');
+    el.innerHTML = `
+      <div class="glimmer-detail-img-wrap">
         <img src="${escapeAttr(imgUrl)}" alt="Glimmer" class="glimmer-detail-img">
         <div class="glimmer-detail-gradient"></div>
-      </div>`
-    : `<div class="glimmer-detail-bg" style="background:${bg}">
-        <div class="glimmer-detail-gradient"></div>
-      </div>`;
-
-  el.innerHTML = `
-    ${imgHtml}
-    <div class="glimmer-detail-caption">
-      <div class="glimmer-detail-text">${escapeHtml(g.text || '')}</div>
-      <div class="glimmer-detail-meta">
-        <span class="glimmer-detail-author">${escapeHtml(g.by || '')}</span>
-        <span class="glimmer-detail-date">${dateStr}</span>
       </div>
-      <button class="glimmer-detail-heart${liked ? ' liked' : ''}"
-        ${isOwn ? 'disabled' : ''}
-        onclick="toggleGlimmerHeart('${id}', ${liked})"
-        aria-label="${liked ? 'Unlike' : 'Like'}">${heartIcon}</button>
-    </div>`;
+      <div class="glimmer-detail-caption">
+        <div class="glimmer-detail-text">${escapeHtml(g.text || '')}</div>
+        <div class="glimmer-detail-meta">
+          <span class="glimmer-detail-author">${escapeHtml(g.by || '')}</span>
+          <span class="glimmer-detail-date">${dateStr}</span>
+        </div>
+        <button class="glimmer-detail-heart${liked ? ' liked' : ''}"
+          ${isOwn ? 'disabled' : ''}
+          onclick="toggleGlimmerHeart('${id}', ${liked})"
+          aria-label="${liked ? 'Unlike' : 'Like'}">${heartIcon}</button>
+      </div>`;
+  } else {
+    // Text-only glimmer: full-screen background with text overlay
+    if (detailSection) detailSection.classList.remove('has-photo');
+    el.innerHTML = `
+      <div class="glimmer-detail-bg-screen" style="background:${bg}">
+        <div class="glimmer-detail-bg-overlay"></div>
+        <div class="glimmer-detail-caption">
+          <div class="glimmer-detail-text">${escapeHtml(g.text || '')}</div>
+          <div class="glimmer-detail-meta">
+            <span class="glimmer-detail-author">${escapeHtml(g.by || '')}</span>
+            <span class="glimmer-detail-date">${dateStr}</span>
+          </div>
+          <button class="glimmer-detail-heart${liked ? ' liked' : ''}"
+            ${isOwn ? 'disabled' : ''}
+            onclick="toggleGlimmerHeart('${id}', ${liked})"
+            aria-label="${liked ? 'Unlike' : 'Like'}">${heartIcon}</button>
+        </div>
+      </div>`;
+  }
 
   // Update pin button label
   const pinBtn = document.getElementById('glimmer-menu-pin-btn');
@@ -1849,6 +1865,8 @@ function renderGlimmerDetail(id) {
 function closeGlimmerDetail() {
   if (window._glimmerDetailUnsub) { window._glimmerDetailUnsub(); window._glimmerDetailUnsub = null; }
   _currentGlimmerId = null;
+  const ds = document.getElementById('glimmer-detail-section');
+  if (ds) ds.classList.remove('has-photo');
   if (_glimmerDetailFrom === 'today') {
     navTo('today');
   } else {
