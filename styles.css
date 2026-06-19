@@ -646,10 +646,6 @@
       margin-bottom: 10px;
       align-items: start;
     }
-    /* Streak card: full width with subtle background */
-    #dash-streak-card {
-      margin-bottom: 10px;
-    }
     /* Customisable widget grid — CSS columns for gap-free flow */
     #dash-widget-grid {
       columns: 2;
@@ -744,8 +740,6 @@
       flex-direction: column;
       gap: 10px;
     }
-    #dash-streak-card .dash-hdr { margin-bottom: 10px; }
-    #dash-streak-card .dash-count { color: white; background: rgba(255,255,255,0.22); border-radius: 20px; padding: 4px 12px; font-size: 13px; font-weight: 700; }
 
     /* ── Sparkle card (shared: dashboard + glimmers page) ──────── */
     .sparkle-card {
