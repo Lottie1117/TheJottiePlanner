@@ -696,6 +696,11 @@
     }
     .todo-avatar-j { background: #DDEEFF; color: #1155AA; }
     .todo-avatar-l { background: #FFE0EC; color: #B5005B; }
+
+    /* ── Generic user-initial avatars (reuse .todo-avatar shape) ─ */
+    .avatar-user1 { background: #FFE0EC; color: #B5005B; }
+    .avatar-user2 { background: #DDEEFF; color: #1155AA; }
+    .avatar-shared { background: var(--primary-light); color: var(--primary); }
     /* Override margin for todo cards to accommodate solid offset shadow */
     #todo-list .item-card { margin-bottom: 14px; overflow: visible; }
 
