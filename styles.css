@@ -646,21 +646,27 @@
       margin-bottom: 10px;
       align-items: start;
     }
-    /* Streak card: full width */
+    /* Streak card: full width with subtle background */
     #dash-streak-card {
       margin-bottom: 10px;
+      background: var(--card);
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      padding: 2px;
     }
-    /* Customisable widget grid */
+    /* Customisable widget grid — CSS columns for gap-free flow */
     #dash-widget-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
+      columns: 2;
+      column-gap: 10px;
       margin-bottom: 10px;
-      align-items: start;
     }
-    /* Each widget slot */
+    /* Each widget slot breaks cleanly in columns */
     .dash-widget-slot {
+      break-inside: avoid;
+      display: block;
       position: relative;
+      margin-bottom: 10px;
     }
     /* Edit mode: wiggle animation */
     @keyframes dash-wiggle {
@@ -697,27 +703,33 @@
       opacity: 0.4;
       animation: none !important;
     }
-    .dash-widget-slot.drag-over {
+    .dash-widget-slot.drag-over > * {
       outline: 2px dashed var(--primary);
       border-radius: 16px;
     }
-    /* Edit bar */
+    /* Edit bar — floating fixed at top */
     #dash-edit-bar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: var(--primary-light);
-      border-radius: 12px;
-      padding: 8px 14px;
-      margin-bottom: 10px;
+      background: var(--primary);
+      padding: 10px 16px;
+      z-index: 200;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.18);
     }
-    .dash-edit-label { font-size: 13px; font-weight: 700; color: var(--primary); }
+    .dash-edit-label { font-size: 13px; font-weight: 700; color: white; }
     .dash-edit-done {
-      background: var(--primary); color: white;
+      background: white; color: var(--primary);
       border: none; border-radius: 20px;
       padding: 6px 16px; font-size: 13px; font-weight: 700; cursor: pointer;
     }
-    /* Top row kept for thinking card sizing */
+    /* Push content down when edit bar is visible */
+    body.dash-editing #today-section {
+      padding-top: 52px;
+    }
+    /* Top row / col layout kept for any legacy use */
     .dash-top-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -725,7 +737,6 @@
       margin-bottom: 10px;
       align-items: stretch;
     }
-    /* Middle section: 2-column dynamic layout */
     .dash-col-layout {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -1419,18 +1430,7 @@
     }
     .glimmer-detail-heart:disabled { opacity: 0.35; cursor: default; }
 
-    /* Pinned glimmer slot spans full width (it has its own 2-col inner grid) */
-    .dash-widget-slot[data-widget-id="pinned-glimmer"] {
-      grid-column: span 2;
-    }
-
     /* ── Pinned Glimmers on Today dashboard ──────────────────────── */
-    #dash-pinned-glimmer { margin-bottom: 12px; }
-    .dash-pinned-glimmer-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
     .dash-pinned-glimmer-card {
       background: var(--card); border-radius: 16px; overflow: hidden;
       box-shadow: var(--shadow); border: 1px solid var(--border);

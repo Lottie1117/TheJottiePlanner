@@ -1920,22 +1920,22 @@ window.glimmerMenuArchive = function() {
   closeGlimmerDetail();
 };
 
-// ── Pinned Glimmers on Today dashboard (up to 4, 2-col grid) ──────
+// ── Pinned Glimmers on Today dashboard (4 individual widget slots) ──
 function renderDashPinnedGlimmer() {
-  const el = document.getElementById('dash-pinned-glimmer');
-  if (!el) return;
-  const slot = el.closest('.dash-widget-slot');
   const allPinned = _glimmersCache.filter(g => g.pinned && !g.archived);
-  if (!allPinned.length) {
-    el.style.display = 'none';
-    if (slot) slot.style.display = 'none';
-    return;
-  }
 
-  // Show up to 4 pinned glimmers
-  const pinned = allPinned.slice(0, 4);
+  for (let i = 1; i <= 4; i++) {
+    const el = document.getElementById('dash-pinned-glimmer-' + i);
+    if (!el) continue;
+    const slot = el.closest('.dash-widget-slot');
+    const g = allPinned[i - 1] || null;
 
-  function glimmerCardHtml(g) {
+    if (!g) {
+      el.style.display = 'none';
+      if (slot) slot.style.display = 'none';
+      continue;
+    }
+
     const images = g.images && g.images.length ? g.images : (g.imageUrl ? [g.imageUrl] : []);
     const imgUrl = images[0] || null;
     const bg = imgUrl ? '' : getGlimmerBg(g.id);
@@ -1950,7 +1950,10 @@ function renderDashPinnedGlimmer() {
       : `<div class="dash-pinned-glimmer-bg" style="background:${bg}">
           <div class="dash-pinned-glimmer-gradient"></div>
         </div>`;
-    return `<div class="dash-pinned-glimmer-card" onclick="openGlimmerDetail('${g.id}', 'today')">
+
+    el.style.display = 'block';
+    if (slot) slot.style.display = '';
+    el.innerHTML = `<div class="dash-pinned-glimmer-card" onclick="openGlimmerDetail('${g.id}', 'today')">
       ${mediaHtml}
       <div class="dash-pinned-glimmer-caption">
         <span class="dash-pinned-glimmer-text">${escapeHtml(g.text || '')}</span>
@@ -1963,15 +1966,6 @@ function renderDashPinnedGlimmer() {
       </div>
     </div>`;
   }
-
-  el.style.display = 'block';
-  if (slot) slot.style.display = '';
-  el.innerHTML = `<div class="dash-hdr" style="margin-bottom:8px">
-    <div class="dash-hdr-title">📌 Pinned Glimmers</div>
-  </div>
-  <div class="dash-pinned-glimmer-grid">
-    ${pinned.map(g => glimmerCardHtml(g)).join('')}
-  </div>`;
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -2493,7 +2487,9 @@ const DASH_WIDGET_ORDER_KEY = 'jottie-dash-widget-order';
 
 // All possible widget IDs in default order
 const DASH_DEFAULT_WIDGETS = [
-  'luna', 'thinking', 'events', 'tasks', 'shopping', 'pinned-notes', 'pinned-glimmer'
+  'luna', 'thinking', 'events', 'tasks', 'shopping',
+  'pinned-notes', 'pinned-glimmer-1', 'pinned-glimmer-2',
+  'pinned-glimmer-3', 'pinned-glimmer-4'
 ];
 
 let _dashWidgetOrder = null;
@@ -2506,7 +2502,6 @@ function dashGetOrder() {
     const saved = localStorage.getItem(DASH_WIDGET_ORDER_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      // Merge: keep saved order, append any new widgets not yet in saved list
       const merged = [...parsed, ...DASH_DEFAULT_WIDGETS.filter(id => !parsed.includes(id))];
       _dashWidgetOrder = merged;
       return _dashWidgetOrder;
@@ -2532,9 +2527,7 @@ function dashBuildGrid() {
     const slot = document.createElement('div');
     slot.className = 'dash-widget-slot';
     slot.dataset.widgetId = id;
-    // Clone template content
     slot.appendChild(tpl.content.cloneNode(true));
-    // Drag handle overlay
     const handle = document.createElement('div');
     handle.className = 'dash-drag-handle';
     handle.textContent = '⠿';
@@ -2548,7 +2541,7 @@ function dashBuildGrid() {
     }, { passive: true });
     slot.addEventListener('touchend', () => clearTimeout(pressTimer));
     slot.addEventListener('touchmove', () => clearTimeout(pressTimer));
-    // Drag events
+    // Mouse drag
     slot.setAttribute('draggable', 'true');
     slot.addEventListener('dragstart', dashOnDragStart);
     slot.addEventListener('dragover',  dashOnDragOver);
@@ -2559,7 +2552,6 @@ function dashBuildGrid() {
     slot.addEventListener('touchstart', dashTouchStart, { passive: false });
     grid.appendChild(slot);
   });
-  // Re-init thinking card
   if (typeof initThinkingOfCard === 'function') initThinkingOfCard();
 }
 
@@ -2570,6 +2562,7 @@ function dashEnterEditMode() {
   if (grid) grid.classList.add('dash-edit-mode');
   const bar = document.getElementById('dash-edit-bar');
   if (bar) bar.style.display = 'flex';
+  document.body.classList.add('dash-editing');
 }
 
 window.dashExitEditMode = function() {
@@ -2578,6 +2571,7 @@ window.dashExitEditMode = function() {
   if (grid) grid.classList.remove('dash-edit-mode');
   const bar = document.getElementById('dash-edit-bar');
   if (bar) bar.style.display = 'none';
+  document.body.classList.remove('dash-editing');
 };
 
 // ── Mouse drag ─────────────────────────────────────────────────────
@@ -2605,13 +2599,8 @@ function dashOnDrop(e) {
   const srcIdx = slots.indexOf(_dashDragSrc);
   const tgtIdx = slots.indexOf(this);
   if (srcIdx === -1 || tgtIdx === -1) return;
-  // Reorder in DOM
-  if (srcIdx < tgtIdx) {
-    grid.insertBefore(_dashDragSrc, this.nextSibling);
-  } else {
-    grid.insertBefore(_dashDragSrc, this);
-  }
-  // Persist order
+  if (srcIdx < tgtIdx) grid.insertBefore(_dashDragSrc, this.nextSibling);
+  else grid.insertBefore(_dashDragSrc, this);
   const newOrder = Array.from(grid.querySelectorAll('.dash-widget-slot')).map(s => s.dataset.widgetId);
   _dashWidgetOrder = newOrder;
   dashSaveOrder();
@@ -2632,7 +2621,6 @@ function dashTouchStart(e) {
   const rect = this.getBoundingClientRect();
   _touchOffX = touch.clientX - rect.left;
   _touchOffY = touch.clientY - rect.top;
-  // Create floating clone
   _touchClone = this.cloneNode(true);
   _touchClone.style.cssText = `
     position:fixed; top:${rect.top}px; left:${rect.left}px;
@@ -2653,7 +2641,6 @@ function dashTouchMove(e) {
   const touch = e.touches[0];
   _touchClone.style.top  = (touch.clientY - _touchOffY) + 'px';
   _touchClone.style.left = (touch.clientX - _touchOffX) + 'px';
-  // Highlight target
   document.querySelectorAll('.dash-widget-slot').forEach(s => s.classList.remove('drag-over'));
   _touchClone.style.display = 'none';
   const el = document.elementFromPoint(touch.clientX, touch.clientY);

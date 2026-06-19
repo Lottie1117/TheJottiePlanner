@@ -118,7 +118,7 @@
     <div id="sparkle-card-dash"><!-- rendered by renderSparkleCard --></div>
   </div>
 
-  <!-- Edit mode toolbar -->
+  <!-- Edit mode toolbar (floating) -->
   <div id="dash-edit-bar" style="display:none">
     <span class="dash-edit-label">✦ Hold &amp; drag to reorder</span>
     <button class="dash-edit-done" onclick="dashExitEditMode()">Done</button>
@@ -172,20 +172,18 @@
   <template id="widget-tpl-pinned-notes">
     <div id="dash-pinned-notes" style="display:none"></div>
   </template>
-  <template id="widget-tpl-pinned-glimmer">
-    <div id="dash-pinned-glimmer" style="display:none"></div>
+  <template id="widget-tpl-pinned-glimmer-1">
+    <div id="dash-pinned-glimmer-1" style="display:none"></div>
   </template>
-
-  <!-- Row 4: Recent Glimmers (full width, static) -->
-  <div id="dash-glimmer-section">
-    <div class="dash-glimmer-hdr">
-      <span class="dash-glimmer-hdr-title">✨ Recent Glimmers</span>
-      <a onclick="navTo('glimmers')">View all →</a>
-    </div>
-    <div class="glimmer-scroll" id="dash-glimmer-scroll">
-      <div class="dash-empty">Loading…</div>
-    </div>
-  </div>
+  <template id="widget-tpl-pinned-glimmer-2">
+    <div id="dash-pinned-glimmer-2" style="display:none"></div>
+  </template>
+  <template id="widget-tpl-pinned-glimmer-3">
+    <div id="dash-pinned-glimmer-3" style="display:none"></div>
+  </template>
+  <template id="widget-tpl-pinned-glimmer-4">
+    <div id="dash-pinned-glimmer-4" style="display:none"></div>
+  </template>
 
 
   <div id="dash-completed" style="display:none"></div>
