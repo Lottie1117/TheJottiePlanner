@@ -81,7 +81,7 @@ function setUser(name) {
   localStorage.setItem('jottie-name', name);
   me = name;
   document.getElementById('name-overlay').style.display = 'none';
-  document.getElementById('header-greeting').textContent = `${getGreeting()}, ${name}! 💜`;
+  document.getElementById('header-greeting').textContent = `${getGreeting()}, ${name}!`;
   document.getElementById('header-date').textContent = fmtFullDate(new Date());
   renderToday();
   setTimeout(checkNotifStatus, 600);
@@ -1451,7 +1451,7 @@ window.addEventListener('load', () => {
   if (savedName) {
     me = savedName;
     document.getElementById('name-overlay').style.display = 'none';
-    document.getElementById('header-greeting').textContent = `Hi ${me}! 💜`;
+    document.getElementById('header-greeting').textContent = `Hi ${me}!`;
   }
   // Default calendar date to today
   renderToday();
@@ -1672,7 +1672,7 @@ function buildGlimmerCard(doc, opts = {}) {
   const bg = imgUrl ? '' : getGlimmerBg(id);
   const isOwn = g.by === me;
   const liked = g.likedBy && g.likedBy.includes(me);
-  const heartIcon = liked ? '💜' : '🤍';
+  const heartIcon = liked ? '💖' : '🤍';
   const heartDisabled = isOwn ? 'disabled' : '';
 
   if (opts.mode === 'tile') {
@@ -1814,7 +1814,7 @@ window.renderGlimmerDetail = function renderGlimmerDetail(id) {
   const bg = imgUrl ? '' : getGlimmerBg(id);
   const isOwn = g.by === me;
   const liked = g.likedBy && g.likedBy.includes(me);
-  const heartIcon = liked ? '💜' : '🤍';
+  const heartIcon = liked ? '💖' : '🤍';
   const dateStr = g.createdAt
     ? g.createdAt.toDate().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
     : '';
@@ -1941,7 +1941,7 @@ function renderDashPinnedGlimmer() {
     const bg = getGlimmerBg(g.id);
     const isOwn = g.by === me;
     const liked = g.likedBy && g.likedBy.includes(me);
-    const heartIcon = liked ? '💜' : '🤍';
+    const heartIcon = liked ? '💖' : '🤍';
 
     let cardHtml;
     if (imgUrl) {
@@ -2249,7 +2249,7 @@ window.sendThinkingOf = function sendThinkingOf() {
 
   // Update sub text briefly
   if (sub) {
-    sub.textContent = 'Sent! 💜';
+    sub.textContent = 'Sent! 💖';
     setTimeout(() => { sub.textContent = 'Tap to send love'; }, 2500);
   }
 
@@ -2281,12 +2281,12 @@ window.initThinkingOfCard = function initThinkingOfCard() {
 window.nudgePersonGlobal = function nudgePerson(name) {
   // Use push notifications if the app already has that system wired up
   if (typeof sendPushNotification === 'function') {
-    sendPushNotification(`👉 Hey ${name}! Time to add your Glimmer today 💜`);
+    sendPushNotification(`👉 Hey ${name}! Time to add your Glimmer today 💖`);
     showToast(`📣 Nudge sent to ${name}!`);
     return;
   }
   // Fallback: friendly in-app toast
-  showToast(`👉 Hey ${name}! Don't forget your Glimmer today 💜`);
+  showToast(`👉 Hey ${name}! Don't forget your Glimmer today 💖`);
 }
 
 // ──────────────────────────────────────────────────────────────
