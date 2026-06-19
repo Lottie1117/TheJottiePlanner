@@ -53,11 +53,11 @@ function whoChip(who) {
 
 function renderToday() {
   if (!me) {
-    document.getElementById('header-greeting').textContent = 'Welcome! 💜';
+    document.getElementById('header-greeting').textContent = 'Welcome! ';
     document.getElementById('header-date').textContent = fmtFullDate(new Date());
     return;
   }
-  document.getElementById('header-greeting').textContent = `${getGreeting()}, ${me}! 💜`;
+  document.getElementById('header-greeting').textContent = `${getGreeting()}, ${me}!`;
   document.getElementById('header-date').textContent = fmtFullDate(new Date());
 
   const todayStr = new Date().toISOString().split('T')[0];
