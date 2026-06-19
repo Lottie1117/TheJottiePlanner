@@ -133,7 +133,8 @@ function renderToday() {
       if (lunaLogged) lunaLogged.textContent = _lunaData.length ? `Last: ${ago(_lunaData[0].createdAt)}` : '';
       if (lunaUnlog) lunaUnlog.style.display = 'none';
     }
-    if (lunaStatus) lunaStatus.textContent = todayChew ? 'Luna has had her chew today 🎉' : 'Not given yet';
+    const _p = (typeof SETTINGS !== 'undefined' && SETTINGS.petName) || 'Luna';
+    if (lunaStatus) lunaStatus.textContent = todayChew ? `${_p} has had her chew today 🎉` : 'Not given yet';
   }
 
   // ── Recent Glimmers ───────────────────────────────────────────────

@@ -17,6 +17,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
 
+  <script src="settings.js"></script>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -326,7 +327,7 @@
     <div id="luna-status-text" class="luna-status">Has Luna had her chew today?</div>
     <div id="luna-last-time" class="luna-time"></div>
     <div id="luna-last-by" class="luna-by"></div>
-    <button class="btn-chew" onclick="logChew()">🦴 Luna has had her chew!</button>
+    <button class="btn-chew" id="luna-chew-btn" onclick="logChew()">🦴 Luna has had her chew!</button>
   </div>
   <div class="list-label">Recent log</div>
   <div id="luna-log"><div class="loading">Loading…</div></div>

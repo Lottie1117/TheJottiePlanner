@@ -2,6 +2,48 @@
 // me is declared in firebase.js; restore persisted value on load
 me = localStorage.getItem('jottie-name') || '';
 
+// ── Apply SETTINGS to display text ───────────────────────────────
+// Replaces hardcoded name labels with values from settings.js.
+// Only touches display text — no data, IDs, or Firestore fields.
+function applySettings() {
+  const s = (typeof SETTINGS !== 'undefined') ? SETTINGS : {};
+  const u1 = s.user1Name || 'Lottie';
+  const u2 = s.user2Name || 'Jonny';
+  const pet = s.petName  || 'Luna';
+
+  // Name overlay buttons
+  const lottieBtn = document.getElementById('name-lottie-btn');
+  const jonnyBtn  = document.getElementById('name-jonny-btn');
+  if (lottieBtn) lottieBtn.textContent = `👩 ${u1}`;
+  if (jonnyBtn)  jonnyBtn.textContent  = `👨 ${u2}`;
+
+  // Luna section: initial status text and chew button
+  const lunaStatus = document.getElementById('luna-status-text');
+  const lunaChewBtn = document.getElementById('luna-chew-btn');
+  if (lunaStatus)  lunaStatus.textContent  = `Has ${pet} had her chew today?`;
+  if (lunaChewBtn) lunaChewBtn.textContent = `🦴 ${pet} has had her chew!`;
+
+  // Dashboard Luna card title
+  const lunaDashTitle = document.querySelector('#widget-tpl-luna .dash-hdr-title');
+  if (lunaDashTitle) lunaDashTitle.textContent = pet;
+
+  // Option labels in bottom sheet templates (value attributes stay as-is for Firestore)
+  document.querySelectorAll('option[value="Lottie"]').forEach(o => { o.textContent = `👩 ${u1}`; });
+  document.querySelectorAll('option[value="Jonny"]').forEach(o => { o.textContent = `👨 ${u2}`; });
+
+  // Section name for Luna in nav/header
+  const sectionNameMap = document.querySelector('[data-section-name-luna]');
+  if (sectionNameMap) sectionNameMap.textContent = `${pet} 🐾`;
+}
+
+(function() {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', applySettings);
+  } else {
+    applySettings();
+  }
+})();
+
 // ── fmtFullDate helper ───────────────────────────────────────────
 function fmtFullDate(d) {
   return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
@@ -25,7 +67,8 @@ function openBottomSheet(section) {
   const sheet = document.getElementById('bottom-sheet');
   const overlay = document.getElementById('bs-overlay');
   if (!tpl || !body || !sheet) return;
-  const sectionNames = { todos: 'Add Task', shopping: 'Add Item', calendar: 'Add Plan', birthdays: 'Add Birthday', glimmers: 'Add Glimmer', luna: 'Luna Note', lists: 'Add Item', 'new-note': 'New Note' };
+  const _pet = (typeof SETTINGS !== 'undefined' && SETTINGS.petName) || 'Luna';
+  const sectionNames = { todos: 'Add Task', shopping: 'Add Item', calendar: 'Add Plan', birthdays: 'Add Birthday', glimmers: 'Add Glimmer', luna: `${_pet} Note`, lists: 'Add Item', 'new-note': 'New Note' };
   if (title) title.textContent = sectionNames[section] || '';
   body.innerHTML = '';
   body.appendChild(document.importNode(tpl.content, true));
@@ -127,7 +170,8 @@ function navTo(sec, navItemEl) {
   if (drawerMatch) drawerMatch.classList.add('active');
 
   // update header section title
-  const sectionNames = {"today":"Today","calendar":"Plans","shopping":"Shopping","todos":"To-Do","lists":"Notes","birthdays":"Birthdays","glimmers":"Glimmers","luna":"Luna 🐾"};
+  const _petName = (typeof SETTINGS !== 'undefined' && SETTINGS.petName) || 'Luna';
+  const sectionNames = {"today":"Today","calendar":"Plans","shopping":"Shopping","todos":"To-Do","lists":"Notes","birthdays":"Birthdays","glimmers":"Glimmers","luna":`${_petName} 🐾`};
   const titleEl = document.getElementById('section-title');
   if (titleEl) titleEl.textContent = sectionNames[sec] || '';
   // Toggle greeting (today) vs section title (all others)
@@ -767,8 +811,9 @@ function logChew() {
     loggedBy: me,
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   }).then(() => {
-    sendNotification('🦴 Luna', `${me} logged Luna's chew`);
-    writeNotif({ type: 'luna_update', icon: '🐶', title: 'Luna had her chew', subtitle: `Given by ${me}`, deepLink: { section: 'luna' } });
+    const _p = (typeof SETTINGS !== 'undefined' && SETTINGS.petName) || 'Luna';
+    sendNotification(`🦴 ${_p}`, `${me} logged ${_p}'s chew`);
+    writeNotif({ type: 'luna_update', icon: '🐶', title: `${_p} had her chew`, subtitle: `Given by ${me}`, deepLink: { section: 'luna' } });
   });
 }
 
@@ -785,7 +830,8 @@ function listenLuna() {
       const logEl     = document.getElementById('luna-log');
 
       if (snap.empty) {
-        statusEl.textContent = 'Has Luna had her chew today?';
+        const _p = (typeof SETTINGS !== 'undefined' && SETTINGS.petName) || 'Luna';
+        statusEl.textContent = `Has ${_p} had her chew today?`;
         timeEl.textContent   = '';
         byEl.textContent     = '';
         logEl.innerHTML = '<div class="empty"><div class="emo">🦴</div><p>No chews logged yet — tap the button!</p></div>';
@@ -811,7 +857,8 @@ function listenLuna() {
         else                 timeStr = `${days} day${days>1?'s':''} ago`;
 
         const isToday = latest.createdAt.toDate().toLocaleDateString('en-GB') === todayStr;
-        statusEl.textContent = isToday ? 'Luna has had her chew today 🎉' : 'Luna hasn\'t had her chew today yet';
+        const _p = (typeof SETTINGS !== 'undefined' && SETTINGS.petName) || 'Luna';
+        statusEl.textContent = isToday ? `${_p} has had her chew today 🎉` : `${_p} hasn't had her chew today yet`;
         timeEl.textContent   = timeStr;
         byEl.textContent     = `Logged by ${latest.loggedBy}`;
       }
@@ -849,7 +896,8 @@ function addLunaNote() {
     addedBy: me,
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   }).then(() => {
-    sendNotification('📝 Luna Note', `${me} added a note${title ? ': '+title : ''}`);
+    const _pn = (typeof SETTINGS !== 'undefined' && SETTINGS.petName) || 'Luna';
+    sendNotification(`📝 ${_pn} Note`, `${me} added a note${title ? ': '+title : ''}`);
     document.getElementById('ln-title').value = '';
     document.getElementById('ln-body').value  = '';
   });
@@ -2073,7 +2121,7 @@ window.saveGlimmer = async function() {
     textEl.value = '';
     removeGlimmerPhoto();
     // Reset selector to the current user
-    const me = localStorage.getItem('jottie-name') || 'Lottie';
+    const me = localStorage.getItem('jottie-name') || ((typeof SETTINGS !== 'undefined' && SETTINGS.user1Name) || 'Lottie');
     byEl.value = me;
 
     showToast('✨ Glimmer saved!');
@@ -2653,6 +2701,9 @@ function renderSparkleCard(containerId, data) {
     }
   }
 
+  const _u1 = (typeof SETTINGS !== 'undefined' && SETTINGS.user1Name) || 'Lottie';
+  const _u2 = (typeof SETTINGS !== 'undefined' && SETTINGS.user2Name) || 'Jonny';
+
   el.innerHTML = `
     <div class="sparkle-header">
       <span class="sparkle-title">✨ Glimmer Streak</span>
@@ -2660,8 +2711,8 @@ function renderSparkleCard(containerId, data) {
     </div>
     <div class="sparkle-row">${sparkles}</div>
     <div class="sparkle-footer">
-      <span class="sparkle-person${lottieCls}">${lottieTick} Lottie</span>
-      <span class="sparkle-person${jonnyCls}">${jonnyTick} Jonny</span>
+      <span class="sparkle-person${lottieCls}">${lottieTick} ${_u1}</span>
+      <span class="sparkle-person${jonnyCls}">${jonnyTick} ${_u2}</span>
     </div>
     ${btnHtml}
   `;
@@ -2792,7 +2843,7 @@ function formatRelativeTime(date) {
 // ──────────────────────────────────────────────────────────────
 
 function initGlimmerSection() {
-  const me = localStorage.getItem('jottie-name') || 'Lottie';
+  const me = localStorage.getItem('jottie-name') || ((typeof SETTINGS !== 'undefined' && SETTINGS.user1Name) || 'Lottie');
   const sel = document.getElementById('glimmer-by');
   if (sel) sel.value = me;
 }

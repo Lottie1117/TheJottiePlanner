@@ -11,6 +11,8 @@ const PRECACHE_URLS = [
   './index.js',
   './styles.css',
   './firebase.js',
+  './settings.js',
+  './household.js',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
