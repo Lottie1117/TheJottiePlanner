@@ -215,6 +215,24 @@
   <div id="todo-list"><div class="loading">Loading…</div></div>
 </div>
 
+<!-- ── Task Detail ─────────────────────────────────────────────── -->
+<div id="task-detail-section" class="section">
+  <div class="note-detail-header">
+    <button class="note-back-btn" onclick="closeTaskDetail()" aria-label="Back to tasks">‹ Tasks</button>
+    <div style="flex:1"></div>
+    <button class="note-menu-btn" onclick="openTaskMenu()" aria-label="Task options">⋮</button>
+  </div>
+  <div id="task-detail-body"></div>
+</div>
+
+<!-- Task options menu -->
+<div class="note-menu-overlay" id="task-menu-overlay" onclick="closeTaskMenu()"></div>
+<div class="note-menu" id="task-menu">
+  <button onclick="taskMenuEdit()">✏️ Edit Task</button>
+  <button onclick="taskMenuPin()">📌 Pin Task</button>
+  <button onclick="taskMenuDelete()" class="note-menu-danger">🗑️ Delete Task</button>
+</div>
+
 <!-- ── Notes Hub ─────────────────────────────────────────────────── -->
 <div id="lists-section" class="section">
   <div class="notes-search-wrap">

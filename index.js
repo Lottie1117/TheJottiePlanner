@@ -558,7 +558,179 @@ function todoCard(i) {
 }
 
 function todoCardClick(e, id, completed) {
-  // Placeholder for Task Detail View (Phase 2)
+  openTaskDetail(id);
+}
+
+// ── Task Detail View ────────────────────────────────────────────
+
+let _currentTaskId = null;
+let _taskSubtasksUnsub = null;
+
+function openTaskDetail(taskId) {
+  const task = _todoData.find(t => t.id === taskId);
+  if (!task) return;
+  _currentTaskId = taskId;
+
+  renderTaskDetailBody(task);
+
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('task-detail-section').classList.add('active');
+  document.getElementById('section-title').textContent = 'Task';
+  if (typeof updateFabForSection === 'function') updateFabForSection('task-detail');
+
+  // Listen to subtasks
+  if (_taskSubtasksUnsub) { _taskSubtasksUnsub(); _taskSubtasksUnsub = null; }
+  _taskSubtasksUnsub = db.collection('todos').doc(taskId).collection('subtasks')
+    .orderBy('createdAt', 'asc')
+    .onSnapshot(snap => {
+      const subtasks = snap.docs.map(d => ({id: d.id, ...d.data()}));
+      renderTaskSubtasks(taskId, subtasks);
+    });
+}
+
+function closeTaskDetail() {
+  if (_taskSubtasksUnsub) { _taskSubtasksUnsub(); _taskSubtasksUnsub = null; }
+  _currentTaskId = null;
+  navTo('todos');
+}
+
+function renderTaskDetailBody(task) {
+  const who = task.who || 'Either';
+
+  // Avatars
+  let avatars = '';
+  if (who === 'Jonny')       avatars = '<span class="todo-avatar todo-avatar-j">J</span>';
+  else if (who === 'Lottie') avatars = '<span class="todo-avatar todo-avatar-l">L</span>';
+  else                       avatars = '<span class="todo-avatar todo-avatar-j">J</span><span class="todo-avatar todo-avatar-l">L</span>';
+
+  // Due date + urgency pill
+  let dueRow = '';
+  if (task.due) {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const d = new Date(task.due + 'T00:00:00');
+    const diff = Math.round((d - today) / 86400000);
+    let urgencyLabel, urgencyCls;
+    if (diff < 0)       { urgencyLabel = 'Overdue';              urgencyCls = 'due-pill-red'; }
+    else if (diff === 0){ urgencyLabel = 'Due today';            urgencyCls = 'due-pill-red'; }
+    else if (diff <= 3) { urgencyLabel = `Due in ${diff} day${diff>1?'s':''}`;  urgencyCls = 'due-pill-red'; }
+    else if (diff <= 7) { urgencyLabel = diff === 7 ? 'Due next week' : `Due in ${diff} days`; urgencyCls = 'due-pill-amber'; }
+    else                { urgencyLabel = `Due ${fmtDate(task.due)}`; urgencyCls = 'due-pill-green'; }
+    dueRow = `
+      <div class="td-meta-row">
+        ${avatars}
+        <span class="td-due-date">📅 ${fmtDate(task.due)}</span>
+        <span class="due-pill ${urgencyCls}">${urgencyLabel}</span>
+      </div>`;
+  } else {
+    dueRow = `<div class="td-meta-row">${avatars}</div>`;
+  }
+
+  // Recurrence card
+  const recurCard = task.recurrence ? `
+    <div class="td-section-card">
+      <span class="td-recur-icon">🔄</span>
+      <span class="td-recur-label">${esc(task.recurrence)}</span>
+    </div>` : '';
+
+  // Notes card
+  const notesCard = task.notes ? `
+    <div class="td-section-card td-notes-card">
+      <div class="td-section-title">Notes</div>
+      <div class="td-notes-text">${esc(task.notes).replace(/\n/g,'<br>')}</div>
+    </div>` : '';
+
+  // Metadata
+  const metaParts = [];
+  if (task.addedBy)   metaParts.push(`Created by ${esc(task.addedBy)}`);
+  if (task.updatedBy) metaParts.push(`Last updated by ${esc(task.updatedBy)}`);
+  if (task.completed && task.completedBy) metaParts.push(`Completed by ${esc(task.completedBy)}`);
+  if (task.completed && task.completedAt) {
+    const cd = new Date(task.completedAt.toMillis ? task.completedAt.toMillis() : task.completedAt);
+    metaParts.push(`Completed ${cd.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}`);
+  }
+  const metaHtml = metaParts.length ? `<div class="td-meta-footer">${metaParts.join(' · ')}</div>` : '';
+
+  document.getElementById('task-detail-body').innerHTML = `
+    <h1 class="td-title">${esc(task.title)}</h1>
+    ${dueRow}
+    ${recurCard}
+    ${notesCard}
+    <div class="td-subtasks-section" id="td-subtasks-${task.id}">
+      <div class="td-section-title td-subtasks-header">Subtasks</div>
+      <div class="loading" style="font-size:13px;padding:8px 0">Loading…</div>
+    </div>
+    ${metaHtml}
+  `;
+}
+
+function renderTaskSubtasks(taskId, subtasks) {
+  const el = document.getElementById('td-subtasks-' + taskId);
+  if (!el) return;
+
+  let html = '<div class="td-section-title td-subtasks-header">Subtasks</div>';
+  subtasks.forEach(s => {
+    html += `
+      <div class="td-subtask-row">
+        <div class="checkbox${s.completed ? ' checked' : ''}" onclick="toggleSubtask('${taskId}','${s.id}',${s.completed})"></div>
+        <span class="td-subtask-title${s.completed ? ' done-text' : ''}">${esc(s.title)}</span>
+      </div>`;
+  });
+  html += `
+    <div class="td-add-subtask-row">
+      <input class="td-subtask-input" id="td-subtask-input" type="text" placeholder="Add subtask…" onkeydown="if(event.key==='Enter')addSubtask('${taskId}')">
+      <button class="td-subtask-add-btn" onclick="addSubtask('${taskId}')">+</button>
+    </div>`;
+
+  el.innerHTML = html;
+}
+
+function toggleSubtask(taskId, subtaskId, done) {
+  db.collection('todos').doc(taskId).collection('subtasks').doc(subtaskId).update({completed: !done});
+}
+
+function addSubtask(taskId) {
+  const inp = document.getElementById('td-subtask-input');
+  if (!inp) return;
+  const title = inp.value.trim();
+  if (!title) return;
+  inp.value = '';
+  db.collection('todos').doc(taskId).collection('subtasks').add({
+    title,
+    completed: false,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+}
+
+// ── Task menu ───────────────────────────────────────────────────
+function openTaskMenu() {
+  document.getElementById('task-menu-overlay').classList.add('open');
+  document.getElementById('task-menu').classList.add('open');
+}
+function closeTaskMenu() {
+  document.getElementById('task-menu-overlay').classList.remove('open');
+  document.getElementById('task-menu').classList.remove('open');
+}
+function taskMenuEdit() {
+  closeTaskMenu();
+  showToast('✏️ Edit Task coming soon');
+}
+function taskMenuPin() {
+  closeTaskMenu();
+  if (!_currentTaskId) return;
+  const task = _todoData.find(t => t.id === _currentTaskId);
+  if (!task) return;
+  db.collection('todos').doc(_currentTaskId).update({pinned: !task.pinned})
+    .then(() => showToast(task.pinned ? 'Unpinned' : '📌 Task pinned'));
+}
+function taskMenuDelete() {
+  closeTaskMenu();
+  if (!_currentTaskId) return;
+  if (!confirm('Delete this task permanently? This cannot be undone.')) return;
+  const id = _currentTaskId;
+  closeTaskDetail();
+  db.collection('todos').doc(id).delete()
+    .then(() => showToast('Task deleted'))
+    .catch(() => showToast('⚠️ Delete failed'));
 }
 
 // ── Luna ─────────────────────────────────────────────────────────
@@ -2511,6 +2683,8 @@ document.querySelectorAll('.tab').forEach(tab => {
       navBtn.setAttribute('aria-label', 'Add item');
       navBtn.innerHTML = '<span id="nav-fab-icon"></span>+';
     } else if (sec === 'glimmer-detail') {
+      navBtn.style.display = 'none';
+    } else if (sec === 'task-detail') {
       navBtn.style.display = 'none';
     } else {
       navBtn.setAttribute('aria-label', sec === 'lists' ? 'New note' : 'Add to ' + sec);
