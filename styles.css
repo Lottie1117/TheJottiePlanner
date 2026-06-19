@@ -649,10 +649,10 @@
     /* Streak card: full width with subtle background */
     #dash-streak-card {
       margin-bottom: 10px;
-      background: var(--card);
+      background: linear-gradient(135deg, #f8e7eb 0%, #f4b8c8 35%, #f58cab 70%, #f56c94 100%);
       border-radius: 18px;
-      border: 1px solid var(--border);
-      box-shadow: var(--shadow);
+      border: none;
+      box-shadow: 0 4px 16px rgba(245,108,148,0.25);
       padding: 2px;
     }
     /* Customisable widget grid — CSS columns for gap-free flow */
@@ -749,7 +749,11 @@
       flex-direction: column;
       gap: 10px;
     }
-    #dash-streak-card .dash-hdr-title { color: white; font-size: 17px; font-weight: 800; }
+    #dash-streak-card .sparkle-card {
+      background: transparent;
+      box-shadow: none;
+      margin-bottom: 0;
+    }
     #dash-streak-card .dash-hdr { margin-bottom: 10px; }
     #dash-streak-card .dash-count { color: white; background: rgba(255,255,255,0.22); border-radius: 20px; padding: 4px 12px; font-size: 13px; font-weight: 700; }
 
