@@ -85,6 +85,7 @@ function setUser(name) {
   document.getElementById('header-date').textContent = fmtFullDate(new Date());
   renderToday();
   setTimeout(checkNotifStatus, 600);
+  if (typeof listenNotifications === 'function') listenNotifications();
 }
 
 // Wire up name buttons safely (guard against null if DOM not ready)
@@ -129,6 +130,22 @@ function navTo(sec, navItemEl) {
   const sectionNames = {"today":"Today","calendar":"Plans","shopping":"Shopping","todos":"To-Do","lists":"Notes","birthdays":"Birthdays","glimmers":"Glimmers","luna":"Luna 🐾"};
   const titleEl = document.getElementById('section-title');
   if (titleEl) titleEl.textContent = sectionNames[sec] || '';
+  // Toggle greeting (today) vs section title (all others)
+  const greetingEl  = document.getElementById('header-greeting');
+  const dateEl      = document.getElementById('header-date');
+  const secTitleEl  = document.getElementById('header-section-title');
+  if (greetingEl && dateEl && secTitleEl) {
+    if (sec === 'today') {
+      greetingEl.style.display = '';
+      dateEl.style.display = '';
+      secTitleEl.style.display = 'none';
+    } else {
+      greetingEl.style.display = 'none';
+      dateEl.style.display = 'none';
+      secTitleEl.style.display = '';
+      secTitleEl.textContent = sectionNames[sec] || sec;
+    }
+  }
 
   if (typeof updateFabForSection === 'function') updateFabForSection(sec);
 
@@ -412,6 +429,11 @@ if (d.recurrence === 'yearly')      base.setFullYear(base.getFullYear() + 1);
     }
   }
   db.collection('todos').doc(id).update({completed: !done});
+  // Write notification when completing a task (not un-completing)
+  if (!done) {
+    const t = (_todoData || []).find(x => x.id === id);
+    if (t) writeNotif({ type: 'task_completed', icon: '☑️', title: `${me} completed a task`, subtitle: t.title, deepLink: { section: 'todos', taskId: id } });
+  }
 }
 function delTodo(id)          { db.collection('todos').doc(id).delete(); }
 
@@ -744,7 +766,10 @@ function logChew() {
   db.collection('luna').add({
     loggedBy: me,
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
-  }).then(() => sendNotification('🦴 Luna', `${me} logged Luna's chew`));
+  }).then(() => {
+    sendNotification('🦴 Luna', `${me} logged Luna's chew`);
+    writeNotif({ type: 'luna_update', icon: '🐶', title: 'Luna had her chew', subtitle: `Given by ${me}`, deepLink: { section: 'luna' } });
+  });
 }
 
 function delChew(id) { db.collection('luna').doc(id).delete(); }
@@ -937,6 +962,156 @@ function sendNotification(title, body) {
 }
 function sendShoppingNotification(itemName) {
   sendNotification('🛒 Shopping List', `${me} added ${itemName}`);
+}
+
+// ── Notification Centre ─────────────────────────────────────────
+
+let _notifUnsub = null;
+let _notifData  = [];
+let _notifPanelOpen = false;
+
+// Write a structured notification (new schema, always use this going forward)
+function writeNotif({ type, icon, title, subtitle, deepLink }) {
+  if (!db || !me) return;
+  const targetUser = me === 'Lottie' ? 'Jonny' : 'Lottie';
+  db.collection('notifications').add({
+    targetUser, type, icon, title, subtitle,
+    deepLink: deepLink || null,
+    read: false,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).catch(e => console.warn('writeNotif:', e));
+}
+
+function listenNotifications() {
+  if (!db || !me) return;
+  if (_notifUnsub) { _notifUnsub(); _notifUnsub = null; }
+  _notifUnsub = db.collection('notifications')
+    .where('targetUser', '==', me)
+    .orderBy('createdAt', 'desc')
+    .limit(60)
+    .onSnapshot(snap => {
+      _notifData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      _updateNotifDot();
+      if (_notifPanelOpen) _renderNotifPanel();
+    }, e => console.warn('listenNotifications:', e));
+}
+
+function _updateNotifDot() {
+  const dot = document.getElementById('notif-bell-dot');
+  if (!dot) return;
+  const hasUnread = _notifData.some(n => !n.read);
+  dot.style.display = hasUnread ? '' : 'none';
+}
+
+function toggleNotifPanel() {
+  _notifPanelOpen ? closeNotifPanel() : openNotifPanel();
+}
+
+function openNotifPanel() {
+  _notifPanelOpen = true;
+  _renderNotifPanel();
+  document.getElementById('notif-panel').classList.add('open');
+  document.getElementById('notif-overlay').classList.add('open');
+}
+
+function closeNotifPanel() {
+  _notifPanelOpen = false;
+  document.getElementById('notif-panel').classList.remove('open');
+  document.getElementById('notif-overlay').classList.remove('open');
+}
+
+function _notifTimestamp(ts) {
+  if (!ts) return '';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  const now = new Date();
+  const diffMs = now - d;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHrs  = Math.floor(diffMs / 3600000);
+  if (diffMins < 2)  return 'just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHrs  < 24) return `${diffHrs}h ago`;
+  const tod = d.toLocaleTimeString('en-GB', { hour: 'numeric', minute: '2-digit' });
+  const diffDays = Math.floor(diffMs / 86400000);
+  if (diffDays === 1) return `Yesterday · ${tod}`;
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + ` · ${tod}`;
+}
+
+function _notifGroup(ts) {
+  if (!ts) return 'earlier';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  const now = new Date();
+  const todayStr = now.toDateString();
+  const yestStr  = new Date(now - 86400000).toDateString();
+  if (d.toDateString() === todayStr) return 'today';
+  if (d.toDateString() === yestStr)  return 'yesterday';
+  return 'earlier';
+}
+
+function _renderNotifPanel() {
+  const body = document.getElementById('notif-panel-body');
+  if (!body) return;
+
+  if (!_notifData.length) {
+    body.innerHTML = '<div class="notif-empty">Nothing yet — check back later 💜</div>';
+    return;
+  }
+
+  const groups = { today: [], yesterday: [], earlier: [] };
+  _notifData.forEach(n => {
+    const g = _notifGroup(n.createdAt);
+    groups[g].push(n);
+  });
+
+  const labels = { today: 'Today', yesterday: 'Yesterday', earlier: 'Earlier' };
+  let html = '';
+  ['today', 'yesterday', 'earlier'].forEach(key => {
+    if (!groups[key].length) return;
+    html += `<div class="notif-group-label">${labels[key]}</div>`;
+    groups[key].forEach(n => {
+      const icon = n.icon || (n.title ? n.title.split(' ')[0] : '🔔');
+      const readCls = n.read ? ' notif-read' : '';
+      const dot = n.read ? '' : '<span class="notif-unread-dot"></span>';
+      html += `
+        <div class="notif-row${readCls}" onclick="openNotif('${n.id}')">
+          ${dot}
+          <div class="notif-icon-wrap">${icon}</div>
+          <div class="notif-content">
+            <div class="notif-title">${esc(n.title || '')}</div>
+            ${n.subtitle ? `<div class="notif-subtitle">${esc(n.subtitle)}</div>` : ''}
+            <div class="notif-time">${_notifTimestamp(n.createdAt)}</div>
+          </div>
+          <span class="notif-chevron">›</span>
+        </div>`;
+    });
+  });
+  body.innerHTML = html;
+}
+
+function openNotif(id) {
+  const n = _notifData.find(x => x.id === id);
+  if (!n) return;
+  // Mark read
+  if (!n.read) {
+    db.collection('notifications').doc(id).update({ read: true });
+  }
+  closeNotifPanel();
+  // Navigate via deepLink
+  if (n.deepLink) {
+    const dl = n.deepLink;
+    if (dl.section) {
+      navTo(dl.section);
+      if (dl.taskId)    setTimeout(() => openTaskDetail(dl.taskId), 100);
+      if (dl.glimmerId) setTimeout(() => openGlimmerDetail(dl.glimmerId), 100);
+    }
+  }
+}
+
+function markAllNotifsRead() {
+  const batch = db.batch();
+  _notifData.filter(n => !n.read).forEach(n => {
+    batch.update(db.collection('notifications').doc(n.id), { read: true });
+  });
+  batch.commit().catch(e => console.warn('markAllRead:', e));
 }
 
 
@@ -1902,6 +2077,7 @@ window.saveGlimmer = async function() {
     byEl.value = me;
 
     showToast('✨ Glimmer saved!');
+    writeNotif({ type: 'new_glimmer', icon: '✨', title: `${me} shared a glimmer`, subtitle: text.length > 60 ? text.slice(0,57)+'…' : text, deepLink: { section: 'glimmers' } });
     loadGlimmersAndStreak();
   } catch (err) {
     console.error('Save glimmer error:', err);
@@ -2055,6 +2231,8 @@ window.toggleGlimmerHeart = async function(id, currentlyLiked) {
     await ref.update({ likedBy: firebase.firestore.FieldValue.arrayRemove(me) });
   } else {
     await ref.update({ likedBy: firebase.firestore.FieldValue.arrayUnion(me) });
+    const g = (_glimmersCache || []).find(x => x.id === id);
+    writeNotif({ type: 'glimmer_liked', icon: '❤️', title: `${me} loved your glimmer`, subtitle: g ? (g.text || '').slice(0,60) : '', deepLink: { section: 'glimmers', glimmerId: id } });
   }
 };
 
@@ -2547,6 +2725,7 @@ window.sendThinkingOf = function sendThinkingOf() {
     sendPushNotification(`💗 ${me} is thinking of you!`);
   }
   showToast(`💗 Love sent to ${other}!`);
+  writeNotif({ type: 'thinking_of_you', icon: '💜', title: `${me} sent you some love`, subtitle: 'Tap to view', deepLink: { section: 'today' } });
 }
 
 window.initThinkingOfCard = function initThinkingOfCard() {

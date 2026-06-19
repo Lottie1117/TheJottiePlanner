@@ -169,5 +169,6 @@ function initFirebase() {
     if (typeof loadStreakData === 'function') loadStreakData();
   }
   if (me) setTimeout(checkNotifStatus, 1200);
+  if (typeof listenNotifications === 'function') listenNotifications();
 }
 

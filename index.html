@@ -48,12 +48,31 @@
 
 <!-- ── App header ─────────────────────────────────────── -->
 <header>
-  <div>
+  <div id="header-left">
     <div id="header-greeting">Loading…</div>
     <div id="header-date"></div>
+    <div id="header-section-title" style="display:none"></div>
   </div>
-  <span id="section-title">Today</span>
+  <span id="section-title" style="display:none"></span>
+  <button class="notif-bell-btn" id="notif-bell-btn" onclick="toggleNotifPanel()" aria-label="Notifications">
+    🔔<span class="notif-bell-dot" id="notif-bell-dot" style="display:none"></span>
+  </button>
 </header>
+
+<!-- ── Notification Panel ──────────────────────────────────────── -->
+<div class="notif-overlay" id="notif-overlay" onclick="closeNotifPanel()"></div>
+<div class="notif-panel" id="notif-panel">
+  <div class="notif-panel-header">
+    <span class="notif-panel-title">Notifications</span>
+    <button class="notif-close-btn" onclick="closeNotifPanel()">✕</button>
+  </div>
+  <div class="notif-panel-body" id="notif-panel-body">
+    <div class="loading">Loading…</div>
+  </div>
+  <div class="notif-panel-footer">
+    <button class="notif-mark-all-btn" onclick="markAllNotifsRead()">✓ Mark all as read</button>
+  </div>
+</div>
 
 <!-- ── Tab bar ────────────────────────────────────────── -->
 <!-- ── Bottom Nav ──────────────────────────────────────────────── -->
