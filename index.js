@@ -1778,7 +1778,7 @@ window.toggleGlimmerHeart = async function(id, currentlyLiked) {
 // ── Glimmer Detail View ───────────────────────────────────────────
 let _currentGlimmerId = null;
 
-function openGlimmerDetail(id, from) {
+window.openGlimmerDetail = function openGlimmerDetail(id, from) {
   _currentGlimmerId = id;
   _glimmerDetailFrom = from || 'glimmers';
 
@@ -1800,7 +1800,7 @@ function openGlimmerDetail(id, from) {
   });
 }
 
-function renderGlimmerDetail(id) {
+window.renderGlimmerDetail = function renderGlimmerDetail(id) {
   const g = _glimmersCache.find(g => g.id === id);
   if (!g) return;
   const el = document.getElementById('glimmer-detail-body');
@@ -1862,7 +1862,7 @@ function renderGlimmerDetail(id) {
   if (pinBtn) pinBtn.textContent = g.pinned ? '📌 Unpin' : '📌 Pin';
 }
 
-function closeGlimmerDetail() {
+window.closeGlimmerDetail = function closeGlimmerDetail() {
   if (window._glimmerDetailUnsub) { window._glimmerDetailUnsub(); window._glimmerDetailUnsub = null; }
   _currentGlimmerId = null;
   const ds = document.getElementById('glimmer-detail-section');
@@ -1875,11 +1875,11 @@ function closeGlimmerDetail() {
 }
 
 // ── Glimmer detail menu ───────────────────────────────────────────
-function openGlimmerDetailMenu() {
+window.openGlimmerDetailMenu = function openGlimmerDetailMenu() {
   document.getElementById('glimmer-detail-menu-overlay').classList.add('open');
   document.getElementById('glimmer-detail-menu').classList.add('open');
 }
-function closeGlimmerDetailMenu() {
+window.closeGlimmerDetailMenu = function closeGlimmerDetailMenu() {
   document.getElementById('glimmer-detail-menu-overlay').classList.remove('open');
   document.getElementById('glimmer-detail-menu').classList.remove('open');
 }
