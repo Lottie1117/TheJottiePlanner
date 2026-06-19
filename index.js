@@ -319,9 +319,18 @@ function ago(ts) {
   return Math.floor(d/86400000) + 'd ago';
 }
 
+function avatarBadge(name) {
+  const u1 = (typeof SETTINGS !== 'undefined' && SETTINGS.user1Name) || 'Lottie';
+  const u2 = (typeof SETTINGS !== 'undefined' && SETTINGS.user2Name) || 'Jonny';
+  let cls = 'avatar-shared';
+  if (name === u1) cls = 'avatar-user1';
+  else if (name === u2) cls = 'avatar-user2';
+  const initial = (name || '').trim().charAt(0).toUpperCase() || '?';
+  return `<span class="todo-avatar ${cls}" title="${esc(name || '')}">${esc(initial)}</span>`;
+}
+
 function badge(name) {
-  const cls = (name === 'Lottie') ? 'badge-a' : 'badge-b';
-  return `<span class="badge ${cls}">${esc(name)}</span>`;
+  return avatarBadge(name);
 }
 
 // ── Plans ─────────────────────────────────────────────────────
@@ -2234,7 +2243,7 @@ function buildGlimmerCard(doc, opts = {}) {
       <div class="glimmer-tile-overlay">
         <div class="glimmer-tile-text">${escapeHtml(g.text || '')}</div>
         <div class="glimmer-tile-footer">
-          <span class="glimmer-tile-author">${escapeHtml(g.by || '')}</span>
+          <span class="glimmer-tile-author">${avatarBadge(g.by)}</span>
           <button class="glimmer-heart-btn${liked ? ' liked' : ''}" ${heartDisabled}
             onclick="event.stopPropagation(); toggleGlimmerHeart('${id}', ${liked})"
             aria-label="${liked ? 'Unlike' : 'Like'}">${heartIcon}</button>
@@ -2378,7 +2387,7 @@ window.renderGlimmerDetail = function renderGlimmerDetail(id) {
       <div class="glimmer-detail-caption">
         <div class="glimmer-detail-text">${escapeHtml(g.text || '')}</div>
         <div class="glimmer-detail-meta">
-          <span class="glimmer-detail-author">${escapeHtml(g.by || '')}</span>
+          <span class="glimmer-detail-author">${avatarBadge(g.by)}</span>
           <span class="glimmer-detail-date">${dateStr}</span>
         </div>
         <button class="glimmer-detail-heart${liked ? ' liked' : ''}"
@@ -2395,7 +2404,7 @@ window.renderGlimmerDetail = function renderGlimmerDetail(id) {
         <div class="glimmer-detail-caption">
           <div class="glimmer-detail-text">${escapeHtml(g.text || '')}</div>
           <div class="glimmer-detail-meta">
-            <span class="glimmer-detail-author">${escapeHtml(g.by || '')}</span>
+            <span class="glimmer-detail-author">${avatarBadge(g.by)}</span>
             <span class="glimmer-detail-date">${dateStr}</span>
           </div>
           <button class="glimmer-detail-heart${liked ? ' liked' : ''}"
@@ -2500,7 +2509,7 @@ function renderDashPinnedGlimmer() {
         <div class="dash-pinned-glimmer-caption">
           <span class="dash-pinned-glimmer-text">${escapeHtml(g.text || '')}</span>
           <div class="dash-pinned-glimmer-footer">
-            <span class="dash-pinned-glimmer-author">${escapeHtml(g.by || '')}</span>
+            <span class="dash-pinned-glimmer-author">${avatarBadge(g.by)}</span>
             <button class="glimmer-heart-btn${liked ? ' liked' : ''}" ${isOwn ? 'disabled' : ''}
               onclick="event.stopPropagation(); toggleGlimmerHeart('${g.id}', ${liked})"
               aria-label="${liked ? 'Unlike' : 'Like'}">${heartIcon}</button>
@@ -2513,7 +2522,7 @@ function renderDashPinnedGlimmer() {
         <div class="dash-pinned-glimmer-text-overlay">
           <span class="dash-pinned-glimmer-text dash-pinned-glimmer-text-only">${escapeHtml(g.text || '')}</span>
           <div class="dash-pinned-glimmer-footer">
-            <span class="dash-pinned-glimmer-author" style="color:rgba(255,255,255,0.8)">${escapeHtml(g.by || '')}</span>
+            <span class="dash-pinned-glimmer-author">${avatarBadge(g.by)}</span>
             <button class="glimmer-heart-btn${liked ? ' liked' : ''}" ${isOwn ? 'disabled' : ''}
               onclick="event.stopPropagation(); toggleGlimmerHeart('${g.id}', ${liked})"
               aria-label="${liked ? 'Unlike' : 'Like'}">${heartIcon}</button>
