@@ -203,6 +203,15 @@
 
 <!-- ── To-Do ───────────────────────────────────────────── -->
 <div id="todos-section" class="section">
+  <div class="todo-header">
+    <span class="todo-header-title">Open Tasks</span>
+    <span class="todo-count-badge" id="todo-open-count">0</span>
+  </div>
+  <div class="todo-filters">
+    <button id="todo-filter-j" class="todo-filter-btn" onclick="todoToggleFilter('showJonny')"><span class="todo-avatar todo-avatar-j">J</span></button>
+    <button id="todo-filter-l" class="todo-filter-btn" onclick="todoToggleFilter('showLottie')"><span class="todo-avatar todo-avatar-l">L</span></button>
+    <button id="todo-filter-done" class="todo-filter-btn todo-filter-check" onclick="todoToggleFilter('showDone')">☑</button>
+  </div>
   <div id="todo-list"><div class="loading">Loading…</div></div>
 </div>
 

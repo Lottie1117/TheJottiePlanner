@@ -415,47 +415,150 @@ if (d.recurrence === 'yearly')      base.setFullYear(base.getFullYear() + 1);
 }
 function delTodo(id)          { db.collection('todos').doc(id).delete(); }
 
+// ── Todo filters state ─────────────────────────────────────────
+let _todoFilter = { showJonny: true, showLottie: true, showDone: false };
+
+function todoToggleFilter(key) {
+  _todoFilter[key] = !_todoFilter[key];
+  renderTodos();
+}
+
+function renderTodos() {
+  const el = document.getElementById('todo-list');
+  if (!el) return;
+  const items = _todoData || [];
+  const showDone = _todoFilter.showDone;
+
+  // Filter by completion
+  let filtered = items.filter(i => showDone ? i.completed : !i.completed);
+
+  // Filter by assignee
+  filtered = filtered.filter(i => {
+    const who = i.who || 'Either';
+    if (who === 'Both' || who === 'Either') return _todoFilter.showJonny || _todoFilter.showLottie;
+    if (who === 'Jonny')  return _todoFilter.showJonny;
+    if (who === 'Lottie') return _todoFilter.showLottie;
+    return true;
+  });
+
+  // Update header count
+  const activeCount = items.filter(i => !i.completed).length;
+  const countEl = document.getElementById('todo-open-count');
+  if (countEl) countEl.textContent = activeCount;
+
+  // Update filter button states
+  const btnJ = document.getElementById('todo-filter-j');
+  const btnL = document.getElementById('todo-filter-l');
+  const btnDone = document.getElementById('todo-filter-done');
+  if (btnJ) btnJ.classList.toggle('filter-off', !_todoFilter.showJonny);
+  if (btnL) btnL.classList.toggle('filter-off', !_todoFilter.showLottie);
+  if (btnDone) btnDone.classList.toggle('filter-done-active', _todoFilter.showDone);
+
+  if (filtered.length === 0) {
+    el.innerHTML = showDone
+      ? '<div class="empty" style="padding:24px"><p>No completed tasks yet 🎉</p></div>'
+      : '<div class="empty" style="padding:24px"><p>Nothing left to do! 🎉</p></div>';
+    return;
+  }
+
+  // Group by due date
+  const today = new Date(); today.setHours(0,0,0,0);
+  const endThisMonth = new Date(today.getFullYear(), today.getMonth()+1, 0);
+  const endNextMonth = new Date(today.getFullYear(), today.getMonth()+2, 0);
+
+  const groups = { thisMonth: [], nextMonth: [], future: [], none: [] };
+  filtered.forEach(i => {
+    if (!i.due) { groups.none.push(i); return; }
+    const d = new Date(i.due + 'T00:00:00');
+    if (d <= endThisMonth)      groups.thisMonth.push(i);
+    else if (d <= endNextMonth) groups.nextMonth.push(i);
+    else                        groups.future.push(i);
+  });
+  // Sort each group by due date
+  const byDue = (a,b) => {
+    if (!a.due && !b.due) return 0;
+    if (!a.due) return 1; if (!b.due) return -1;
+    return a.due < b.due ? -1 : 1;
+  };
+  groups.thisMonth.sort(byDue); groups.nextMonth.sort(byDue);
+  groups.future.sort(byDue);
+
+  let html = '';
+  const renderGroup = (label, list) => {
+    if (!list.length) return;
+    html += `<div class="todo-group-label">${label}</div>`;
+    list.forEach(i => { html += todoCard(i); });
+  };
+  renderGroup('This Month', groups.thisMonth);
+  renderGroup('Next Month', groups.nextMonth);
+  renderGroup('In The Future', groups.future);
+  renderGroup('No Due Date', groups.none);
+
+  el.innerHTML = html;
+}
+
 function listenTodos() {
   db.collection('todos').orderBy('createdAt','asc')
     .onSnapshot(snap => {
       _todoData = snap.docs.map(d => ({id:d.id,...d.data()}));
       renderToday();
-      const el = document.getElementById('todo-list');
-      if (snap.empty) {
-        el.innerHTML = '<div class="empty"><div class="emo">✅</div><p>No tasks yet — add one above!</p></div>';
-        return;
-      }
-      const items  = snap.docs.map(d => ({id:d.id,...d.data()}));
-      const active = items.filter(i => !i.completed);
-      const done   = items.filter(i =>  i.completed);
-
-      let html = '<div class="list-label">Open tasks</div>';
-      if (active.length === 0) {
-        html += '<div class="empty" style="padding:16px"><p>Nothing left to do! 🎉</p></div>';
-      }
-      active.forEach(i => { html += todoCard(i); });
-      if (done.length > 0) {
-        html += `<div class="list-label" style="margin-top:14px;opacity:0.6">Done (${done.length})</div>`;
-        done.forEach(i => { html += todoCard(i); });
-      }
-      el.innerHTML = html;
+      renderTodos();
     });
 }
 
+function todoDuePill(due) {
+  if (!due) return '';
+  const today = new Date(); today.setHours(0,0,0,0);
+  const d = new Date(due + 'T00:00:00');
+  const diffDays = Math.round((d - today) / 86400000);
+
+  let label;
+  if (diffDays === 0)       label = 'Today';
+  else if (diffDays === 1)  label = 'Tomorrow';
+  else if (diffDays === -1) label = 'Yesterday';
+  else if (diffDays < 0)    label = fmtDate(due);
+  else                      label = fmtDate(due);
+
+  let cls = 'due-pill-green';
+  if (diffDays <= 0)      cls = 'due-pill-red';
+  else if (diffDays <= 3) cls = 'due-pill-red';
+  else if (diffDays <= 7) cls = 'due-pill-amber';
+
+  return `<span class="due-pill ${cls}">${label}</span>`;
+}
+
 function todoCard(i) {
-  const whoIcon = {Lottie:'👩',Jonny:'👨',Both:'👫',Either:'🤷'};
-  const whoStr  = i.who ? `${whoIcon[i.who]||'👤'} ${esc(i.who)} · ` : '';
-  const dueStr  = i.due ? `Due ${fmtDate(i.due)} · ` : '';
-  const recurBadge = i.recurrence ? `<span class="recur-badge">🔁 ${i.recurrence}</span> ` : '';
+  const who = i.who || 'Either';
+
+  // Avatar indicators
+  let avatars = '';
+  if (who === 'Jonny')  avatars = '<span class="todo-avatar todo-avatar-j">J</span>';
+  else if (who === 'Lottie') avatars = '<span class="todo-avatar todo-avatar-l">L</span>';
+  else avatars = '<span class="todo-avatar todo-avatar-j">J</span><span class="todo-avatar todo-avatar-l">L</span>';
+
+  // Shadow class
+  let shadowCls = '';
+  if (who === 'Lottie')        shadowCls = ' shadow-lottie';
+  else if (who === 'Jonny')    shadowCls = ' shadow-jonny';
+  else                         shadowCls = ' shadow-both';
+
+  const repeatIcon = i.recurrence ? '<span class="todo-repeat-icon">↻</span>' : '';
+  const duePill = todoDuePill(i.due);
+
   return `
-  <div class="item-card${i.completed ? ' done' : ''}">
-    <div class="checkbox${i.completed ? ' checked' : ''}" onclick="toggleTodo('${i.id}',${i.completed})"></div>
+  <div class="item-card todo-card${i.completed ? ' done' : ''}${shadowCls}" onclick="todoCardClick(event,'${i.id}',${i.completed})">
+    <div class="checkbox${i.completed ? ' checked' : ''}" onclick="event.stopPropagation();toggleTodo('${i.id}',${i.completed})"></div>
     <div class="item-body">
+      <div class="todo-avatars">${avatars}</div>
       <div class="item-title">${esc(i.title)}</div>
-      <div class="item-meta">${recurBadge}${whoStr}${dueStr}${badge(i.addedBy)} · ${ago(i.createdAt)}</div>
     </div>
-    <button class="del-btn" onclick="delTodo('${i.id}')">✕</button>
+    ${duePill}
+    ${repeatIcon}
   </div>`;
+}
+
+function todoCardClick(e, id, completed) {
+  // Placeholder for Task Detail View (Phase 2)
 }
 
 // ── Luna ─────────────────────────────────────────────────────────

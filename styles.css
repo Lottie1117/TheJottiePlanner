@@ -528,6 +528,76 @@
     /* ── Recurrence badge ─────────────────────────────────── */
     .recur-badge { font-size:11px; font-weight:700; background:#E8F5E9; color:#2E7D32; padding:2px 8px; border-radius:20px; }
 
+    /* ── Todo redesign ───────────────────────────────── */
+    .todo-header {
+      display: flex; align-items: center; gap: 10px;
+      margin: 4px 2px 10px;
+    }
+    .todo-header-title {
+      font-size: 12px; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.6px;
+    }
+    .todo-count-badge {
+      background: var(--primary-light); color: var(--primary);
+      font-size: 11px; font-weight: 700;
+      padding: 2px 8px; border-radius: 20px;
+    }
+    .todo-filters {
+      display: flex; gap: 8px; margin-bottom: 14px;
+    }
+    .todo-filter-btn {
+      background: none; border: none; cursor: pointer;
+      padding: 0; line-height: 1; transition: opacity 0.18s;
+    }
+    .todo-filter-btn.filter-off .todo-avatar { opacity: 0.3; filter: grayscale(1); }
+    .todo-filter-check {
+      font-size: 20px; color: var(--primary); line-height: 1;
+    }
+    .todo-filter-check.filter-done-active { color: var(--green); }
+
+    .todo-avatar {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 26px; height: 26px; border-radius: 50%;
+      font-size: 12px; font-weight: 800; line-height: 1;
+    }
+    .todo-avatar-j { background: #DDEEFF; color: #1155AA; }
+    .todo-avatar-l { background: #FFE0EC; color: #B5005B; }
+
+    .todo-avatars { display: flex; gap: 4px; margin-bottom: 5px; }
+
+    .todo-card {
+      position: relative;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .todo-card:active { transform: scale(0.98); }
+
+    .shadow-lottie { box-shadow: 0 4px 14px rgba(233,123,154,0.30); border-color: #FFD6E7; }
+    .shadow-jonny  { box-shadow: 0 4px 14px rgba(17,85,170,0.18);   border-color: #DDEEFF; }
+    .shadow-both   { box-shadow: 0 4px 14px rgba(140,110,200,0.22); border-color: #E5DAFF; }
+
+    .todo-repeat-icon {
+      position: absolute; top: 10px; right: 12px;
+      font-size: 15px; color: var(--muted); opacity: 0.55;
+    }
+
+    .due-pill {
+      flex-shrink: 0; align-self: center;
+      font-size: 11.5px; font-weight: 700;
+      padding: 4px 10px; border-radius: 20px;
+      white-space: nowrap; margin-right: 4px;
+    }
+    .due-pill-green { background: #E8F5E9; color: #2E7D32; }
+    .due-pill-amber { background: #FFF3E0; color: #E65100; }
+    .due-pill-red   { background: #FFEBEE; color: #C62828; }
+
+    .todo-group-label {
+      font-size: 11px; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.5px;
+      margin: 14px 2px 8px;
+    }
+    .todo-group-label:first-child { margin-top: 0; }
+
 
     /* ── Glimmers ───────────────────────────────────────────────── */
     .glimmer-input-row { display:flex; gap:8px; margin-bottom:10px; }
