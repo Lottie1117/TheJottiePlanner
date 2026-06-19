@@ -1832,117 +1832,122 @@ async function calculateStreaks() {
   // ── Today's individual status ──────────────────
   const todaySubmitters = dayMap[todayKey] || new Set();
 
+  // ── Weekly sparkle data (Mon–Sun of current week) ─────────────
+  // Find Monday of this week
+  const today = new Date();
+  const dayOfWeek = today.getDay(); // 0=Sun, 1=Mon…
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() + mondayOffset);
+  monday.setHours(0, 0, 0, 0);
+
+  const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const weekDays = DAY_LABELS.map((label, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    const key = getLocalDateKey(d);
+    const submitters = dayMap[key] || new Set();
+    return {
+      label,
+      key,
+      isToday: key === todayKey,
+      lottieDone: submitters.has('Lottie'),
+      jonnyDone: submitters.has('Jonny'),
+      bothDone: submitters.has('Lottie') && submitters.has('Jonny')
+    };
+  });
+
   return {
     currentStreak,
     longest: Math.max(longest, currentStreak),
     totalValidDays: validDays.size,
     lottieDone: todaySubmitters.has('Lottie'),
     jonnyDone:  todaySubmitters.has('Jonny'),
-    todayComplete: todaySubmitters.has('Lottie') && todaySubmitters.has('Jonny')
+    todayComplete: todaySubmitters.has('Lottie') && todaySubmitters.has('Jonny'),
+    weekDays
   };
 }
 
 // ──────────────────────────────────────────────────────────────
-// RENDER STREAK — GLIMMERS PAGE
+// SPARKLE CARD — shared component for dashboard + glimmers page
 // ──────────────────────────────────────────────────────────────
 
+/**
+ * Renders the weekly sparkle streak card into a container element.
+ * Used by both the Today dashboard and the Glimmers page.
+ * @param {string} containerId - ID of the element to render into
+ * @param {object} data - result from calculateStreaks()
+ */
+function renderSparkleCard(containerId, data) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+
+  const streakLabel = data.currentStreak === 0
+    ? '0 days'
+    : data.currentStreak === 1
+      ? '1 day 🔥'
+      : data.currentStreak + ' days 🔥';
+
+  // Build sparkle dots (Mon–Sun)
+  const sparkles = data.weekDays.map(day => {
+    const icon = day.bothDone ? '✨' : '✦';
+    const todayCls = day.isToday ? ' sparkle-today' : '';
+    const doneCls  = day.bothDone ? ' sparkle-done' : '';
+    return `<div class="sparkle-day${todayCls}${doneCls}">
+      <span class="sparkle-icon">${icon}</span>
+      <span class="sparkle-label">${day.label}</span>
+    </div>`;
+  }).join('');
+
+  // Footer status
+  const lottieTick = data.lottieDone ? '✓' : '◦';
+  const jonnyTick  = data.jonnyDone  ? '✓' : '◦';
+  const lottieCls  = data.lottieDone ? ' sparkle-done-name' : '';
+  const jonnyCls   = data.jonnyDone  ? ' sparkle-done-name' : '';
+
+  // Nudge or CTA button
+  let btnHtml = '';
+  if (data.todayComplete) {
+    btnHtml = `<button class="sparkle-btn" onclick="navTo('glimmers')">See today's Glimmers →</button>`;
+  } else {
+    const other = (me === 'Lottie') ? 'Jonny' : 'Lottie';
+    const otherDone = (other === 'Lottie') ? data.lottieDone : data.jonnyDone;
+    if (!otherDone) {
+      btnHtml = `<button class="sparkle-btn sparkle-btn-nudge" onclick="nudgePerson('${other}')">👉 Nudge ${other}</button>`;
+    } else {
+      btnHtml = `<button class="sparkle-btn" onclick="navTo('glimmers')">See today's Glimmers →</button>`;
+    }
+  }
+
+  el.innerHTML = `
+    <div class="sparkle-header">
+      <span class="sparkle-title">✨ Glimmer Streak</span>
+      <span class="sparkle-count">${streakLabel}</span>
+    </div>
+    <div class="sparkle-row">${sparkles}</div>
+    <div class="sparkle-footer">
+      <span class="sparkle-person${lottieCls}">${lottieTick} Lottie</span>
+      <span class="sparkle-person${jonnyCls}">${jonnyTick} Jonny</span>
+    </div>
+    ${btnHtml}
+  `;
+}
+
+// ── Called when navigating to glimmers page ───────────────────
 async function loadStreakData() {
   try {
     const data = await calculateStreaks();
-
-    const numEl = document.getElementById('streak-current');
-    const labelEl = document.getElementById('streak-label');
-    const longestEl = document.getElementById('streak-longest');
-    const totalEl = document.getElementById('streak-total-days');
-    const dotL = document.getElementById('streak-dot-lottie');
-    const dotJ = document.getElementById('streak-dot-jonny');
-    const nudgeWrap = document.getElementById('streak-nudge-wrap');
-
-    if (numEl) numEl.textContent = data.currentStreak;
-    if (longestEl) longestEl.textContent = data.longest;
-    if (totalEl) totalEl.textContent = data.totalValidDays;
-
-    if (labelEl) {
-      if (data.currentStreak === 0) labelEl.textContent = 'Start your streak today! 💜';
-      else if (data.currentStreak === 1) labelEl.textContent = 'day in a row — keep going!';
-      else labelEl.textContent = `days in a row 🔥`;
-    }
-
-    if (dotL) {
-      dotL.className = 'streak-person-dot' + (data.lottieDone ? ' done' : '');
-      dotL.textContent = data.lottieDone ? '✓' : '👩';
-    }
-    if (dotJ) {
-      dotJ.className = 'streak-person-dot' + (data.jonnyDone ? ' done' : '');
-      dotJ.textContent = data.jonnyDone ? '✓' : '👨';
-    }
-
-    if (nudgeWrap) {
-      nudgeWrap.innerHTML = '';
-      if (!data.todayComplete) {
-        const other = (me === 'Lottie') ? 'Jonny' : 'Lottie';
-        const otherDone = (other === 'Lottie') ? data.lottieDone : data.jonnyDone;
-        if (!otherDone) {
-          const btn = document.createElement('button');
-          btn.className = 'nudge-btn';
-          btn.textContent = '👉 Nudge ' + other;
-          btn.onclick = () => nudgePerson(other);
-          nudgeWrap.appendChild(btn);
-        }
-      }
-    }
+    renderSparkleCard('sparkle-card-glimmers', data);
   } catch (err) {
     console.error('loadStreakData error:', err);
   }
 }
 
-// ──────────────────────────────────────────────────────────────
-// RENDER STREAK — DASHBOARD
-// ──────────────────────────────────────────────────────────────
-
+// ── Called on Today dashboard load ────────────────────────────
 window.updateDashboardStreak = async function() {
   try {
     const data = await calculateStreaks();
-
-    const countEl   = document.getElementById('dash-streak-count');
-    const lottieSt  = document.getElementById('dash-lottie-status');
-    const jonnySt   = document.getElementById('dash-jonny-status');
-    const nudgeWrap = document.getElementById('dash-nudge-wrap');
-
-    if (countEl) {
-      countEl.textContent = data.currentStreak === 1
-        ? '1 day 🔥'
-        : data.currentStreak > 1
-          ? `${data.currentStreak} days 🔥`
-          : '0 days';
-    }
-
-    const lottieIcon = document.getElementById('dash-lottie-icon');
-    const jonnyIcon  = document.getElementById('dash-jonny-icon');
-    if (lottieIcon) lottieIcon.textContent = data.lottieDone ? '✓' : '✕';
-    if (jonnyIcon)  jonnyIcon.textContent  = data.jonnyDone  ? '✓' : '✕';
-    if (lottieSt) { lottieSt.textContent = (data.lottieDone ? '✓' : '✕') + ' Lottie'; }
-    if (jonnySt)  { jonnySt.textContent  = (data.jonnyDone  ? '✓' : '✕') + ' Jonny'; }
-
-    if (nudgeWrap) {
-      nudgeWrap.innerHTML = '';
-      const btn = document.createElement('button');
-      if (!data.todayComplete) {
-        const other = (me === 'Lottie') ? 'Jonny' : 'Lottie';
-        const otherDone = (other === 'Lottie') ? data.lottieDone : data.jonnyDone;
-        if (!otherDone) {
-          btn.textContent = '👉 Nudge ' + other;
-          btn.onclick = () => { window.nudgePersonGlobal ? window.nudgePersonGlobal(other) : nudgePerson(other); };
-        } else {
-          btn.textContent = 'All done today! ✨';
-          btn.onclick = () => navTo('glimmers');
-        }
-      } else {
-        btn.textContent = `See today's Glimmers →`;
-        btn.onclick = () => navTo('glimmers');
-      }
-      nudgeWrap.appendChild(btn);
-    }
+    renderSparkleCard('sparkle-card-dash', data);
   } catch (err) {
     console.error('updateDashboardStreak error:', err);
   }

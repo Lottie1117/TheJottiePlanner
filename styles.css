@@ -656,592 +656,106 @@
       align-items: stretch;
     }
     /* Streak card */
+    /* ── Dash streak card container ──────────────────────────────── */
     #dash-streak-card {
       background: linear-gradient(135deg, #7C5CBF 0%, #9B7DD4 100%);
+      border-radius: 16px;
+      padding: 14px 16px;
       color: white;
-      border-radius: 18px;
-      padding: 14px 16px;
-      box-shadow: 0 4px 20px rgba(124,92,191,0.35);
-    }
-    #dash-streak-card .dash-hdr-title { color: white; font-size: 17px; font-weight: 800; }
-    #dash-streak-card .dash-hdr { margin-bottom: 10px; }
-    #dash-streak-card .dash-count { color: white; background: rgba(255,255,255,0.22); border-radius: 20px; padding: 4px 12px; font-size: 13px; font-weight: 700; }
-    /* Streak body: sparkles left, people right */
-    .streak-body { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
-    .streak-sparkles { font-size: 42px; flex: 0 0 auto; line-height: 1; padding-right: 4px; }
-    .streak-people { display: flex; gap: 20px; flex: 1; }
-    .streak-person { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-    .streak-person .sp-icon { font-size: 22px; font-weight: 900; color: white; line-height: 1; }
-    .streak-person-name { font-size: 14px; font-weight: 700; color: white; }
-    .streak-nudge { }
-    .streak-nudge button { background: rgba(255,255,255,0.22); color: white; border: 1.5px solid rgba(255,255,255,0.45); border-radius: 20px; padding: 8px 16px; font-size: 13px; font-weight: 700; cursor: pointer; width: 100%; letter-spacing: 0.1px; }
-    /* Thinking of You card */
-    #dash-thinking-card {
-      background: linear-gradient(160deg, #FFF0F5 0%, #FFE4EE 100%);
-      border-radius: 18px;
-      padding: 12px 8px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-      cursor: pointer;
-      box-shadow: 0 2px 12px rgba(233,123,154,0.18);
-      -webkit-tap-highlight-color: transparent;
-      user-select: none;
-      text-align: center;
-    }
-    .thinking-title { font-size: 10px; font-weight: 800; color: #C2406E; line-height: 1.2; }
-    .thinking-heart { background: none; border: none; font-size: 38px; cursor: pointer; padding: 4px; transition: transform 0.18s cubic-bezier(0.34,1.56,0.64,1); display: block; line-height: 1; }
-    .thinking-heart.pop { transform: scale(1.35); }
-    .thinking-sub { font-size: 9px; color: #C2406E; font-weight: 600; opacity: 0.8; line-height: 1.2; }
-    .thinking-last { font-size: 9px; color: #C2406E; opacity: 0.7; margin-top: 2px; line-height: 1.3; font-weight: 600; }
-    /* Luna dash card */
-    .luna-dash-hero { text-align: center; font-size: 52px; line-height: 1; margin-bottom: 6px; }
-    .luna-chew-btn { width: 100%; margin-top: 8px; padding: 10px; background: var(--primary); color: white; border: none; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; }
-    .luna-chew-btn.done { background: #4CAF50; }
-    .luna-chew-logged { font-size: 12px; color: var(--muted); margin-top: 6px; text-align: center; }
-    .luna-unlog { font-size: 11px; color: var(--primary); cursor: pointer; text-decoration: underline; display: block; text-align: center; margin-top: 3px; }
-    /* Small dash cards */
-    .dash-card-sm { background: var(--card); border-radius: 16px; padding: 14px 16px; box-shadow: var(--shadow); border: 1px solid var(--border); }
-    .dash-card-sm .dash-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-    .dash-card-sm .dash-hdr-title { font-size: 15px; font-weight: 800; color: var(--primary); }
-    .dash-card-sm .dash-row-title { font-size: 12px; font-weight: 400; color: var(--text); flex: 1; min-width: 0; word-break: break-word; }
-    .dash-card-sm .dash-count { font-size: 11px; font-weight: 700; background: var(--primary-light); color: var(--primary); border-radius: 10px; padding: 2px 8px; }
-    .dash-card-sm .dash-row { font-size: 12px; color: var(--text); padding: 4px 0; border-bottom: 1px solid var(--border); line-height: 1.3; }
-    .dash-card-sm .dash-row:last-child { border-bottom: none; }
-    .dash-card-sm .view-all { display: block; text-align: center; color: var(--primary); font-size: 12px; font-weight: 700; margin-top: 8px; cursor: pointer; text-decoration: none; }
-    .dash-card-sm .dash-empty { font-size: 12px; color: var(--muted); padding: 8px 0; }
-    /* Recent glimmers */
-    #dash-glimmer-section { margin-bottom: 10px; }
-    #dash-pinned-notes { margin-bottom: 12px; }
-    .dash-pinned-card {
-      background: var(--card);
-      border-radius: 16px;
-      padding: 14px 16px;
       box-shadow: var(--shadow);
-      border: 1px solid var(--border);
-      margin-bottom: 12px;
     }
-    .dash-pinned-items { display: flex; flex-direction: column; gap: 0; }
-    .dash-pinned-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 6px 0;
-      border-bottom: 1px solid var(--border);
-      cursor: pointer;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .dash-pinned-row:last-child { border-bottom: none; }
-    .dash-pinned-emoji { font-size: 18px; flex-shrink: 0; }
-    .dash-pinned-title { font-size: 13px; font-weight: 600; color: var(--text); flex: 1; }
-    .dash-pinned-count { font-size: 11px; color: var(--muted); }
-    .dash-glimmer-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-    .dash-glimmer-hdr-title { font-size: 15px; font-weight: 800; color: var(--text); }
-    .dash-glimmer-hdr a { color: var(--primary); font-size: 13px; font-weight: 700; text-decoration: none; cursor: pointer; }
-    .glimmer-scroll { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-    .glimmer-scroll::-webkit-scrollbar { display: none; }
-    .glimmer-tile { flex: 0 0 110px; background: var(--card); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow); cursor: pointer; }
-    .glimmer-tile img { width: 100%; height: 80px; object-fit: cover; display: block; }
-    .glimmer-tile-emoji { width: 100%; height: 80px; display: flex; align-items: center; justify-content: center; font-size: 32px; background: var(--primary-light); }
-    .glimmer-tile-text { font-size: 11px; color: var(--text); padding: 6px 8px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-    /* New nav */
-    .bottom-nav-new { position: fixed; bottom: 0; left: 0; right: 0; max-width: 600px; margin: 0 auto; background: var(--card); border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-around; padding: 8px 0 20px; z-index: 200; }
-    .nav-btn { display: flex; flex-direction: column; align-items: center; gap: 3px; background: none; border: none; cursor: pointer; color: var(--muted); font-size: 10px; font-weight: 700; padding: 4px 20px; -webkit-tap-highlight-color: transparent; }
-    .nav-btn .nav-icon { font-size: 22px; line-height: 1; }
-    .nav-btn.active { color: var(--primary); }
-    .nav-fab-btn { width: 56px; height: 56px; border-radius: 50%; background: var(--primary); color: white; border: none; font-size: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(124,92,191,0.5); margin-top: -20px; transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1); -webkit-tap-highlight-color: transparent; }
-    .nav-fab-btn.open { transform: rotate(45deg); }
-    /* hide old nav */
-    .bottom-nav { display: none !important; }
 
-    /* ── Birthdays ──────────────────────────────────────────────── */
-    .bday-card { background:var(--card); border-radius:14px; padding:14px 16px; margin-bottom:10px;
-      display:flex; align-items:center; gap:14px; }
-    .bday-emoji { font-size:28px; flex-shrink:0; }
-    .bday-body  { flex:1; }
-    .bday-name  { font-size:16px; font-weight:700; color:var(--text); }
-    .bday-date  { font-size:13px; color:var(--muted); margin-top:2px; }
-    .bday-age   { font-size:12px; color:var(--primary); font-weight:600; margin-top:2px; }
-    .bday-upcoming { border-left:4px solid #F48FB1; }
-    .dash-bday-card { background:var(--card); border-radius:14px; padding:12px 14px;
-      margin-bottom:8px; border-left:3px solid #F48FB1; display:flex; gap:10px; align-items:center; }
-    .dash-bday-emoji { font-size:22px; }
-    .dash-bday-body  { flex:1; }
-    .dash-bday-name  { font-size:14px; font-weight:700; color:var(--text); }
-    .dash-bday-info  { font-size:12px; color:var(--muted); margin-top:2px; }
-
-    /* ── Lists Hub ──────────────────────────────────────────────── */
-    /* ── Notes Hub ─────────────────────────────────────────────── */
-    .notes-search-wrap {
-      position: relative;
-      margin-bottom: 16px;
-    }
-    .notes-search-icon {
-      position: absolute;
-      right: 12px;
-      top: 50%;
-      transform: translateY(-50%);
-      font-size: 16px;
-      pointer-events: none;
-    }
-    .notes-search {
-      width: 100%;
-      padding: 10px 38px 10px 14px;
-      border-radius: 14px;
-      border: 1.5px solid var(--border);
-      background: var(--card);
-      color: var(--text);
-      font-size: 14px;
-      box-sizing: border-box;
-    }
-    #notes-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-    .note-card {
-      background: var(--card);
+    /* ── Sparkle card (shared: dashboard + glimmers page) ─────────── */
+    .sparkle-card {
+      background: linear-gradient(135deg, #7C5CBF 0%, #9B7DD4 100%);
       border-radius: 16px;
-      padding: 14px;
-      cursor: pointer;
-      box-shadow: 0 2px 8px rgba(124,92,191,0.08);
-      border: 1.5px solid var(--border);
-      transition: transform 0.15s, box-shadow 0.15s;
-      -webkit-tap-highlight-color: transparent;
+      padding: 14px 16px;
+      color: white;
+      box-shadow: var(--shadow);
+      margin-bottom: 14px;
     }
-    .note-card:active { transform: scale(0.97); box-shadow: 0 1px 4px rgba(124,92,191,0.12); }
-    .note-card-top {
+    .sparkle-header {
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 6px;
+      align-items: center;
+      margin-bottom: 12px;
     }
-    .note-card-emoji { font-size: 28px; line-height: 1; }
-    .note-pin { font-size: 14px; opacity: 0.7; }
-    .note-card-title {
+    .sparkle-title {
       font-size: 14px;
-      font-weight: 600;
-      color: var(--text);
-      margin-bottom: 4px;
-      line-height: 1.3;
+      font-weight: 800;
+      letter-spacing: 0.1px;
     }
-    .note-card-meta { font-size: 12px; color: var(--muted); margin-bottom: 2px; }
-    .note-card-updated { font-size: 11px; color: var(--primary); opacity: 0.8; margin-top: 4px; }
-
-    /* ── Emoji picker ─────────────────────────────────────────────── */
-    .emoji-picker {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 4px;
-    }
-    .emoji-opt {
-      width: 42px;
-      height: 42px;
-      border-radius: 10px;
-      border: 2px solid var(--border);
-      background: var(--card);
-      font-size: 22px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: border-color 0.15s, background 0.15s;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .emoji-opt.selected {
-      border-color: var(--primary);
-      background: var(--primary-light, #ede8f8);
-    }
-    .emoji-opt:active { transform: scale(0.92); }
-    .emoji-custom-btn {
-      font-size: 18px;
+    .sparkle-count {
+      font-size: 13px;
       font-weight: 700;
-      color: var(--primary);
-      border-style: dashed;
+      background: rgba(255,255,255,0.22);
+      border-radius: 20px;
+      padding: 3px 10px;
     }
-
-    /* ── Note Detail Page ──────────────────────────────────────── */
-    .note-detail-header {
+    .sparkle-row {
       display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 16px;
-      padding-bottom: 12px;
-      border-bottom: 1.5px solid var(--border);
-      position: sticky;
-      top: 0;
-      background: var(--bg);
-      z-index: 10;
-      padding-top: 2px;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 12px;
+      gap: 2px;
     }
-    .note-back-btn {
-      background: none;
-      border: none;
-      color: var(--primary);
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      padding: 4px 8px 4px 0;
-      flex-shrink: 0;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .note-detail-title {
-      flex: 1;
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--text);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .note-menu-btn {
-      background: none;
-      border: none;
-      font-size: 22px;
-      color: var(--muted);
-      cursor: pointer;
-      padding: 4px 0 4px 8px;
-      flex-shrink: 0;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .note-item-card {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-    }
-    .note-item-body { flex: 1; min-width: 0; }
-    .note-item-actions {
+    .sparkle-day {
       display: flex;
       flex-direction: column;
-      gap: 4px;
-      flex-shrink: 0;
-    }
-    .note-item-check {
-      background: none;
-      border: 2px solid var(--border);
-      border-radius: 50%;
-      width: 26px;
-      height: 26px;
-      font-size: 14px;
-      cursor: pointer;
-      color: var(--muted);
-      display: flex;
       align-items: center;
-      justify-content: center;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .note-item-check.checked {
-      background: var(--primary);
-      border-color: var(--primary);
-      color: white;
-    }
-
-    /* ── Note options menu ─────────────────────────────────────── */
-    .note-menu-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      z-index: 400;
-      background: rgba(0,0,0,0.3);
-    }
-    .note-menu-overlay.open { display: block; }
-    .note-menu {
-      position: fixed;
-      bottom: -100%;
-      left: 0;
-      right: 0;
-      background: var(--card);
-      border-radius: 20px 20px 0 0;
-      padding: 12px 0 32px;
-      z-index: 401;
-      transition: bottom 0.3s cubic-bezier(0.4,0,0.2,1);
-      box-shadow: 0 -4px 24px rgba(0,0,0,0.15);
-    }
-    .note-menu.open { bottom: 0; }
-    .note-menu button {
-      display: block;
-      width: 100%;
-      text-align: left;
-      padding: 14px 24px;
-      background: none;
-      border: none;
-      font-size: 16px;
-      color: var(--text);
-      cursor: pointer;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .note-menu button:active { background: var(--bg); }
-    .note-menu-danger { color: #e53935 !important; }
-
-    .lists-tabs { display:flex; gap:8px; margin-bottom:16px; }
-    .list-tab   { flex:1; padding:10px 6px; border-radius:12px; border:none; background:var(--card);
-      color:var(--muted); font-size:13px; font-weight:700; cursor:pointer; transition:all 0.15s; }
-    .list-tab.active { background:var(--primary); color:#fff; }
-    .list-panel { display:none; }
-    .list-panel.active { display:block; }
-    .watch-genre { display:inline-block; font-size:11px; font-weight:700; padding:2px 8px;
-      border-radius:20px; background:#EDE7F6; color:#6A1B9A; margin-top:4px; }
-    .dice-btn   { background:var(--primary); color:#fff; border:none; border-radius:12px;
-      padding:10px 18px; font-size:14px; font-weight:700; cursor:pointer; margin-bottom:12px;
-      width:100%; transition:opacity 0.15s; }
-    .dice-btn:active { opacity:0.75; }
-    .dice-result { background:var(--card); border-radius:14px; padding:14px; margin-bottom:12px;
-      text-align:center; font-size:16px; font-weight:700; color:var(--primary); display:none; border:2px solid var(--primary); }
-
-    /* ── FAB ───────────────────────────────────────────────────── */
-    /* FAB wrap — centred above nav bar */
-    .fab-wrap {
-      position: fixed;
-      bottom: 70px;
-      left: 0;
-      right: 0;
-      z-index: 250;
-      pointer-events: none;
-    }
-    /* hide the old separate fab-btn — nav button acts as trigger */
-    .fab-btn { display: none !important; }
-
-    /* Row of icons evenly spaced above the nav bar */
-    .fab-items {
-      position: fixed;
-      bottom: 100px;
-      left: 0;
-      right: 0;
-      width: 100vw;
-      display: flex;
-      flex-direction: row;
-      justify-content: space-around;
-      align-items: center;
-      pointer-events: none;
-      z-index: 251;
-      padding: 10px 8px;
-      background: transparent;
-      transition: background 0.2s ease;
-    }
-    .fab-wrap.open .fab-items {
-      background: rgba(255,255,255,0.72);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      border-radius: 20px;
-      box-shadow: 0 4px 20px rgba(124,92,191,0.15);
-    }
-    .fab-item {
-      width: 46px;
-      height: 46px;
-      min-width: 46px;
-      min-height: 46px;
-      border-radius: 50%;
-      background: white;
-      border: none;
-      font-size: 22px;
-      cursor: pointer;
-      box-shadow: 0 4px 18px rgba(0,0,0,0.25);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transform: translateY(20px) scale(0.3);
-      opacity: 0;
-      transition: transform 0.28s cubic-bezier(0.34,1.56,0.64,1), opacity 0.2s ease;
-      pointer-events: none;
-      -webkit-tap-highlight-color: transparent;
-      flex-shrink: 0;
-    }
-    .fab-item:nth-child(1) { transition-delay: 0.05s; }
-    .fab-item:nth-child(2) { transition-delay: 0.04s; }
-    .fab-item:nth-child(3) { transition-delay: 0.03s; }
-    .fab-item:nth-child(4) { transition-delay: 0.02s; }
-    .fab-item:nth-child(5) { transition-delay: 0.01s; }
-    .fab-item:nth-child(6) { transition-delay: 0.0s; }
-
-    .fab-wrap.open .fab-items { pointer-events: auto; }
-    .fab-wrap.open .fab-item {
-      transform: translateY(0) scale(1);
-      opacity: 1;
-      pointer-events: auto;
-    }
-        .fab-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      z-index: 249;
-      background: rgba(0,0,0,0.08);
-    }
-    .fab-overlay.open { display: block; }
-
-    /* ── Glimmer Photo Upload ───────────────────────── */
-    .photo-upload-area {
-      border: 2px dashed var(--border);
-      border-radius: 12px;
-      padding: 14px;
-      text-align: center;
-      cursor: pointer;
-      transition: border-color 0.18s, background 0.18s;
-      margin-bottom: 9px;
-      background: var(--bg);
-      user-select: none;
-    }
-    .photo-upload-area:hover,
-    .photo-upload-area:active { border-color: var(--primary); background: var(--primary-light); }
-    .photo-upload-area .upload-icon { font-size: 22px; margin-bottom: 4px; }
-    .photo-upload-area .upload-label { font-size: 13px; color: var(--muted); font-weight: 600; }
-    #glimmer-img-input { display: none; }
-    .photo-preview-wrap {
-      position: relative;
-      margin-bottom: 9px;
-      border-radius: 12px;
-      overflow: hidden;
-      background: #000;
-    }
-    .photo-preview-wrap img {
-      width: 100%;
-      max-height: 220px;
-      object-fit: cover;
-      display: block;
-      border-radius: 12px;
-      opacity: 0.95;
-    }
-    .photo-remove-btn {
-      position: absolute;
-      top: 8px; right: 8px;
-      background: rgba(0,0,0,0.55);
-      color: white;
-      border: none;
-      border-radius: 50%;
-      width: 30px; height: 30px;
-      font-size: 16px;
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      transition: background 0.15s;
-      line-height: 1;
-    }
-    .photo-remove-btn:hover { background: rgba(239,83,80,0.85); }
-    .glimmer-thumb {
-      width: 62px; height: 62px;
+      gap: 3px;
+      flex: 1;
+      padding: 5px 2px;
       border-radius: 10px;
-      object-fit: cover;
-      flex-shrink: 0;
-      cursor: pointer;
-      border: 2px solid var(--border);
-      transition: transform 0.15s, box-shadow 0.15s;
+      transition: background 0.2s;
     }
-    .glimmer-thumb:hover { transform: scale(1.06); box-shadow: 0 4px 12px rgba(0,0,0,0.18); }
-    /* ── Glimmer Streak Card ────────────────────────── */
-    .streak-card {
-      background: linear-gradient(135deg, #7C5CBF 0%, #9B7DD4 100%);
+    .sparkle-day.sparkle-today {
+      background: rgba(255,255,255,0.18);
+    }
+    .sparkle-icon {
+      font-size: 20px;
+      line-height: 1;
+      opacity: 0.35;
+      transition: opacity 0.2s;
+    }
+    .sparkle-day.sparkle-done .sparkle-icon {
+      opacity: 1;
+    }
+    .sparkle-label {
+      font-size: 10px;
+      font-weight: 600;
+      opacity: 0.75;
+      letter-spacing: 0.2px;
+    }
+    .sparkle-footer {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 10px;
+    }
+    .sparkle-person {
+      font-size: 13px;
+      font-weight: 600;
+      opacity: 0.7;
+    }
+    .sparkle-person.sparkle-done-name {
+      opacity: 1;
+    }
+    .sparkle-btn {
+      width: 100%;
+      background: rgba(255,255,255,0.22);
       color: white;
+      border: 1.5px solid rgba(255,255,255,0.4);
       border-radius: 20px;
-      padding: 20px 18px 16px;
-      margin-bottom: 14px;
-      box-shadow: 0 4px 18px rgba(124,92,191,0.35);
-      text-align: center;
-    }
-    .streak-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.9px; opacity: 0.82; margin-bottom: 8px; }
-    .streak-number { font-size: 56px; font-weight: 900; line-height: 1; margin-bottom: 2px; letter-spacing: -3px; }
-    .streak-label { font-size: 14px; opacity: 0.88; margin-bottom: 16px; font-weight: 600; }
-    .streak-people { display: flex; justify-content: center; gap: 28px; margin-bottom: 14px; }
-    .streak-person { display: flex; flex-direction: column; align-items: center; gap: 5px; }
-    .streak-person-dot {
-      width: 38px; height: 38px;
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 18px;
-      background: rgba(255,255,255,0.18);
-      border: 2px solid rgba(255,255,255,0.35);
-      transition: all 0.25s;
-    }
-    .streak-person-dot.done { background: rgba(76,175,80,0.72); border-color: #A5D6A7; font-size: 20px; }
-    .streak-person-name { font-size: 12px; opacity: 0.85; font-weight: 600; }
-    .nudge-btn {
-      background: rgba(255,255,255,0.18);
-      color: white;
-      border: 2px solid rgba(255,255,255,0.45);
-      border-radius: 22px;
-      padding: 8px 22px;
+      padding: 8px 16px;
       font-size: 13px;
       font-weight: 700;
       cursor: pointer;
-      transition: background 0.18s;
-      letter-spacing: 0.2px;
-      margin-bottom: 2px;
+      letter-spacing: 0.1px;
+      -webkit-tap-highlight-color: transparent;
     }
-    .nudge-btn:hover { background: rgba(255,255,255,0.32); }
-    .nudge-btn:active { transform: scale(0.97); }
-    .streak-stats { display: flex; justify-content: center; gap: 28px; padding-top: 12px; margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.2); }
-    .streak-stat { text-align: center; }
-    .streak-stat-val { font-size: 22px; font-weight: 800; }
-    .streak-stat-lbl { font-size: 10px; opacity: 0.72; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 1px; }
-    /* ── Dashboard streak mini card ─────────────────── */
-    #dash-streak-mini { padding: 2px 0; }
-    #dash-lottie-status, #dash-jonny-status { font-weight: 600; }
-    #dash-nudge-wrap { margin-top: 4px; }
-    /* ── Lightbox ───────────────────────────────────── */
-    #glimmer-lightbox {
-      display: none;
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,0.90);
-      z-index: 300;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      -webkit-backdrop-filter: blur(4px);
-      backdrop-filter: blur(4px);
-    }
-    #glimmer-lightbox.open { display: flex; }
-    #glimmer-lightbox img {
-      max-width: 100%;
-      max-height: 88vh;
-      border-radius: 14px;
-      object-fit: contain;
-      box-shadow: 0 8px 40px rgba(0,0,0,0.5);
-    }
-    #glimmer-lightbox-close {
-      position: fixed;
-      top: 16px; right: 16px;
+    .sparkle-btn-nudge {
       background: rgba(255,255,255,0.15);
-      border: none;
-      color: white;
-      font-size: 22px;
-      width: 40px; height: 40px;
-      border-radius: 50%;
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      transition: background 0.18s;
     }
-    #glimmer-lightbox-close:hover { background: rgba(255,255,255,0.28); }
-    /* ── Toast notification ─────────────────────────── */
-    /* ── Bottom Sheet ──────────────────────────────────── */
-    .bs-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.35);
-      z-index: 194;
-    }
-    .bs-overlay.open { display: block; }
-    .bottom-sheet {
-      position: fixed;
-      bottom: 66px; left: 0; right: 0;
-      max-width: 600px; margin: 0 auto;
-      background: var(--bg);
-      border-radius: 20px 20px 0 0;
-      padding: 12px 16px 28px;
-      z-index: 195;
-      transform: translateY(120%);
-      transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
-      max-height: 85vh;
-      overflow-y: auto;
-      box-shadow: 0 -4px 24px rgba(0,0,0,0.12);
-    }
-    .bottom-sheet.open { transform: translateY(0); }
-    .bs-title {
-      font-size: 17px; font-weight: 800; color: var(--text);
-      margin-bottom: 14px; text-align: center;
-    }
-    .bs-list-panel { display: none; }
-    .bs-list-panel.active { display: block; }
 
     /* ── Nav FAB icon ─────────────────────────────────── */
     #nav-fab-icon { font-size: 16px; line-height: 1; vertical-align: middle; }

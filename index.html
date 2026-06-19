@@ -116,24 +116,7 @@
   <!-- Row 1: Streak + Thinking of You -->
   <div class="dash-top-row">
     <div id="dash-streak-card">
-      <div class="dash-hdr">
-        <span class="dash-hdr-title">Glimmer Streak</span>
-        <span class="dash-count" id="dash-streak-count">0 days</span>
-      </div>
-      <div class="streak-body">
-        <div class="streak-sparkles">✨</div>
-        <div class="streak-people">
-          <div class="streak-person">
-            <span class="sp-icon" id="dash-lottie-icon">✕</span>
-            <span class="streak-person-name">Lottie</span>
-          </div>
-          <div class="streak-person">
-            <span class="sp-icon" id="dash-jonny-icon">✕</span>
-            <span class="streak-person-name">Jonny</span>
-          </div>
-        </div>
-      </div>
-      <div class="streak-nudge" id="dash-nudge-wrap"></div>
+      <div id="sparkle-card-dash"><!-- rendered by renderSparkleCard --></div>
     </div>
     <div id="dash-thinking-card" onclick="sendThinkingOf()">
       <div class="thinking-title">💗 Thinking of You</div>
@@ -253,33 +236,8 @@
 <div id="glimmers-section" class="section">
 
 
-  <!-- Streak card -->
-  <div class="streak-card" id="glimmer-streak-card">
-    <div class="streak-title">🔥 Glimmer Streak</div>
-    <div class="streak-number" id="streak-current">–</div>
-    <div class="streak-label" id="streak-label">loading…</div>
-    <div class="streak-people">
-      <div class="streak-person">
-        <div class="streak-person-dot" id="streak-dot-lottie">👩</div>
-        <div class="streak-person-name">Lottie</div>
-      </div>
-      <div class="streak-person">
-        <div class="streak-person-dot" id="streak-dot-jonny">👨</div>
-        <div class="streak-person-name">Jonny</div>
-      </div>
-    </div>
-    <div id="streak-nudge-wrap" style="min-height:36px;display:flex;justify-content:center;align-items:center;"></div>
-    <div class="streak-stats">
-      <div class="streak-stat">
-        <div class="streak-stat-val" id="streak-longest">–</div>
-        <div class="streak-stat-lbl">Longest</div>
-      </div>
-      <div class="streak-stat">
-        <div class="streak-stat-val" id="streak-total-days">–</div>
-        <div class="streak-stat-lbl">Valid Days</div>
-      </div>
-    </div>
-  </div>
+  <!-- Sparkle streak card -->
+  <div id="sparkle-card-glimmers" class="sparkle-card"><!-- rendered by renderSparkleCard --></div>
 
   <!-- Glimmers list -->
   <div class="list-label">Recent Glimmers</div>
