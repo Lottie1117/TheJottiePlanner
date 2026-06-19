@@ -765,7 +765,7 @@ function renderDashPinnedNotes() {
   if (slot) slot.style.display = '';
   el.innerHTML = `<div class="dash-pinned-card">
     <div class="dash-hdr">
-      <div class="dash-hdr-title">📌 Pinned Notes</div>
+      <div class="dash-hdr-title">Pinned Notes  📌</div>
     </div>
     <div class="dash-pinned-items" id="dash-pinned-items"></div>
   </div>`;
