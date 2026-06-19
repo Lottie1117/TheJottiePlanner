@@ -650,7 +650,74 @@
     #dash-streak-card {
       margin-bottom: 10px;
     }
-    /* Row 2: Luna + Thinking of You (50/50) */
+    /* Customisable widget grid */
+    #dash-widget-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+      align-items: start;
+    }
+    /* Each widget slot */
+    .dash-widget-slot {
+      position: relative;
+    }
+    /* Edit mode: wiggle animation */
+    @keyframes dash-wiggle {
+      0%,100% { transform: rotate(0deg); }
+      25% { transform: rotate(-1.5deg); }
+      75% { transform: rotate(1.5deg); }
+    }
+    #dash-widget-grid.dash-edit-mode .dash-widget-slot {
+      animation: dash-wiggle 0.5s infinite;
+      cursor: grab;
+    }
+    #dash-widget-grid.dash-edit-mode .dash-widget-slot:active {
+      cursor: grabbing;
+    }
+    /* Drag handle shown in edit mode */
+    .dash-drag-handle {
+      display: none;
+      position: absolute;
+      top: 6px; right: 6px;
+      background: rgba(124,92,191,0.85);
+      color: white;
+      border-radius: 8px;
+      font-size: 13px;
+      padding: 2px 6px;
+      z-index: 10;
+      pointer-events: none;
+      line-height: 1.4;
+    }
+    #dash-widget-grid.dash-edit-mode .dash-drag-handle {
+      display: block;
+    }
+    /* Dragging state */
+    .dash-widget-slot.dragging {
+      opacity: 0.4;
+      animation: none !important;
+    }
+    .dash-widget-slot.drag-over {
+      outline: 2px dashed var(--primary);
+      border-radius: 16px;
+    }
+    /* Edit bar */
+    #dash-edit-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--primary-light);
+      border-radius: 12px;
+      padding: 8px 14px;
+      margin-bottom: 10px;
+    }
+    .dash-edit-label { font-size: 13px; font-weight: 700; color: var(--primary); }
+    .dash-edit-done {
+      background: var(--primary); color: white;
+      border: none; border-radius: 20px;
+      padding: 6px 16px; font-size: 13px; font-weight: 700; cursor: pointer;
+    }
+    /* Top row kept for thinking card sizing */
     .dash-top-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -1351,6 +1418,11 @@
       -webkit-tap-highlight-color: transparent;
     }
     .glimmer-detail-heart:disabled { opacity: 0.35; cursor: default; }
+
+    /* Pinned glimmer slot spans full width (it has its own 2-col inner grid) */
+    .dash-widget-slot[data-widget-id="pinned-glimmer"] {
+      grid-column: span 2;
+    }
 
     /* ── Pinned Glimmers on Today dashboard ──────────────────────── */
     #dash-pinned-glimmer { margin-bottom: 12px; }

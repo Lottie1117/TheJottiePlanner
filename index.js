@@ -753,13 +753,16 @@ async function migrateOldCollections() {
 function renderDashPinnedNotes() {
   const el = document.getElementById('dash-pinned-notes');
   if (!el) return;
+  const slot = el.closest('.dash-widget-slot');
   const pinned = _notesData.filter(n => n.pinned && !n.archived);
   if (!pinned.length) {
     el.style.display = 'none';
     el.innerHTML = '';
+    if (slot) slot.style.display = 'none';
     return;
   }
   el.style.display = 'block';
+  if (slot) slot.style.display = '';
   el.innerHTML = `<div class="dash-pinned-card">
     <div class="dash-hdr">
       <div class="dash-hdr-title">📌 Pinned Notes</div>
@@ -1921,8 +1924,13 @@ window.glimmerMenuArchive = function() {
 function renderDashPinnedGlimmer() {
   const el = document.getElementById('dash-pinned-glimmer');
   if (!el) return;
+  const slot = el.closest('.dash-widget-slot');
   const allPinned = _glimmersCache.filter(g => g.pinned && !g.archived);
-  if (!allPinned.length) { el.style.display = 'none'; return; }
+  if (!allPinned.length) {
+    el.style.display = 'none';
+    if (slot) slot.style.display = 'none';
+    return;
+  }
 
   // Show up to 4 pinned glimmers
   const pinned = allPinned.slice(0, 4);
@@ -1957,6 +1965,7 @@ function renderDashPinnedGlimmer() {
   }
 
   el.style.display = 'block';
+  if (slot) slot.style.display = '';
   el.innerHTML = `<div class="dash-hdr" style="margin-bottom:8px">
     <div class="dash-hdr-title">📌 Pinned Glimmers</div>
   </div>
@@ -2475,3 +2484,208 @@ document.querySelectorAll('.tab').forEach(tab => {
     if (e.key === 'ArrowDown') { e.preventDefault(); items[(idx + 1) % items.length].focus(); }
   });
 })();
+
+// ══════════════════════════════════════════════════════════════════
+//  DASHBOARD WIDGET GRID — customisable drag-to-reorder layout
+// ══════════════════════════════════════════════════════════════════
+
+const DASH_WIDGET_ORDER_KEY = 'jottie-dash-widget-order';
+
+// All possible widget IDs in default order
+const DASH_DEFAULT_WIDGETS = [
+  'luna', 'thinking', 'events', 'tasks', 'shopping', 'pinned-notes', 'pinned-glimmer'
+];
+
+let _dashWidgetOrder = null;
+let _dashEditMode = false;
+let _dashDragSrc = null;
+
+function dashGetOrder() {
+  if (_dashWidgetOrder) return _dashWidgetOrder;
+  try {
+    const saved = localStorage.getItem(DASH_WIDGET_ORDER_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Merge: keep saved order, append any new widgets not yet in saved list
+      const merged = [...parsed, ...DASH_DEFAULT_WIDGETS.filter(id => !parsed.includes(id))];
+      _dashWidgetOrder = merged;
+      return _dashWidgetOrder;
+    }
+  } catch(e) {}
+  _dashWidgetOrder = [...DASH_DEFAULT_WIDGETS];
+  return _dashWidgetOrder;
+}
+
+function dashSaveOrder() {
+  localStorage.setItem(DASH_WIDGET_ORDER_KEY, JSON.stringify(_dashWidgetOrder));
+}
+
+// Build the widget grid from templates, in saved order
+function dashBuildGrid() {
+  const grid = document.getElementById('dash-widget-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  const order = dashGetOrder();
+  order.forEach(id => {
+    const tpl = document.getElementById('widget-tpl-' + id);
+    if (!tpl) return;
+    const slot = document.createElement('div');
+    slot.className = 'dash-widget-slot';
+    slot.dataset.widgetId = id;
+    // Clone template content
+    slot.appendChild(tpl.content.cloneNode(true));
+    // Drag handle overlay
+    const handle = document.createElement('div');
+    handle.className = 'dash-drag-handle';
+    handle.textContent = '⠿';
+    slot.appendChild(handle);
+    // Long-press to enter edit mode
+    let pressTimer = null;
+    slot.addEventListener('touchstart', function(e) {
+      pressTimer = setTimeout(() => {
+        if (!_dashEditMode) dashEnterEditMode();
+      }, 500);
+    }, { passive: true });
+    slot.addEventListener('touchend', () => clearTimeout(pressTimer));
+    slot.addEventListener('touchmove', () => clearTimeout(pressTimer));
+    // Drag events
+    slot.setAttribute('draggable', 'true');
+    slot.addEventListener('dragstart', dashOnDragStart);
+    slot.addEventListener('dragover',  dashOnDragOver);
+    slot.addEventListener('dragleave', dashOnDragLeave);
+    slot.addEventListener('drop',      dashOnDrop);
+    slot.addEventListener('dragend',   dashOnDragEnd);
+    // Touch drag
+    slot.addEventListener('touchstart', dashTouchStart, { passive: false });
+    grid.appendChild(slot);
+  });
+  // Re-init thinking card
+  if (typeof initThinkingOfCard === 'function') initThinkingOfCard();
+}
+
+// ── Edit mode ──────────────────────────────────────────────────────
+function dashEnterEditMode() {
+  _dashEditMode = true;
+  const grid = document.getElementById('dash-widget-grid');
+  if (grid) grid.classList.add('dash-edit-mode');
+  const bar = document.getElementById('dash-edit-bar');
+  if (bar) bar.style.display = 'flex';
+}
+
+window.dashExitEditMode = function() {
+  _dashEditMode = false;
+  const grid = document.getElementById('dash-widget-grid');
+  if (grid) grid.classList.remove('dash-edit-mode');
+  const bar = document.getElementById('dash-edit-bar');
+  if (bar) bar.style.display = 'none';
+};
+
+// ── Mouse drag ─────────────────────────────────────────────────────
+function dashOnDragStart(e) {
+  if (!_dashEditMode) { e.preventDefault(); return; }
+  _dashDragSrc = this;
+  this.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+}
+function dashOnDragOver(e) {
+  if (!_dashEditMode || !_dashDragSrc || _dashDragSrc === this) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  this.classList.add('drag-over');
+}
+function dashOnDragLeave() {
+  this.classList.remove('drag-over');
+}
+function dashOnDrop(e) {
+  if (!_dashEditMode || !_dashDragSrc || _dashDragSrc === this) return;
+  e.preventDefault();
+  this.classList.remove('drag-over');
+  const grid = document.getElementById('dash-widget-grid');
+  const slots = Array.from(grid.querySelectorAll('.dash-widget-slot'));
+  const srcIdx = slots.indexOf(_dashDragSrc);
+  const tgtIdx = slots.indexOf(this);
+  if (srcIdx === -1 || tgtIdx === -1) return;
+  // Reorder in DOM
+  if (srcIdx < tgtIdx) {
+    grid.insertBefore(_dashDragSrc, this.nextSibling);
+  } else {
+    grid.insertBefore(_dashDragSrc, this);
+  }
+  // Persist order
+  const newOrder = Array.from(grid.querySelectorAll('.dash-widget-slot')).map(s => s.dataset.widgetId);
+  _dashWidgetOrder = newOrder;
+  dashSaveOrder();
+}
+function dashOnDragEnd() {
+  this.classList.remove('dragging');
+  document.querySelectorAll('.dash-widget-slot').forEach(s => s.classList.remove('drag-over'));
+  _dashDragSrc = null;
+}
+
+// ── Touch drag ─────────────────────────────────────────────────────
+let _touchDragEl = null, _touchClone = null, _touchOffX = 0, _touchOffY = 0;
+
+function dashTouchStart(e) {
+  if (!_dashEditMode) return;
+  const touch = e.touches[0];
+  _touchDragEl = this;
+  const rect = this.getBoundingClientRect();
+  _touchOffX = touch.clientX - rect.left;
+  _touchOffY = touch.clientY - rect.top;
+  // Create floating clone
+  _touchClone = this.cloneNode(true);
+  _touchClone.style.cssText = `
+    position:fixed; top:${rect.top}px; left:${rect.left}px;
+    width:${rect.width}px; pointer-events:none; z-index:9999;
+    opacity:0.85; border-radius:16px; box-shadow:0 8px 24px rgba(0,0,0,0.2);
+    transition: none;
+  `;
+  document.body.appendChild(_touchClone);
+  this.style.opacity = '0.3';
+  e.preventDefault();
+  document.addEventListener('touchmove', dashTouchMove, { passive: false });
+  document.addEventListener('touchend',  dashTouchEnd);
+}
+
+function dashTouchMove(e) {
+  if (!_touchClone) return;
+  e.preventDefault();
+  const touch = e.touches[0];
+  _touchClone.style.top  = (touch.clientY - _touchOffY) + 'px';
+  _touchClone.style.left = (touch.clientX - _touchOffX) + 'px';
+  // Highlight target
+  document.querySelectorAll('.dash-widget-slot').forEach(s => s.classList.remove('drag-over'));
+  _touchClone.style.display = 'none';
+  const el = document.elementFromPoint(touch.clientX, touch.clientY);
+  _touchClone.style.display = '';
+  const target = el && el.closest('.dash-widget-slot');
+  if (target && target !== _touchDragEl) target.classList.add('drag-over');
+}
+
+function dashTouchEnd(e) {
+  document.removeEventListener('touchmove', dashTouchMove);
+  document.removeEventListener('touchend',  dashTouchEnd);
+  if (_touchClone) { _touchClone.remove(); _touchClone = null; }
+  if (_touchDragEl) _touchDragEl.style.opacity = '';
+  const touch = e.changedTouches[0];
+  const el = document.elementFromPoint(touch.clientX, touch.clientY);
+  const target = el && el.closest('.dash-widget-slot');
+  if (target && target !== _touchDragEl) {
+    const grid = document.getElementById('dash-widget-grid');
+    const slots = Array.from(grid.querySelectorAll('.dash-widget-slot'));
+    const srcIdx = slots.indexOf(_touchDragEl);
+    const tgtIdx = slots.indexOf(target);
+    if (srcIdx < tgtIdx) grid.insertBefore(_touchDragEl, target.nextSibling);
+    else grid.insertBefore(_touchDragEl, target);
+    const newOrder = Array.from(grid.querySelectorAll('.dash-widget-slot')).map(s => s.dataset.widgetId);
+    _dashWidgetOrder = newOrder;
+    dashSaveOrder();
+  }
+  document.querySelectorAll('.dash-widget-slot').forEach(s => s.classList.remove('drag-over'));
+  _touchDragEl = null;
+}
+
+// Initialise on load
+document.addEventListener('DOMContentLoaded', function() {
+  dashBuildGrid();
+});

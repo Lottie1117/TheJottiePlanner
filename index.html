@@ -113,15 +113,24 @@
     <button class="btn-notif" onclick="requestNotifPermission()">Enable</button>
   </div>
 
-  <!-- Row 1: Streak (full width) -->
+  <!-- Row 1: Streak (full width, static) -->
   <div id="dash-streak-card">
     <div id="sparkle-card-dash"><!-- rendered by renderSparkleCard --></div>
   </div>
 
-  <!-- Row 2: Luna + Thinking of You (50/50) -->
-  <div class="dash-top-row">
+  <!-- Edit mode toolbar -->
+  <div id="dash-edit-bar" style="display:none">
+    <span class="dash-edit-label">✦ Hold &amp; drag to reorder</span>
+    <button class="dash-edit-done" onclick="dashExitEditMode()">Done</button>
+  </div>
+
+  <!-- Customisable widget grid -->
+  <div id="dash-widget-grid"></div>
+
+  <!-- Widget templates (hidden, cloned by JS) -->
+  <template id="widget-tpl-luna">
     <div class="dash-card-sm">
-      <div class="dash-hdr"><div class="dash-hdr-title">Luna</div></div>
+      <div class="dash-hdr"><div class="dash-hdr-title">Luna 🐾</div></div>
       <div class="luna-dash-hero">
         <img id="luna-dash-img" class="luna-dash-img" style="width:80px;height:80px;border-radius:50%;object-fit:cover;display:block;margin:0 auto 6px" alt="Luna">
       </div>
@@ -130,43 +139,44 @@
       <div class="luna-chew-logged" id="dash-luna-logged"></div>
       <span class="luna-unlog" id="dash-luna-unlog" style="display:none" onclick="dashUnlogChew()">Undo</span>
     </div>
+  </template>
+  <template id="widget-tpl-thinking">
     <div id="dash-thinking-card" onclick="sendThinkingOf()">
       <div class="thinking-title">💗 Thinking of You</div>
       <button class="thinking-heart" id="thinking-heart-btn" onclick="sendThinkingOf(); event.stopPropagation()">💗</button>
       <div class="thinking-sub" id="thinking-sub">Tap to send love</div>
       <div class="thinking-last" id="thinking-last" style="display:none"></div>
     </div>
-  </div>
-
-  <!-- Middle columns: dynamic 2-col layout -->
-  <div class="dash-col-layout">
-    <div class="dash-col" id="dash-col-left">
-      <div class="dash-card-sm">
-        <div class="dash-hdr"><div class="dash-hdr-title">Coming Up</div><span class="dash-count" id="dash-ev-count">-</span></div>
-        <div id="dash-events"><div class="dash-empty">Loading…</div></div>
-        <a class="view-all" onclick="navTo('calendar')">View all upcoming →</a>
-      </div>
-      <div class="dash-card-sm">
-        <div class="dash-hdr"><div class="dash-hdr-title">Shopping</div><span class="dash-count" id="dash-shop-count">-</span></div>
-        <div id="dash-shop"><div class="dash-empty">Loading…</div></div>
-        <a class="view-all" onclick="navTo('shopping')">View all →</a>
-      </div>
+  </template>
+  <template id="widget-tpl-events">
+    <div class="dash-card-sm">
+      <div class="dash-hdr"><div class="dash-hdr-title">Coming Up</div><span class="dash-count" id="dash-ev-count">-</span></div>
+      <div id="dash-events"><div class="dash-empty">Loading…</div></div>
+      <a class="view-all" onclick="navTo('calendar')">View all upcoming →</a>
     </div>
-    <div class="dash-col" id="dash-col-right">
-      <div class="dash-card-sm">
-        <div class="dash-hdr"><div class="dash-hdr-title">Tasks</div><span class="dash-count" id="dash-todo-count">-</span></div>
-        <div id="dash-todos"><div class="dash-empty">Loading…</div></div>
-        <a class="view-all" onclick="navTo('todos')">View all tasks →</a>
-      </div>
-      <!-- Pinned Notes -->
-      <div id="dash-pinned-notes" style="display:none"></div>
+  </template>
+  <template id="widget-tpl-tasks">
+    <div class="dash-card-sm">
+      <div class="dash-hdr"><div class="dash-hdr-title">Tasks</div><span class="dash-count" id="dash-todo-count">-</span></div>
+      <div id="dash-todos"><div class="dash-empty">Loading…</div></div>
+      <a class="view-all" onclick="navTo('todos')">View all tasks →</a>
     </div>
-  </div>
+  </template>
+  <template id="widget-tpl-shopping">
+    <div class="dash-card-sm">
+      <div class="dash-hdr"><div class="dash-hdr-title">Shopping</div><span class="dash-count" id="dash-shop-count">-</span></div>
+      <div id="dash-shop"><div class="dash-empty">Loading…</div></div>
+      <a class="view-all" onclick="navTo('shopping')">View all →</a>
+    </div>
+  </template>
+  <template id="widget-tpl-pinned-notes">
+    <div id="dash-pinned-notes" style="display:none"></div>
+  </template>
+  <template id="widget-tpl-pinned-glimmer">
+    <div id="dash-pinned-glimmer" style="display:none"></div>
+  </template>
 
-  <!-- Pinned Glimmers (up to 4, 2x2 grid) -->
-  <div id="dash-pinned-glimmer" style="display:none"></div>
-
-  <!-- Row 4: Recent Glimmers -->
+  <!-- Row 4: Recent Glimmers (full width, static) -->
   <div id="dash-glimmer-section">
     <div class="dash-glimmer-hdr">
       <span class="dash-glimmer-hdr-title">✨ Recent Glimmers</span>
