@@ -215,14 +215,9 @@
   <!-- Widget templates (hidden, cloned by JS) -->
   <template id="widget-tpl-luna">
     <div class="dash-card-sm">
-      <div class="dash-hdr"><div class="dash-hdr-title">Luna</div></div>
-      <div class="luna-dash-hero">
-        <img id="luna-dash-img" class="luna-dash-img" style="width:80px;height:80px;border-radius:50%;object-fit:cover;display:block;margin:0 auto 6px" alt="Luna">
-      </div>
-      <div id="dash-luna-chew-status" style="text-align:center;font-size:12px;color:var(--muted);margin-bottom:4px">Loading…</div>
-      <button class="luna-chew-btn" id="dash-luna-btn" onclick="dashLogChew()">🦴 Log chew</button>
-      <div class="luna-chew-logged" id="dash-luna-logged"></div>
-      <span class="luna-unlog" id="dash-luna-unlog" style="display:none" onclick="dashUnlogChew()">Undo</span>
+      <div class="dash-hdr"><div class="dash-hdr-title">Luna</div><span class="dash-count" id="dash-luna-count">-</span></div>
+      <div id="dash-luna-summary"><div class="dash-empty">Loading…</div></div>
+      <a class="view-all" onclick="navTo('luna')">View Luna's day →</a>
     </div>
   </template>
   <template id="widget-tpl-thinking">
@@ -390,20 +385,72 @@
 
 <!-- ── Luna ───────────────────────────────────────────────── -->
 <div id="luna-section" class="section">
-  <div class="luna-hero">
-    <img class="luna-hero-img" src="images/lunaface.png" alt="Luna">
-    <div id="luna-status-text" class="luna-status">Has Luna had her chew today?</div>
-    <div id="luna-last-time" class="luna-time"></div>
-    <div id="luna-last-by" class="luna-by"></div>
-    <button class="btn-chew" id="luna-chew-btn" onclick="logChew()">🦴 Luna has had her chew!</button>
-  </div>
-  <div class="list-label">Recent log</div>
-  <div id="luna-log"><div class="loading">Loading…</div></div>
 
-  <div style="margin-top:20px">
-    <div class="list-label">Notes</div>
-    <div id="luna-notes-list"><div class="loading">Loading…</div></div>
+  <!-- Hero status -->
+  <div class="luna-hero" id="luna-hero">
+    <div class="luna-hero-top">
+      <div class="luna-hero-ring" id="luna-hero-ring">
+        <img class="luna-hero-img" src="images/lunaface.png" alt="Luna">
+      </div>
+      <div class="luna-hero-text">
+        <div class="luna-hero-label">Today's care</div>
+        <div class="luna-hero-headline" id="luna-hero-headline">Loading…</div>
+        <div class="luna-hero-sub" id="luna-hero-sub"></div>
+      </div>
+    </div>
+    <div class="luna-hero-progress">
+      <div class="luna-hero-bar"><div class="luna-hero-bar-fill" id="luna-hero-bar-fill" style="width:0%"></div></div>
+      <div class="luna-hero-count" id="luna-hero-count">0/0</div>
+    </div>
   </div>
+
+  <!-- Good-girl biscuits -->
+  <div class="luna-biscuits-card">
+    <div class="luna-biscuits-info">
+      <div class="luna-biscuits-title">Good-girl biscuits</div>
+      <div class="luna-biscuits-sub">A treat for every wee outside 🐾</div>
+      <div class="luna-biscuits-dots" id="luna-biscuits-dots"></div>
+    </div>
+    <div class="luna-biscuits-controls">
+      <div class="luna-biscuits-count" id="luna-biscuits-count">0</div>
+      <div class="luna-biscuits-btns">
+        <button class="luna-biscuit-btn luna-biscuit-minus" onclick="lunaRemoveTreat()" aria-label="Remove a biscuit">−</button>
+        <button class="luna-biscuit-btn luna-biscuit-plus" onclick="lunaAddTreat()" aria-label="Add a biscuit">+</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Routine label -->
+  <div class="luna-section-row">
+    <span class="luna-section-eyebrow">Luna's routine</span>
+    <span class="luna-section-chip" id="luna-routine-chip">0/0 done</span>
+  </div>
+
+  <!-- Timeline -->
+  <div class="luna-timeline" id="luna-timeline"><div class="loading">Loading…</div></div>
+
+  <!-- Memories -->
+  <div class="luna-section-row">
+    <div class="luna-section-eyebrow-group">
+      <span class="luna-section-eyebrow">Luna memories</span>
+      <span class="luna-tag-chip">#Luna</span>
+    </div>
+    <span class="luna-see-all" onclick="navTo('glimmers')">See all →</span>
+  </div>
+  <div class="luna-section-caption">Glimmers you tag <b>#Luna</b> show up here automatically</div>
+  <div class="luna-memories-scroll" id="luna-memories-scroll"><div class="loading">Loading…</div></div>
+
+  <!-- Notes -->
+  <div class="luna-section-row">
+    <div class="luna-section-eyebrow-group">
+      <span class="luna-section-eyebrow">Luna's notes</span>
+      <span class="luna-tag-chip">#Luna</span>
+    </div>
+    <span class="luna-see-all" onclick="openBottomSheet('luna')">+ Add</span>
+  </div>
+  <div class="luna-section-caption">Notes tagged <b>#Luna</b> are gathered here automatically</div>
+  <div id="luna-notes-list" class="luna-notes-list"><div class="loading">Loading…</div></div>
+
 </div>
 
 
@@ -704,7 +751,7 @@
             onclick="fabAction('glimmers')" tabindex="-1">✨</button>
     <button class="fab-item" role="menuitem" aria-label="Add birthday"
             onclick="fabAction('birthdays')" tabindex="-1">🎂</button>
-    <button class="fab-item" role="menuitem" aria-label="Log Luna chew"
+    <button class="fab-item" role="menuitem" aria-label="Add Luna note"
             onclick="fabAction('luna')" tabindex="-1">🐶</button>
     <button class="fab-item" role="menuitem" aria-label="Add plan"
             onclick="fabAction('calendar')" tabindex="-1">📅</button>

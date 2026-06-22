@@ -24,7 +24,6 @@ const configured = firebaseConfig.apiKey !== 'YOUR_API_KEY';
 let _calData  = [];
 let _shopData = [];
 let _todoData = [];
-let _lunaData = [];
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -113,28 +112,22 @@ function renderToday() {
       ).join('');
 
   // ── Luna (dashboard) ─────────────────────────────────────────────
-  const todayDateStr = new Date().toLocaleDateString('en-GB');
-  const lunaBtn = document.getElementById('dash-luna-btn');
-  const lunaStatus = document.getElementById('dash-luna-chew-status');
-  const lunaLogged = document.getElementById('dash-luna-logged');
-  const lunaUnlog = document.getElementById('dash-luna-unlog');
-  if (lunaBtn && lunaStatus) {
-    const todayChew = _lunaData.find(e => e.createdAt && e.createdAt.toDate().toLocaleDateString('en-GB') === todayDateStr);
-    if (todayChew) {
-      lunaBtn.textContent = '✓ Chew given!';
-      lunaBtn.classList.add('done');
-      lunaBtn.onclick = null;
-      if (lunaLogged) lunaLogged.textContent = `Given by ${todayChew.loggedBy}`;
-      if (lunaUnlog) lunaUnlog.style.display = 'block';
+  const lunaCountEl = document.getElementById('dash-luna-count');
+  const lunaSummaryEl = document.getElementById('dash-luna-summary');
+  if (lunaSummaryEl) {
+    if (typeof _lunaRoutine !== 'undefined' && _lunaRoutine) {
+      const items = lunaMergedItems();
+      const total = items.length;
+      const doneCount = items.filter(i => i.done).length;
+      const next = items.find(i => !i.done);
+      const _p = (typeof SETTINGS !== 'undefined' && SETTINGS.petName) || 'Luna';
+      if (lunaCountEl) lunaCountEl.textContent = `${doneCount}/${total}`;
+      lunaSummaryEl.innerHTML = next
+        ? `<div class="dash-row">Next: ${esc(next.title)} · ${lunaFmtSchedTime(next.time)}</div>`
+        : `<div class="dash-empty">${esc(_p)}'s all set for today! 🐾</div>`;
     } else {
-      lunaBtn.textContent = '🦴 Log chew';
-      lunaBtn.classList.remove('done');
-      lunaBtn.onclick = dashLogChew;
-      if (lunaLogged) lunaLogged.textContent = _lunaData.length ? `Last: ${ago(_lunaData[0].createdAt)}` : '';
-      if (lunaUnlog) lunaUnlog.style.display = 'none';
+      lunaSummaryEl.innerHTML = '<div class="dash-empty">Loading…</div>';
     }
-    const _p = (typeof SETTINGS !== 'undefined' && SETTINGS.petName) || 'Luna';
-    if (lunaStatus) lunaStatus.textContent = todayChew ? `${_p} has had her chew today 🎉` : 'Not given yet';
   }
 
   // ── Recent Glimmers ───────────────────────────────────────────────
@@ -158,7 +151,8 @@ function initFirebase() {
   listenCalendar();
   listenShopping();
   listenTodos();
-  listenLuna();
+  listenLunaRoutine();
+  listenLunaMemories();
   listenLunaNotes();
   initNotes();
   listenBirthdays();

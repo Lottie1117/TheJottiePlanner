@@ -854,88 +854,189 @@ function taskMenuDelete() {
     .catch(() => showToast('⚠️ Delete failed'));
 }
 
-// ── Luna ─────────────────────────────────────────────────────────
-function logChew() {
+// ── Luna's daily routine ───────────────────────────────────────────
+// One Firestore doc holds the whole day's state. Whoever's app first
+// notices the date has rolled over overwrites it with a fresh default —
+// none of this needs to be kept long-term.
+const LUNA_ROUTINE_DEFS = [
+  { id: 'walk1',  icon: '🦮', title: 'Morning walk',              time: '08:00', sub: 'Quick one round the block' },
+  { id: 'bfast',  icon: '🍳', title: 'Breakfast + YuMove vitamin', time: '08:30', sub: 'Joint vitamin tucked in her bowl' },
+  { id: 'chew1',  icon: '🥨', title: 'Twisty chew',                time: '13:00', sub: 'Lunchtime treat' },
+  { id: 'walk2',  icon: '🐾', title: 'Afternoon walk',             time: '17:30', sub: 'The long loop round the park' },
+  { id: 'dinner', icon: '🍽️', title: 'Dinner',                     time: '18:00', sub: '' },
+  { id: 'chew2',  icon: '🦷', title: 'Chompy chew',                time: '19:00', sub: 'Evening dental chew' },
+  { id: 'wee',    icon: '🌙', title: 'Night-time wee',              time: '22:30', sub: 'Last garden trip before bed' },
+];
+const LUNA_MAX_TREATS = 14;
+
+let _lunaRoutine = null; // { dateKey, items: { [id]: {done, by, at} }, treats }
+
+function lunaDateKey(d) {
+  d = d || new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function lunaDefaultItemsMap() {
+  const map = {};
+  LUNA_ROUTINE_DEFS.forEach(d => { map[d.id] = { done: false, by: null, at: null }; });
+  return map;
+}
+
+function lunaFmtSchedTime(t) {
+  const [h, m] = t.split(':').map(Number);
+  const ap = h >= 12 ? 'pm' : 'am';
+  const hh = h % 12 || 12;
+  return hh + ':' + String(m).padStart(2, '0') + ap;
+}
+
+function lunaFmtLoggedTime(ts) {
+  if (!ts || !ts.toDate) return '';
+  const d = ts.toDate();
+  let h = d.getHours();
+  const m = d.getMinutes();
+  const ap = h >= 12 ? 'pm' : 'am';
+  h = h % 12 || 12;
+  return h + ':' + String(m).padStart(2, '0') + ap;
+}
+
+function listenLunaRoutine() {
   if (!db) return;
-  db.collection('luna').add({
-    loggedBy: me,
-    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-  }).then(() => {
-    const _p = (typeof SETTINGS !== 'undefined' && SETTINGS.petName) || 'Luna';
-    sendNotification(`🦴 ${_p}`, `${me} logged ${_p}'s chew`);
-    writeNotif({ type: 'luna_update', icon: '🐶', title: `${_p} had her chew`, subtitle: `Given by ${me}`, deepLink: { section: 'luna' } });
+  db.collection('luna-routine').doc('current').onSnapshot(snap => {
+    const today = lunaDateKey();
+    if (!snap.exists || snap.data().dateKey !== today) {
+      db.collection('luna-routine').doc('current').set({
+        dateKey: today,
+        items: lunaDefaultItemsMap(),
+        treats: 0,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      return; // onSnapshot fires again once the fresh doc lands
+    }
+    _lunaRoutine = snap.data();
+    renderLunaRoutine();
+    renderToday();
   });
 }
 
-function delChew(id) { db.collection('luna').doc(id).delete(); }
-
-function listenLuna() {
-  db.collection('luna').orderBy('createdAt','desc').limit(30)
-    .onSnapshot(snap => {
-      _lunaData = snap.docs.map(d => ({id:d.id,...d.data()}));
-      renderToday();
-      const statusEl  = document.getElementById('luna-status-text');
-      const timeEl    = document.getElementById('luna-last-time');
-      const byEl      = document.getElementById('luna-last-by');
-      const logEl     = document.getElementById('luna-log');
-
-      if (snap.empty) {
-        const _p = (typeof SETTINGS !== 'undefined' && SETTINGS.petName) || 'Luna';
-        statusEl.textContent = `Has ${_p} had her chew today?`;
-        timeEl.textContent   = '';
-        byEl.textContent     = '';
-        logEl.innerHTML = '<div class="empty"><div class="emo">🦴</div><p>No chews logged yet — tap the button!</p></div>';
-        return;
-      }
-
-      const items = snap.docs.map(d => ({id: d.id, ...d.data()}));
-      const latest = items[0];
-
-      // Work out how long ago the last chew was
-      const todayStr = new Date().toLocaleDateString('en-GB');
-
-      if (latest.createdAt) {
-        const ms   = Date.now() - latest.createdAt.toMillis();
-        const mins = Math.floor(ms / 60000);
-        const hrs  = Math.floor(ms / 3600000);
-        const days = Math.floor(ms / 86400000);
-
-        let timeStr;
-        if (mins < 2)        timeStr = 'just now';
-        else if (mins < 60)  timeStr = `${mins} minutes ago`;
-        else if (hrs < 24)   timeStr = `${hrs} hour${hrs>1?'s':''} ago`;
-        else                 timeStr = `${days} day${days>1?'s':''} ago`;
-
-        const isToday = latest.createdAt.toDate().toLocaleDateString('en-GB') === todayStr;
-        const _p = (typeof SETTINGS !== 'undefined' && SETTINGS.petName) || 'Luna';
-        statusEl.textContent = isToday ? `${_p} has had her chew today 🎉` : `${_p} hasn't had her chew today yet`;
-        timeEl.textContent   = timeStr;
-        byEl.textContent     = `Logged by ${latest.loggedBy}`;
-      }
-
-      // Build log
-      let html = '';
-      items.forEach(entry => {
-        if (!entry.createdAt) return;
-        const dt = entry.createdAt.toDate();
-        const isToday = dt.toLocaleDateString('en-GB') === todayStr;
-        const timeStr = dt.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
-        const dateStr = isToday ? 'Today' : dt.toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'short'});
-        html += `
-        <div class="chew-log-card">
-          <div class="bone">🦴</div>
-          <div class="chew-log-body">
-            <div class="chew-log-time">${dateStr} at ${timeStr} ${isToday ? '<span class="chew-today-badge">Today</span>' : ''}</div>
-            <div class="chew-log-meta">Logged by ${esc(entry.loggedBy)}</div>
-          </div>
-          <button class="del-btn" onclick="delChew('${entry.id}')">✕</button>
-        </div>`;
-      });
-      logEl.innerHTML = html;
-    });
+function lunaToggleItem(id) {
+  if (!db || !_lunaRoutine) return;
+  const cur = _lunaRoutine.items[id] || {};
+  const def = LUNA_ROUTINE_DEFS.find(d => d.id === id);
+  const wasDone = cur.done;
+  const next = wasDone
+    ? { done: false, by: null, at: null }
+    : { done: true, by: me, at: firebase.firestore.FieldValue.serverTimestamp() };
+  db.collection('luna-routine').doc('current').update({ ['items.' + id]: next }).then(() => {
+    if (!wasDone && def) {
+      const _p = (typeof SETTINGS !== 'undefined' && SETTINGS.petName) || 'Luna';
+      sendNotification(`🐾 ${_p}`, `${me} logged: ${def.title}`);
+      writeNotif({ type: 'luna_update', icon: '🐶', title: `${_p}: ${def.title}`, subtitle: `Logged by ${me}`, deepLink: { section: 'luna' } });
+    }
+  });
 }
 
-// ── Luna Notes ───────────────────────────────────────────────────
+function lunaAddTreat() {
+  if (!db || !_lunaRoutine) return;
+  db.collection('luna-routine').doc('current').update({ treats: Math.min((_lunaRoutine.treats || 0) + 1, LUNA_MAX_TREATS) });
+}
+
+function lunaRemoveTreat() {
+  if (!db || !_lunaRoutine) return;
+  db.collection('luna-routine').doc('current').update({ treats: Math.max((_lunaRoutine.treats || 0) - 1, 0) });
+}
+
+function lunaMergedItems() {
+  if (!_lunaRoutine) return [];
+  return LUNA_ROUTINE_DEFS.map(d => ({ ...d, ...(_lunaRoutine.items[d.id] || { done: false, by: null, at: null }) }));
+}
+
+function renderLunaRoutine() {
+  const timelineEl = document.getElementById('luna-timeline');
+  if (!timelineEl) return; // not on the Luna screen
+  const _p = (typeof SETTINGS !== 'undefined' && SETTINGS.petName) || 'Luna';
+  const items = lunaMergedItems();
+  const total = items.length;
+  const doneCount = items.filter(i => i.done).length;
+  const pct = total ? Math.round((doneCount / total) * 100) : 0;
+  const next = items.find(i => !i.done);
+  const allDone = doneCount === total;
+
+  document.getElementById('luna-hero-ring').style.background =
+    `conic-gradient(#fff ${pct}%, rgba(255,255,255,.30) 0)`;
+  document.getElementById('luna-hero-bar-fill').style.width = pct + '%';
+  document.getElementById('luna-hero-count').textContent = `${doneCount}/${total}`;
+  document.getElementById('luna-routine-chip').textContent = `${doneCount}/${total} done`;
+
+  let headline, sub;
+  if (allDone) {
+    headline = `${_p}'s all set for today!`;
+    sub = 'Every walk, meal & chew done. Good girl 🐾';
+  } else if (doneCount === 0) {
+    headline = `${_p}'s day awaits 🐾`;
+    sub = 'Nothing logged yet · first up: ' + next.title;
+  } else {
+    headline = `${_p}'s having a lovely day`;
+    sub = `${doneCount} of ${total} done · next: ${next.title} at ${lunaFmtSchedTime(next.time)}`;
+  }
+  document.getElementById('luna-hero-headline').textContent = headline;
+  document.getElementById('luna-hero-sub').textContent = sub;
+
+  timelineEl.innerHTML = items.map((it, idx) => `
+    <div class="luna-tl-row" onclick="lunaToggleItem('${it.id}')">
+      <div class="luna-tl-time">${lunaFmtSchedTime(it.time)}</div>
+      <div class="luna-tl-icon-col">
+        <div class="luna-tl-line" style="top:${idx === 0 ? '25px' : '0'};bottom:${idx === total - 1 ? 'calc(100% - 25px)' : '0'}"></div>
+        <div class="luna-tl-icon">
+          ${it.icon}
+          ${it.done ? '<span class="luna-tl-badge">✓</span>' : ''}
+        </div>
+      </div>
+      <div class="luna-tl-body">
+        <div class="luna-tl-info">
+          <div class="luna-tl-title${it.done ? ' done' : ''}">${esc(it.title)}</div>
+          ${it.sub ? `<div class="luna-tl-sub">${esc(it.sub)}</div>` : ''}
+          ${it.done ? `<div class="luna-tl-meta">${avatarBadge(it.by)}<span>${esc(it.by)} · ${lunaFmtLoggedTime(it.at)}</span></div>` : ''}
+        </div>
+        <div class="luna-tl-check${it.done ? ' done' : ''}">✓</div>
+      </div>
+    </div>`).join('');
+
+  const treats = _lunaRoutine.treats || 0;
+  document.getElementById('luna-biscuits-count').textContent = treats;
+  document.getElementById('luna-biscuits-dots').innerHTML =
+    Array.from({ length: treats }).map(() => '<span class="luna-biscuit-dot">🦴</span>').join('');
+}
+
+// ── Luna memories (glimmers tagged #Luna) ──────────────────────────
+let _lunaMemoriesUnsub = null;
+function listenLunaMemories() {
+  if (!db) return;
+  if (_lunaMemoriesUnsub) { _lunaMemoriesUnsub(); _lunaMemoriesUnsub = null; }
+  const el = document.getElementById('luna-memories-scroll');
+  if (!el) return;
+  _lunaMemoriesUnsub = db.collection('glimmers').orderBy('createdAt', 'desc').limit(50)
+    .onSnapshot(snap => {
+      if (!el) return;
+      const tagged = snap.docs.filter(d => {
+        const tags = d.data().tags || [];
+        return tags.some(t => String(t).toLowerCase() === 'luna');
+      }).slice(0, 10);
+      if (!tagged.length) {
+        el.innerHTML = '<div class="luna-memories-empty">No memories tagged <b>#Luna</b> yet — tag a glimmer to see it here ✨</div>';
+        return;
+      }
+      el.innerHTML = '';
+      tagged.forEach(doc => {
+        const card = buildGlimmerCard(doc, { mode: 'dash-tile', from: 'luna' });
+        if (card) el.appendChild(card);
+      });
+    }, () => {});
+}
+
+// ── Luna's notes (tagged #Luna) ─────────────────────────────────────
 function addLunaNote() {
   const title = document.getElementById('ln-title').value.trim();
   const body  = document.getElementById('ln-body').value.trim();
@@ -944,6 +1045,7 @@ function addLunaNote() {
   db.collection('luna-notes').add({
     title, body,
     addedBy: me,
+    tags: ['luna'],
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   }).then(() => {
     const _pn = (typeof SETTINGS !== 'undefined' && SETTINGS.petName) || 'Luna';
@@ -959,18 +1061,20 @@ function listenLunaNotes() {
   db.collection('luna-notes').orderBy('createdAt','desc').limit(50)
     .onSnapshot(snap => {
       const el = document.getElementById('luna-notes-list');
-      if (snap.empty) {
+      // Tags default to ['luna'] on write, but stay defensive for older/legacy docs.
+      const docs = snap.docs.filter(d => { const t = d.data().tags; return !t || t.some(x => String(x).toLowerCase() === 'luna'); });
+      if (!docs.length) {
         el.innerHTML = '<div class="empty"><div class="emo">📝</div><p>No notes yet — add one above!</p></div>';
         return;
       }
       let html = '';
-      snap.docs.forEach(doc => {
+      docs.forEach(doc => {
         const n = {id: doc.id, ...doc.data()};
         const dateStr = n.createdAt
           ? n.createdAt.toDate().toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'})
           : '';
         html += `
-        <div class="item-card">
+        <div class="luna-note-card">
           <div class="item-body">
             ${n.title ? `<div class="item-title">${esc(n.title)}</div>` : ''}
             <div class="item-notes" style="margin-top:${n.title?'5px':'0'};color:var(--text);font-size:14px;line-height:1.5">${esc(n.body)}</div>
@@ -2027,19 +2131,6 @@ function setNavActive(btnId) {
   if (el) el.classList.add('active');
 }
 
-// ── Dashboard Luna helpers ────────────────────────────────────────
-window.dashLogChew = function() {
-  if (!db) return;
-  logChew();
-};
-
-window.dashUnlogChew = function() {
-  if (!db || !_lunaData.length) return;
-  const todayStr = new Date().toLocaleDateString('en-GB');
-  const todayChew = _lunaData.find(e => e.createdAt && e.createdAt.toDate().toLocaleDateString('en-GB') === todayStr);
-  if (todayChew) delChew(todayChew.id);
-};
-
 // ── Dashboard Glimmer gallery ─────────────────────────────────────
 let _dashGlimmerUnsub = null;
 function renderDashGlimmers() {
@@ -2074,13 +2165,6 @@ window.addEventListener('load', () => {
   }
   // Default calendar date to today
   renderToday();
-
-  // Copy Luna image from drawer tile to dashboard
-  (function() {
-    const src = document.querySelector('.luna-tile-img');
-    const dest = document.getElementById('luna-dash-img');
-    if (src && dest) dest.src = src.src;
-  })();
 
   const evDateEl = document.getElementById('ev-date');
   if (evDateEl) evDateEl.value = new Date().toISOString().split('T')[0];
@@ -2229,6 +2313,7 @@ window.saveGlimmer = async function() {
       text,
       by,
       images,                                                  // future-proof array
+      tags: [],                                                // future-proof: e.g. ['luna']
       dateKey: getLocalDateKey(),                              // for streak calc
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
@@ -2323,7 +2408,7 @@ function buildGlimmerCard(doc, opts = {}) {
     // Small horizontal tile for Recent Glimmers scroll
     const el = document.createElement('div');
     el.className = 'glimmer-tile';
-    el.onclick = () => openGlimmerDetail(id, 'today');
+    el.onclick = () => openGlimmerDetail(id, opts.from || 'today');
     if (imgUrl) {
       el.innerHTML = `<img src="${escapeAttr(imgUrl)}" alt="glimmer" loading="lazy" style="width:100%;height:80px;object-fit:cover;display:block">
         <div class="glimmer-tile-text">${escapeHtml((g.text || '').substring(0, 40))}</div>`;
@@ -2494,6 +2579,8 @@ window.closeGlimmerDetail = function closeGlimmerDetail() {
   if (ds) ds.classList.remove('has-photo');
   if (_glimmerDetailFrom === 'today') {
     navTo('today');
+  } else if (_glimmerDetailFrom === 'luna') {
+    navTo('luna');
   } else {
     navTo('glimmers');
   }
@@ -3091,10 +3178,6 @@ document.querySelectorAll('.tab').forEach(tab => {
     if (sheetSections.includes(section)) {
       navTo(section);
       openBottomSheet(section);
-      return;
-    }
-    if (section === 'luna') {
-      setTimeout(logChew, 100);
       return;
     }
     if (section === 'lists') {
