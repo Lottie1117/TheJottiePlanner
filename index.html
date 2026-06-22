@@ -215,7 +215,13 @@
   <!-- Widget templates (hidden, cloned by JS) -->
   <template id="widget-tpl-luna">
     <div class="dash-card-sm">
-      <div class="dash-hdr"><div class="dash-hdr-title">Luna</div><span class="dash-count" id="dash-luna-count">-</span></div>
+      <div class="dash-hdr">
+        <div class="dash-hdr-title dash-hdr-title-luna">
+          <img class="dash-luna-face" src="images/lunaface.png" alt="Luna">
+          <span id="dash-luna-title-text">Luna</span>
+        </div>
+        <span class="dash-count" id="dash-luna-count">-</span>
+      </div>
       <div id="dash-luna-summary"><div class="dash-empty">Loading…</div></div>
       <a class="view-all" onclick="navTo('luna')">View Luna's day →</a>
     </div>
@@ -637,10 +643,6 @@
 
 <template id="bs-tpl-glimmers">
   <textarea id="glimmer-text" placeholder="What made you smile today?" rows="3"></textarea>
-  <select id="glimmer-by">
-    <option value="Lottie">👩 Lottie</option>
-    <option value="Jonny">👨 Jonny</option>
-  </select>
   <div class="photo-upload-area" id="glimmer-upload-area"
        onclick="document.getElementById('glimmer-img-input').click()"
        role="button" tabindex="0" aria-label="Add photo">
@@ -652,12 +654,17 @@
     <img id="glimmer-preview-img" src="" alt="Photo preview">
     <button class="photo-remove-btn" onclick="removeGlimmerPhoto()" title="Remove photo">✕</button>
   </div>
+  <input type="text" id="glimmer-tag-input" placeholder="Add a tag (e.g. luna) and press Enter" onkeydown="handleTagInputKeydown(event,'glimmer')">
+  <div class="tag-chip-list" id="glimmer-tag-chips"></div>
   <button class="btn-primary" id="glimmer-save-btn" onclick="saveGlimmer()">✨ Save Glimmer</button>
 </template>
 
 <template id="bs-tpl-luna">
   <input type="text" id="ln-title" placeholder="Title (e.g. Food, Behaviour, Vet)">
   <textarea id="ln-body" placeholder="Write a note about Luna…"></textarea>
+  <input type="text" id="ln-tag-input" placeholder="Add a tag (e.g. vet) and press Enter" onkeydown="handleTagInputKeydown(event,'ln')">
+  <div class="tag-chip-list" id="ln-tag-chips"></div>
+  <div class="tag-hint">Always tagged <span class="luna-tag-chip">#luna</span></div>
   <button class="btn-primary" onclick="addLunaNote();closeBottomSheet()">Save Note</button>
 </template>
 

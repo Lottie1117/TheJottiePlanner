@@ -28,14 +28,8 @@ function applySettings() {
   if (lottieBtn) lottieBtn.textContent = `👩 ${u1}`;
   if (jonnyBtn)  jonnyBtn.textContent  = `👨 ${u2}`;
 
-  // Luna section: initial status text and chew button
-  const lunaStatus = document.getElementById('luna-status-text');
-  const lunaChewBtn = document.getElementById('luna-chew-btn');
-  if (lunaStatus)  lunaStatus.textContent  = `Has ${pet} had her chew today?`;
-  if (lunaChewBtn) lunaChewBtn.textContent = `🦴 ${pet} has had her chew!`;
-
-  // Dashboard Luna card title
-  const lunaDashTitle = document.querySelector('#widget-tpl-luna .dash-hdr-title');
+  // Dashboard Luna card title (keep the face image, just rename the text)
+  const lunaDashTitle = document.getElementById('dash-luna-title-text');
   if (lunaDashTitle) lunaDashTitle.textContent = pet;
 
   // Option labels in bottom sheet templates (value attributes stay as-is for Firestore)
@@ -122,6 +116,9 @@ function openBottomSheet(section) {
   }
   // For notes: render context-aware item form after template is inserted
   if (section === 'lists') renderNoteItemForm();
+  // For glimmers / Luna notes: reset the tag chip input
+  if (section === 'glimmers') resetTagInput('glimmer');
+  if (section === 'luna') resetTagInput('ln');
   // For new-note: select first emoji by default
   if (section === 'new-note') {
     setTimeout(() => {
@@ -150,6 +147,51 @@ function closeBottomSheet() {
   // Remove rotation from nav button
   const navFab = document.getElementById('nav-fab-main');
   if (navFab) navFab.classList.remove('open');
+}
+
+// ── Tag input (shared by glimmers / Luna notes forms) ──────────────
+const _tagInputState = {};
+
+function handleTagInputKeydown(e, prefix) {
+  if (e.key !== 'Enter' && e.key !== ',') return;
+  e.preventDefault();
+  const input = document.getElementById(`${prefix}-tag-input`);
+  if (!input) return;
+  addTagChip(prefix, input.value);
+  input.value = '';
+}
+
+function addTagChip(prefix, raw) {
+  const tag = String(raw).trim().toLowerCase().replace(/^#/, '');
+  if (!tag) return;
+  const tags = _tagInputState[prefix] || (_tagInputState[prefix] = []);
+  if (!tags.includes(tag)) tags.push(tag);
+  renderTagChips(prefix);
+}
+
+function removeTagChip(prefix, tag) {
+  _tagInputState[prefix] = (_tagInputState[prefix] || []).filter(t => t !== tag);
+  renderTagChips(prefix);
+}
+
+function renderTagChips(prefix) {
+  const el = document.getElementById(`${prefix}-tag-chips`);
+  if (!el) return;
+  const tags = _tagInputState[prefix] || [];
+  el.innerHTML = tags.map(t =>
+    `<span class="tag-chip">#${esc(t)}<button type="button" onclick="removeTagChip('${prefix}','${esc(t)}')" aria-label="Remove tag">✕</button></span>`
+  ).join('');
+}
+
+function resetTagInput(prefix) {
+  _tagInputState[prefix] = [];
+  const input = document.getElementById(`${prefix}-tag-input`);
+  if (input) input.value = '';
+  renderTagChips(prefix);
+}
+
+function getTagInputValue(prefix) {
+  return (_tagInputState[prefix] || []).slice();
 }
 
 function bsListTab(name, btn) {
@@ -1042,16 +1084,18 @@ function addLunaNote() {
   const body  = document.getElementById('ln-body').value.trim();
   if (!body) return;
   if (!db) return;
+  const tags = Array.from(new Set(['luna', ...getTagInputValue('ln')]));
   db.collection('luna-notes').add({
     title, body,
     addedBy: me,
-    tags: ['luna'],
+    tags,
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   }).then(() => {
     const _pn = (typeof SETTINGS !== 'undefined' && SETTINGS.petName) || 'Luna';
     sendNotification(`📝 ${_pn} Note`, `${me} added a note${title ? ': '+title : ''}`);
     document.getElementById('ln-title').value = '';
     document.getElementById('ln-body').value  = '';
+    resetTagInput('ln');
   });
 }
 
@@ -2288,11 +2332,10 @@ function getLocalDateKey(date) {
 
 window.saveGlimmer = async function() {
   const textEl = document.getElementById('glimmer-text');
-  const byEl = document.getElementById('glimmer-by');
-  if (!textEl || !byEl) return;
+  if (!textEl) return;
 
   const text = textEl.value.trim();
-  const by = byEl.value;
+  const by = me || localStorage.getItem('jottie-name') || ((typeof SETTINGS !== 'undefined' && SETTINGS.user1Name) || 'Lottie');
   if (!text) { showToast('✏️ Write something first!'); return; }
 
   const btn = document.getElementById('glimmer-save-btn');
@@ -2313,7 +2356,7 @@ window.saveGlimmer = async function() {
       text,
       by,
       images,                                                  // future-proof array
-      tags: [],                                                // future-proof: e.g. ['luna']
+      tags: getTagInputValue('glimmer'),                       // e.g. ['luna']
       dateKey: getLocalDateKey(),                              // for streak calc
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
@@ -2321,12 +2364,10 @@ window.saveGlimmer = async function() {
     // Reset form
     textEl.value = '';
     removeGlimmerPhoto();
-    // Reset selector to the current user
-    const me = localStorage.getItem('jottie-name') || ((typeof SETTINGS !== 'undefined' && SETTINGS.user1Name) || 'Lottie');
-    byEl.value = me;
+    resetTagInput('glimmer');
 
     showToast('✨ Glimmer saved!');
-    writeNotif({ type: 'new_glimmer', icon: '✨', title: `${me} shared a glimmer`, subtitle: text.length > 60 ? text.slice(0,57)+'…' : text, deepLink: { section: 'glimmers' } });
+    writeNotif({ type: 'new_glimmer', icon: '✨', title: `${by} shared a glimmer`, subtitle: text.length > 60 ? text.slice(0,57)+'…' : text, deepLink: { section: 'glimmers' } });
     loadGlimmersAndStreak();
   } catch (err) {
     console.error('Save glimmer error:', err);
@@ -3042,14 +3083,10 @@ function formatRelativeTime(date) {
 }
 
 // ──────────────────────────────────────────────────────────────
-// INIT — set "by" selector to current user, wire tab events
+// INIT — wire tab events (glimmers are always authored by the current user)
 // ──────────────────────────────────────────────────────────────
 
-function initGlimmerSection() {
-  const me = localStorage.getItem('jottie-name') || ((typeof SETTINGS !== 'undefined' && SETTINGS.user1Name) || 'Lottie');
-  const sel = document.getElementById('glimmer-by');
-  if (sel) sel.value = me;
-}
+function initGlimmerSection() {}
 
 // Hook into tab switching (works alongside existing tab logic)
 document.querySelectorAll('.tab').forEach(tab => {
