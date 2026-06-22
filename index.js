@@ -116,11 +116,11 @@ function openBottomSheet(section) {
   }
   // For notes: render context-aware item form after template is inserted
   if (section === 'lists') renderNoteItemForm();
-  // For glimmers / Luna notes: reset the tag chip input
+  // For glimmers: reset tags and render preset buttons
   if (section === 'glimmers') resetTagInput('glimmer');
-  if (section === 'luna') resetTagInput('ln');
-  // For new-note: select first emoji by default
+  // For new-note: reset tags, render presets, select first emoji
   if (section === 'new-note') {
+    resetTagInput('note');
     setTimeout(() => {
       const firstEmoji = document.querySelector('.emoji-opt');
       if (firstEmoji) { firstEmoji.classList.add('selected'); }
@@ -149,7 +149,17 @@ function closeBottomSheet() {
   if (navFab) navFab.classList.remove('open');
 }
 
-// ── Tag input (shared by glimmers / Luna notes forms) ──────────────
+// ── Tagging config ───────────────────────────────────────────────
+// Add entries here to extend tagging to new sections in future.
+const PRESET_TAGS = ['luna', 'us', 'family', 'holiday'];
+
+// Maps a tag (lowercase) to the section that should display items with that tag.
+// Used to drive cross-section routing (e.g. Luna memories, Luna notes).
+const TAG_SECTION_MAP = {
+  luna: 'luna'
+};
+
+// ── Tag input (shared by glimmers / notes forms) ──────────────────
 const _tagInputState = {};
 
 function handleTagInputKeydown(e, prefix) {
@@ -167,27 +177,55 @@ function addTagChip(prefix, raw) {
   const tags = _tagInputState[prefix] || (_tagInputState[prefix] = []);
   if (!tags.includes(tag)) tags.push(tag);
   renderTagChips(prefix);
+  renderPresetTags(prefix); // keep preset buttons in sync
 }
 
 function removeTagChip(prefix, tag) {
   _tagInputState[prefix] = (_tagInputState[prefix] || []).filter(t => t !== tag);
   renderTagChips(prefix);
+  renderPresetTags(prefix);
 }
+window.removeTagChip = removeTagChip;
 
 function renderTagChips(prefix) {
   const el = document.getElementById(`${prefix}-tag-chips`);
   if (!el) return;
   const tags = _tagInputState[prefix] || [];
-  el.innerHTML = tags.map(t =>
+  // Only show chips for custom (non-preset) tags — presets are shown as buttons
+  const custom = tags.filter(t => !PRESET_TAGS.includes(t));
+  el.innerHTML = custom.map(t =>
     `<span class="tag-chip">#${esc(t)}<button type="button" onclick="removeTagChip('${prefix}','${esc(t)}')" aria-label="Remove tag">✕</button></span>`
   ).join('');
 }
+
+function renderPresetTags(prefix) {
+  const el = document.getElementById(`${prefix}-tag-presets`);
+  if (!el) return;
+  const active = _tagInputState[prefix] || [];
+  el.innerHTML = PRESET_TAGS.map(t =>
+    `<button type="button" class="tag-preset-btn${active.includes(t) ? ' active' : ''}"
+      onclick="selectPresetTag('${prefix}','${t}')">#${t}</button>`
+  ).join('');
+}
+
+function selectPresetTag(prefix, tag) {
+  const tags = _tagInputState[prefix] || (_tagInputState[prefix] = []);
+  if (tags.includes(tag)) {
+    _tagInputState[prefix] = tags.filter(t => t !== tag);
+  } else {
+    tags.push(tag);
+  }
+  renderPresetTags(prefix);
+  renderTagChips(prefix);
+}
+window.selectPresetTag = selectPresetTag;
 
 function resetTagInput(prefix) {
   _tagInputState[prefix] = [];
   const input = document.getElementById(`${prefix}-tag-input`);
   if (input) input.value = '';
   renderTagChips(prefix);
+  renderPresetTags(prefix);
 }
 
 function getTagInputValue(prefix) {
@@ -1079,55 +1117,41 @@ function listenLunaMemories() {
 }
 
 // ── Luna's notes (tagged #Luna) ─────────────────────────────────────
-function addLunaNote() {
-  const title = document.getElementById('ln-title').value.trim();
-  const body  = document.getElementById('ln-body').value.trim();
-  if (!body) return;
-  if (!db) return;
-  const tags = Array.from(new Set(['luna', ...getTagInputValue('ln')]));
-  db.collection('luna-notes').add({
-    title, body,
-    addedBy: me,
-    tags,
-    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-  }).then(() => {
-    const _pn = (typeof SETTINGS !== 'undefined' && SETTINGS.petName) || 'Luna';
-    sendNotification(`📝 ${_pn} Note`, `${me} added a note${title ? ': '+title : ''}`);
-    document.getElementById('ln-title').value = '';
-    document.getElementById('ln-body').value  = '';
-    resetTagInput('ln');
-  });
-}
-
-function delLunaNote(id) { db.collection('luna-notes').doc(id).delete(); }
-
+// ── Luna's notes — reads from main 'notes' collection tagged #luna ──
 function listenLunaNotes() {
-  db.collection('luna-notes').orderBy('createdAt','desc').limit(50)
+  if (!db) return;
+  db.collection('notes')
+    .where('archived', '==', false)
+    .orderBy('updatedAt', 'desc')
     .onSnapshot(snap => {
       const el = document.getElementById('luna-notes-list');
-      // Tags default to ['luna'] on write, but stay defensive for older/legacy docs.
-      const docs = snap.docs.filter(d => { const t = d.data().tags; return !t || t.some(x => String(x).toLowerCase() === 'luna'); });
+      if (!el) return;
+      const docs = snap.docs.filter(d => {
+        const tags = d.data().tags || [];
+        return tags.some(t => String(t).toLowerCase() === 'luna');
+      });
       if (!docs.length) {
-        el.innerHTML = '<div class="empty"><div class="emo">📝</div><p>No notes yet — add one above!</p></div>';
+        el.innerHTML = '<div class="empty"><div class="emo">📝</div><p>No Luna notes yet — tap + Add to create one!</p></div>';
         return;
       }
-      let html = '';
-      docs.forEach(doc => {
-        const n = {id: doc.id, ...doc.data()};
-        const dateStr = n.createdAt
-          ? n.createdAt.toDate().toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'})
-          : '';
-        html += `
-        <div class="luna-note-card">
-          <div class="item-body">
-            ${n.title ? `<div class="item-title">${esc(n.title)}</div>` : ''}
-            <div class="item-notes" style="margin-top:${n.title?'5px':'0'};color:var(--text);font-size:14px;line-height:1.5">${esc(n.body)}</div>
-            <div class="item-meta" style="margin-top:6px">${badge(n.addedBy)} · ${dateStr}</div>
+      el.innerHTML = docs.map(doc => {
+        const n = { id: doc.id, ...doc.data() };
+        const updLabel = n.updatedAt ? relativeDay(n.updatedAt) : '';
+        return `<div class="luna-note-card" onclick="openNote('${n.id}')">
+          <div class="luna-note-card-inner">
+            <div class="luna-note-card-title">${esc(n.emoji || '📝')} ${esc(n.title)}</div>
+            <div class="luna-note-card-count" id="luna-note-count-${n.id}">…</div>
+            ${updLabel ? `<div class="luna-note-card-meta">${updLabel}</div>` : ''}
           </div>
-          <button class="del-btn" onclick="delLunaNote('${n.id}')">✕</button>
         </div>`;
+      }).join('');
+      // Load item counts async
+      docs.forEach(doc => {
+        db.collection('notes').doc(doc.id).collection('items').get().then(snap => {
+          const el = document.getElementById(`luna-note-count-${doc.id}`);
+          if (el) el.textContent = snap.size === 1 ? '1 item' : `${snap.size} items`;
+        });
       });
-      el.innerHTML = html;
     });
 }
 
@@ -1810,19 +1834,23 @@ function customEmojiInput(inp) {
 }
 
 // ── Create a new note ──────────────────────────────────────────────
-function createNote() {
-  const titleEl = document.getElementById('new-note-title');
-  const emojiEl = document.getElementById('new-note-emoji');
-  const firstEl = document.getElementById('new-note-first-item');
+function createNote(opts = {}) {
+  const titleEl  = document.getElementById('new-note-title');
+  const emojiEl  = document.getElementById('new-note-emoji');
+  const firstEl  = document.getElementById('new-note-first-item');
   const pinnedEl = document.getElementById('new-note-pinned');
   if (!titleEl) return;
   const title = titleEl.value.trim();
   if (!title || !db) return;
-  const emoji = emojiEl ? emojiEl.value.trim() || '📝' : '📝';
+  const emoji  = emojiEl ? emojiEl.value.trim() || '📝' : '📝';
   const pinned = pinnedEl ? pinnedEl.checked : false;
+  // Merge tags from the form input with any forced tags passed in opts
+  const formTags  = getTagInputValue('note');
+  const forceTags = opts.tags || [];
+  const tags = Array.from(new Set([...forceTags, ...formTags]));
   const now = firebase.firestore.FieldValue.serverTimestamp();
   db.collection('notes').add({
-    title, emoji, pinned, archived: false,
+    title, emoji, pinned, archived: false, tags,
     createdAt: now, updatedAt: now, protected: false
   }).then(ref => {
     const firstItem = firstEl ? firstEl.value.trim() : '';
@@ -1836,8 +1864,23 @@ function createNote() {
     if (emojiEl) emojiEl.value = '';
     if (firstEl) firstEl.value = '';
     if (pinnedEl) pinnedEl.checked = false;
+    resetTagInput('note');
+    // If the note was luna-tagged, open it immediately
+    if (tags.includes('luna')) {
+      openNote(ref.id);
+    }
   });
 }
+
+// ── Create a Luna note (opens Notes Hub with #luna pre-selected) ──
+function createLunaNote() {
+  openBottomSheet('new-note');
+  // Pre-select the luna preset after the template renders
+  setTimeout(() => {
+    selectPresetTag('note', 'luna');
+  }, 50);
+}
+window.createLunaNote = createLunaNote;
 
 // ── Note menu ──────────────────────────────────────────────────────
 function openNoteMenu() {
@@ -2432,9 +2475,11 @@ function buildGlimmerCard(doc, opts = {}) {
     } else {
       el.style.background = bg;
     }
+    const tagPills = (g.tags || []).map(t => `<span class="glimmer-tag-pill">#${escapeHtml(t)}</span>`).join('');
     el.innerHTML = `
       <div class="glimmer-tile-overlay">
         <div class="glimmer-tile-text">${escapeHtml(g.text || '')}</div>
+        ${tagPills ? `<div class="glimmer-tags">${tagPills}</div>` : ''}
         <div class="glimmer-tile-footer">
           <span class="glimmer-tile-author">${avatarBadge(g.by)}</span>
           <button class="glimmer-heart-btn${liked ? ' liked' : ''}" ${heartDisabled}

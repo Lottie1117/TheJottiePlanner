@@ -335,6 +335,42 @@
     .tag-hint { font-size: 12px; color: var(--muted); margin: -3px 0 9px; }
     .tag-hint .luna-tag-chip { margin-left: 2px; vertical-align: middle; }
 
+    /* ── Preset tag buttons ──────────────────────────────── */
+    .tag-presets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 9px; }
+    .tag-preset-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+    .tag-preset-btn {
+      font-size: 12px; font-weight: 700; color: var(--muted);
+      background: var(--bg); border: 1.5px solid var(--border);
+      padding: 4px 10px; border-radius: 99px; cursor: pointer;
+      transition: all 0.15s;
+    }
+    .tag-preset-btn.active {
+      color: var(--primary); background: var(--primary-light);
+      border-color: var(--primary);
+    }
+
+    /* ── Tag pills displayed on glimmer cards ────────────── */
+    .glimmer-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+    .glimmer-tag-pill {
+      font-size: 10px; font-weight: 700; color: var(--primary);
+      background: rgba(255,255,255,0.25); padding: 2px 7px;
+      border-radius: 99px; backdrop-filter: blur(4px);
+    }
+
+    /* ── Luna notes cards (from notes collection) ────────── */
+    .luna-note-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 12px 14px;
+      margin-bottom: 10px; box-shadow: var(--shadow);
+      display: flex; align-items: flex-start; gap: 10px;
+      cursor: pointer;
+    }
+    .luna-note-card:active { opacity: 0.8; }
+    .luna-note-card-inner { flex: 1; min-width: 0; }
+    .luna-note-card-title { font-size: 14px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 6px; }
+    .luna-note-card-meta { font-size: 11px; color: var(--muted); margin-top: 3px; }
+    .luna-note-card-count { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
     /* ── Buttons ─────────────────────────────────────── */
     .btn-primary {
       width: 100%;

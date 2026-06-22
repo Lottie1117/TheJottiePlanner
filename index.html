@@ -452,7 +452,7 @@
       <span class="luna-section-eyebrow">Luna's notes</span>
       <span class="luna-tag-chip">#Luna</span>
     </div>
-    <span class="luna-see-all" onclick="openBottomSheet('luna')">+ Add</span>
+    <span class="luna-see-all" onclick="createLunaNote()">+ Add</span>
   </div>
   <div class="luna-section-caption">Notes tagged <b>#Luna</b> are gathered here automatically</div>
   <div id="luna-notes-list" class="luna-notes-list"><div class="loading">Loading…</div></div>
@@ -654,18 +654,16 @@
     <img id="glimmer-preview-img" src="" alt="Photo preview">
     <button class="photo-remove-btn" onclick="removeGlimmerPhoto()" title="Remove photo">✕</button>
   </div>
-  <input type="text" id="glimmer-tag-input" placeholder="Add a tag (e.g. luna) and press Enter" onkeydown="handleTagInputKeydown(event,'glimmer')">
+  <div class="tag-preset-label">Tags</div>
+  <div class="tag-presets" id="glimmer-tag-presets"></div>
+  <input type="text" id="glimmer-tag-input" placeholder="Add custom tag and press Enter" onkeydown="handleTagInputKeydown(event,'glimmer')">
   <div class="tag-chip-list" id="glimmer-tag-chips"></div>
   <button class="btn-primary" id="glimmer-save-btn" onclick="saveGlimmer()">✨ Save Glimmer</button>
 </template>
 
 <template id="bs-tpl-luna">
-  <input type="text" id="ln-title" placeholder="Title (e.g. Food, Behaviour, Vet)">
-  <textarea id="ln-body" placeholder="Write a note about Luna…"></textarea>
-  <input type="text" id="ln-tag-input" placeholder="Add a tag (e.g. vet) and press Enter" onkeydown="handleTagInputKeydown(event,'ln')">
-  <div class="tag-chip-list" id="ln-tag-chips"></div>
-  <div class="tag-hint">Always tagged <span class="luna-tag-chip">#luna</span></div>
-  <button class="btn-primary" onclick="addLunaNote();closeBottomSheet()">Save Note</button>
+  <p style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.5">Luna notes are created in the Notes Hub and tagged <span class="luna-tag-chip">#luna</span> so they appear here automatically.</p>
+  <button class="btn-primary" onclick="closeBottomSheet();createLunaNote()">📝 Create Luna Note</button>
 </template>
 
 <template id="bs-tpl-lists">
@@ -699,6 +697,10 @@
     <input type="hidden" id="new-note-emoji" value="📝">
   </div>
   <input type="text" id="new-note-first-item" placeholder="First item (optional)">
+  <div class="tag-preset-label">Tags</div>
+  <div class="tag-presets" id="note-tag-presets"></div>
+  <input type="text" id="note-tag-input" placeholder="Add custom tag and press Enter" onkeydown="handleTagInputKeydown(event,'note')">
+  <div class="tag-chip-list" id="note-tag-chips"></div>
   <div class="row" style="align-items:center;gap:10px;padding:4px 0">
     <label style="display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted);cursor:pointer">
       <input type="checkbox" id="new-note-pinned" style="width:18px;height:18px;accent-color:var(--primary)"> 📌 Pin this note
