@@ -132,8 +132,12 @@ exports.sendEveningRoundup = onSchedule(
 // Sends a realistic-looking roundup push to a single user immediately.
 // Only callable from the app; restricted to the jottieplans domain.
 exports.sendTestRoundup = onRequest(
-  { region: 'europe-west2', cors: ['https://jottieplans.web.app', 'https://lottie1117.github.io'] },
+  { region: 'europe-west2', cors: true },
   async (req, res) => {
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.set('Access-Control-Allow-Headers', 'Content-Type');
+    if (req.method === 'OPTIONS') { res.status(204).send(''); return; }
     if (req.method !== 'POST') { res.status(405).send('Method Not Allowed'); return; }
 
     const { targetUser } = req.body;
