@@ -1655,6 +1655,14 @@ function filterNotes(q) {
 }
 
 // ── Search ──────────────────────────────────────────────────────────
+// escapeHtml defined here at top level (the version inside the glimmers IIFE is scoped there)
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // Reusable text-match helper (same behaviour as original filterNotes)
 function _searchMatch(val, q) {
   if (!val) return false;
@@ -3105,12 +3113,7 @@ if (lightbox) {
   });
 }
 
-// Close search on Escape
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape' && document.getElementById('search-overlay').classList.contains('open')) {
-    closeSearch();
-  }
-});
+// Close search on Escape removed per UX preference
 
 // ──────────────────────────────────────────────────────────────
 // STREAK CALCULATION
