@@ -325,6 +325,10 @@ function navTo(sec, navItemEl) {
     if (typeof loadGlimmersList === 'function') loadGlimmersList();
     if (typeof loadStreakData === 'function') loadStreakData();
   }
+  if (sec === 'luna') {
+    if (typeof listenLunaMemories === 'function') listenLunaMemories();
+    if (typeof listenLunaNotes === 'function') listenLunaNotes();
+  }
   if (sec === 'dev-settings') openDevSettings();
 }
 
