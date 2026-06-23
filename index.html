@@ -384,9 +384,33 @@
 <!-- Glimmer detail options menu -->
 <div class="note-menu-overlay" id="glimmer-detail-menu-overlay" onclick="closeGlimmerDetailMenu()"></div>
 <div class="note-menu" id="glimmer-detail-menu">
-  <button onclick="glimmerMenuEdit()">✏️ Edit caption</button>
+  <button onclick="glimmerMenuEdit()">✏️ Edit Glimmer</button>
   <button id="glimmer-menu-pin-btn" onclick="glimmerMenuTogglePin()">📌 Pin</button>
   <button onclick="glimmerMenuArchive()">📦 Archive</button>
+</div>
+
+<!-- Edit Glimmer modal -->
+<div class="modal-overlay" id="edit-glimmer-overlay" onclick="closeEditGlimmer()"></div>
+<div class="modal-sheet" id="edit-glimmer-modal">
+  <div class="drawer-handle"></div>
+  <div class="bs-title">Edit Glimmer</div>
+  <textarea id="edit-glimmer-text" rows="3" placeholder="What's this glimmer about?"></textarea>
+  <div class="photo-upload-area" id="edit-glimmer-upload-area"
+       onclick="document.getElementById('edit-glimmer-img-input').click()"
+       role="button" tabindex="0" aria-label="Change photo">
+    <div class="upload-icon">📷</div>
+    <div class="upload-label">Change Photo (optional)</div>
+  </div>
+  <input type="file" id="edit-glimmer-img-input" accept="image/*">
+  <div class="photo-preview-wrap" id="edit-glimmer-preview-wrap" style="display:none;">
+    <img id="edit-glimmer-preview-img" src="" alt="Photo preview">
+    <button class="photo-remove-btn" onclick="removeEditGlimmerPhoto()" title="Remove photo">✕</button>
+  </div>
+  <div class="tag-preset-label">Tags</div>
+  <div class="tag-presets" id="edit-glimmer-tag-presets"></div>
+  <input type="text" id="edit-glimmer-tag-input" placeholder="Add custom tag and press Enter" onkeydown="handleTagInputKeydown(event,'edit-glimmer')">
+  <div class="tag-chip-list" id="edit-glimmer-tag-chips"></div>
+  <button class="btn-primary" id="edit-glimmer-save-btn" onclick="saveGlimmerEdit()">✨ Save Changes</button>
 </div>
 
 <!-- ── Luna ───────────────────────────────────────────────── -->

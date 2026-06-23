@@ -2686,13 +2686,123 @@ window.closeGlimmerDetailMenu = function closeGlimmerDetailMenu() {
   document.getElementById('glimmer-detail-menu-overlay').classList.remove('open');
   document.getElementById('glimmer-detail-menu').classList.remove('open');
 }
+// ── Edit Glimmer modal ────────────────────────────────────────────
+let _editGlimmerPendingBlob = null; // null = no change, false = remove, Blob = new image
+
 window.glimmerMenuEdit = function() {
   closeGlimmerDetailMenu();
   const g = _glimmersCache.find(g => g.id === _currentGlimmerId);
   if (!g) return;
-  const newText = prompt('Edit caption:', g.text || '');
-  if (newText !== null && newText.trim()) {
-    db.collection('glimmers').doc(_currentGlimmerId).update({ text: newText.trim() });
+
+  // Pre-fill text
+  const textEl = document.getElementById('edit-glimmer-text');
+  if (textEl) textEl.value = g.text || '';
+
+  // Pre-fill photo
+  _editGlimmerPendingBlob = null;
+  const existingUrl = (g.images && g.images[0]) || g.imageUrl || null;
+  const previewWrap = document.getElementById('edit-glimmer-preview-wrap');
+  const uploadArea  = document.getElementById('edit-glimmer-upload-area');
+  const previewImg  = document.getElementById('edit-glimmer-preview-img');
+  if (existingUrl && previewImg && previewWrap && uploadArea) {
+    previewImg.src = existingUrl;
+    previewWrap.style.display = 'block';
+    uploadArea.style.display = 'none';
+  } else if (previewWrap && uploadArea) {
+    previewWrap.style.display = 'none';
+    uploadArea.style.display = 'block';
+  }
+
+  // Pre-fill tags
+  _tagInputState['edit-glimmer'] = (g.tags || []).slice();
+  renderPresetTags('edit-glimmer');
+  renderTagChips('edit-glimmer');
+
+  // Wire image input
+  const imgInput = document.getElementById('edit-glimmer-img-input');
+  if (imgInput) {
+    // Clone to remove any previous listener
+    const fresh = imgInput.cloneNode(true);
+    imgInput.parentNode.replaceChild(fresh, imgInput);
+    fresh.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      try {
+        showToast('⏳ Preparing image…');
+        _editGlimmerPendingBlob = await compressImage(file);
+        const objectUrl = URL.createObjectURL(_editGlimmerPendingBlob);
+        const pi = document.getElementById('edit-glimmer-preview-img');
+        if (pi.dataset.prevUrl) URL.revokeObjectURL(pi.dataset.prevUrl);
+        pi.src = objectUrl;
+        pi.dataset.prevUrl = objectUrl;
+        document.getElementById('edit-glimmer-preview-wrap').style.display = 'block';
+        document.getElementById('edit-glimmer-upload-area').style.display = 'none';
+        showToast('📷 Photo ready');
+      } catch (err) {
+        console.error('Image compress error:', err);
+        showToast('⚠️ Could not process image');
+      }
+    });
+  }
+
+  // Open modal
+  document.getElementById('edit-glimmer-overlay').classList.add('open');
+  document.getElementById('edit-glimmer-modal').classList.add('open');
+};
+
+window.closeEditGlimmer = function() {
+  document.getElementById('edit-glimmer-overlay').classList.remove('open');
+  document.getElementById('edit-glimmer-modal').classList.remove('open');
+  _editGlimmerPendingBlob = null;
+};
+
+window.removeEditGlimmerPhoto = function() {
+  _editGlimmerPendingBlob = false; // false = user explicitly removed photo
+  const pi = document.getElementById('edit-glimmer-preview-img');
+  if (pi && pi.dataset.prevUrl) { URL.revokeObjectURL(pi.dataset.prevUrl); pi.removeAttribute('data-prev-url'); }
+  if (pi) pi.src = '';
+  const wrap = document.getElementById('edit-glimmer-preview-wrap');
+  const area = document.getElementById('edit-glimmer-upload-area');
+  if (wrap) wrap.style.display = 'none';
+  if (area) area.style.display = 'block';
+};
+
+window.saveGlimmerEdit = async function() {
+  const textEl = document.getElementById('edit-glimmer-text');
+  const text = textEl ? textEl.value.trim() : '';
+  if (!text) { showToast('✏️ Write something first!'); return; }
+
+  const btn = document.getElementById('edit-glimmer-save-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '💾 Saving…'; }
+
+  try {
+    const g = _glimmersCache.find(g => g.id === _currentGlimmerId);
+    const existingImages = (g && g.images && g.images.length) ? g.images : (g && g.imageUrl ? [g.imageUrl] : []);
+
+    let images = existingImages;
+    if (_editGlimmerPendingBlob instanceof Blob) {
+      if (btn) btn.textContent = '📤 Uploading…';
+      const url = await uploadGlimmerImage(_editGlimmerPendingBlob);
+      images = [url];
+    } else if (_editGlimmerPendingBlob === false) {
+      images = [];
+    }
+
+    const tags = getTagInputValue('edit-glimmer');
+    await db.collection('glimmers').doc(_currentGlimmerId).update({ text, images, tags });
+
+    // Update local cache so detail view re-renders correctly
+    if (g) { g.text = text; g.images = images; g.tags = tags; }
+
+    closeEditGlimmer();
+    showToast('✨ Glimmer updated!');
+    // Re-render detail view with updated data
+    showGlimmerDetail(_currentGlimmerId);
+  } catch (err) {
+    console.error('Edit glimmer error:', err);
+    showToast('⚠️ Save failed — check your connection');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '✨ Save Changes'; }
   }
 };
 window.glimmerMenuTogglePin = function() {
