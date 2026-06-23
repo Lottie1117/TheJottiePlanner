@@ -79,6 +79,33 @@ function resetDevSettings() {
   showToast('↩️ Reset to defaults');
 }
 
+async function devSendTestRoundup() {
+  if (!me) { showToast('⚠️ Not signed in'); return; }
+  const btn = document.getElementById('dev-test-roundup-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+  try {
+    const res = await fetch(
+      'https://europe-west2-jottieplans.cloudfunctions.net/sendTestRoundup',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUser: me })
+      }
+    );
+    if (res.ok) {
+      showToast('✓ Test roundup sent!');
+    } else {
+      const txt = await res.text();
+      showToast('⚠️ Failed: ' + txt.slice(0, 60));
+    }
+  } catch(e) {
+    showToast('⚠️ Could not reach function');
+    console.warn('devSendTestRoundup:', e);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Send Test Roundup'; }
+  }
+}
+
 // ── fmtFullDate helper ───────────────────────────────────────────
 function fmtFullDate(d) {
   return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });

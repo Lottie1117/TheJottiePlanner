@@ -1,5 +1,6 @@
 const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { onSchedule }        = require('firebase-functions/v2/scheduler');
+const { onRequest }         = require('firebase-functions/v2/https');
 const { initializeApp }     = require('firebase-admin/app');
 const { getFirestore }      = require('firebase-admin/firestore');
 const { getMessaging }      = require('firebase-admin/messaging');
@@ -125,4 +126,29 @@ exports.sendLunchRoundup = onSchedule(
 exports.sendEveningRoundup = onSchedule(
   { schedule: '0 20 * * *', timeZone: 'Europe/London' },
   () => sendRoundups('evening')
+);
+
+// ── Dev: test roundup ─────────────────────────────────────────────
+// Sends a realistic-looking roundup push to a single user immediately.
+// Only callable from the app; restricted to the jottieplans domain.
+exports.sendTestRoundup = onRequest(
+  { region: 'europe-west2', cors: ['https://jottieplans.web.app', 'https://lottie1117.github.io'] },
+  async (req, res) => {
+    if (req.method !== 'POST') { res.status(405).send('Method Not Allowed'); return; }
+
+    const { targetUser } = req.body;
+    if (!targetUser) { res.status(400).send('Missing targetUser'); return; }
+
+    const title = '💜 Good evening!';
+    const body  = [
+      '✨ 2 new memories added',
+      '❤️ 1 glimmer reaction',
+      '🛒 2 shopping updates',
+      '📅 1 plan tomorrow',
+      'Tap to catch up →',
+    ].join('\n');
+
+    await sendPush(targetUser, title, body);
+    res.status(200).send('ok');
+  }
 );
