@@ -1102,11 +1102,11 @@ let _lunaMemoriesUnsub = null;
 function listenLunaMemories() {
   if (!db) return;
   if (_lunaMemoriesUnsub) { _lunaMemoriesUnsub(); _lunaMemoriesUnsub = null; }
-  const el = document.getElementById('luna-memories-scroll');
-  if (!el) return;
   _lunaMemoriesUnsub = db.collection('glimmers').orderBy('createdAt', 'desc').limit(50)
     .onSnapshot(snap => {
+      const el = document.getElementById('luna-memories-scroll');
       if (!el) return;
+
       const tagged = snap.docs.filter(d => {
         const tags = d.data().tags || [];
         return tags.some(t => String(t).toLowerCase() === 'luna');
