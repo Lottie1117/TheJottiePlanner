@@ -806,7 +806,7 @@ if ('serviceWorker' in navigator) {
     <div class="search-sheet-bar">
       <div class="search-input-wrap">
         <span class="search-input-icon">🔍</span>
-        <input type="text" id="search-input" class="search-input" placeholder="Search notes…" oninput="onSearchInput(this.value)" autocomplete="off" autocorrect="off">
+        <input type="text" id="search-input" class="search-input" placeholder="Search notes…" oninput="onSearchInput(this.value)" onkeydown="if(event.key==='Enter'){this.blur();}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
       </div>
       <button class="search-close-btn" onclick="closeSearch()">✕</button>
     </div>
