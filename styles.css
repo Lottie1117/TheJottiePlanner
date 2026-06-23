@@ -1277,7 +1277,7 @@
     /* ── Lists Hub ──────────────────────────────────────────────── */
     /* ── Notes Hub ─────────────────────────────────────────────── */
     /* Search overlay */
-    .search-overlay { display: none; position: fixed; inset: 0; z-index: 500; }
+    .search-overlay { display: none; position: fixed; inset: 0; z-index: 500; background: rgba(0,0,0,0.35); }
     .search-overlay.open { display: block; }
     .search-sheet { position: absolute; top: 0; left: 0; right: 0; max-width: 600px; margin: 0 auto; background: var(--card); border-radius: 0 0 20px 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.18); transform: translateY(-100%); transition: transform 0.28s cubic-bezier(0.34,1.2,0.64,1); }
     .search-overlay.open .search-sheet { transform: translateY(0); }
@@ -1287,7 +1287,7 @@
     .search-input { width: 100%; padding: 10px 14px 10px 38px; border-radius: 14px; border: 1.5px solid var(--border); background: var(--bg); color: var(--text); font-size: 15px; box-sizing: border-box; outline: none; }
     .search-input:focus { border-color: var(--primary); }
     .search-close-btn { background: none; border: none; font-size: 18px; color: var(--muted); cursor: pointer; padding: 6px 8px; -webkit-tap-highlight-color: transparent; }
-    .search-results { padding: 0 12px 20px; max-height: 70vh; overflow-y: auto; }
+    .search-results { padding: 0 12px 20px; max-height: 60vh; overflow-y: auto; }
     .search-group-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin: 16px 0 6px; }
     .search-result-item { display: flex; flex-direction: column; padding: 10px 12px; border-radius: 12px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
     .search-result-item:active { background: var(--bg); }
@@ -1295,8 +1295,7 @@
     .search-result-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
     .search-empty { text-align: center; color: var(--muted); font-size: 14px; padding: 24px 0 8px; }
     .search-everywhere-link { display: block; text-align: center; color: var(--primary); font-size: 13px; font-weight: 600; padding: 14px 0 4px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-    .search-overlay-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 499; }
-    .search-overlay-backdrop.open { display: block; }
+    .search-overlay-backdrop { display: none; }
     #notes-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;

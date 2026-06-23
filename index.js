@@ -1782,18 +1782,14 @@ window.openSearch = function() {
     input.value = '';
   }
   document.getElementById('search-results').innerHTML = '';
-  document.getElementById('search-overlay').classList.add('open');
-  document.getElementById('search-backdrop').classList.add('open');
+  const overlay = document.getElementById('search-overlay');
+  overlay.classList.add('open');
+  overlay.onclick = function(e) { if (e.target === overlay) closeSearch(); };
   setTimeout(() => { if (input) input.focus(); }, 50);
 };
 
 window.closeSearch = function() {
   document.getElementById('search-overlay').classList.remove('open');
-  document.getElementById('search-backdrop').classList.remove('open');
-};
-
-window.onSearchOverlayClick = function(e) {
-  // sheet itself — do nothing (backdrop handles close)
 };
 
 window.onSearchInput = function(q) {

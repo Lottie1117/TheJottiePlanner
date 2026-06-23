@@ -801,8 +801,8 @@ if ('serviceWorker' in navigator) {
 
 <!-- ── Search Overlay ─────────────────────────────────────────────── -->
 <div id="search-backdrop" class="search-overlay-backdrop" onclick="closeSearch()"></div>
-<div id="search-overlay" class="search-overlay" onclick="onSearchOverlayClick(event)">
-  <div class="search-sheet" id="search-sheet">
+<div id="search-overlay" class="search-overlay">
+  <div class="search-sheet" id="search-sheet" onclick="event.stopPropagation()">
     <div class="search-sheet-bar">
       <div class="search-input-wrap">
         <span class="search-input-icon">🔍</span>
