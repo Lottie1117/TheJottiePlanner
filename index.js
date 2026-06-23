@@ -116,8 +116,11 @@ function openBottomSheet(section) {
   }
   // For notes: render context-aware item form after template is inserted
   if (section === 'lists') renderNoteItemForm();
-  // For glimmers: reset tags and render preset buttons
-  if (section === 'glimmers') resetTagInput('glimmer');
+  // For glimmers: reset tags, render preset buttons, wire image input
+  if (section === 'glimmers') {
+    resetTagInput('glimmer');
+    if (typeof wireGlimmerImgInput === 'function') wireGlimmerImgInput();
+  }
   // For new-note: reset tags, render presets, select first emoji
   if (section === 'new-note') {
     resetTagInput('note');
@@ -2307,8 +2310,10 @@ function compressImage(file) {
 
 let glimmerPendingBlob = null; // holds compressed blob before save
 
-const imgInput = document.getElementById('glimmer-img-input');
-if (imgInput) {
+// Called by openBottomSheet() after the glimmer template is cloned into the DOM.
+window.wireGlimmerImgInput = function() {
+  const imgInput = document.getElementById('glimmer-img-input');
+  if (!imgInput) return;
   imgInput.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -2328,7 +2333,7 @@ if (imgInput) {
       showToast('⚠️ Could not process image — try a different photo');
     }
   });
-}
+};
 
 window.removeGlimmerPhoto = function() {
   glimmerPendingBlob = null;
