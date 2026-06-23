@@ -1204,6 +1204,7 @@ async function requestNotifPermission() {
     const perm = await Notification.requestPermission();
     if (perm === 'granted') await _saveFCMToken();
     document.getElementById('notif-banner').style.display = 'none';
+    _updatePermissionCard();
   } catch(e) { console.warn('Notif permission:', e); }
 }
 
@@ -1270,6 +1271,7 @@ function saveNotificationSettings() {
     }
   };
   db.collection('settings').doc(me).set({ notificationSettings: settings }, { merge: true })
+    .then(() => showToast('✓ Notification preferences saved'))
     .catch(e => console.warn('saveNotificationSettings:', e));
 }
 
@@ -1280,9 +1282,54 @@ function _updateRoundupCardsVisibility() {
   document.getElementById('notif-roundup-preview-card').style.display = display;
 }
 
+function _updateRoundupPreview() {
+  const el = document.getElementById('notif-roundup-preview-inner');
+  if (!el) return;
+  const morning = document.getElementById('notif-time-morning').checked;
+  const lunch   = document.getElementById('notif-time-lunch').checked;
+  const evening = document.getElementById('notif-time-evening').checked;
+  let greeting = '💜 Good morning!';
+  if (morning)      greeting = '💜 Good morning!';
+  else if (lunch)   greeting = '💜 Good afternoon!';
+  else if (evening) greeting = '💜 Good evening!';
+  el.innerHTML = `
+    <div style="font-weight:700;font-size:14px;color:var(--primary);margin-bottom:6px">${greeting}</div>
+    <div style="font-size:13px;margin-bottom:8px;color:var(--text)">You have new updates waiting</div>
+    <div style="font-size:12px;font-weight:700;color:var(--primary)">Tap to catch up →</div>`;
+}
+
+function _updatePermissionCard() {
+  if (!('Notification' in window)) return;
+  const perm = Notification.permission;
+  document.getElementById('notif-permission-granted').style.display = perm === 'granted'  ? '' : 'none';
+  document.getElementById('notif-permission-denied').style.display  = perm === 'denied'   ? '' : 'none';
+  document.getElementById('notif-permission-default').style.display = perm === 'default'  ? '' : 'none';
+  if (perm === 'granted') {
+    const isRoundup = document.getElementById('notif-mode-roundup').checked;
+    const summary = document.getElementById('notif-permission-mode-summary');
+    if (summary) {
+      if (isRoundup) {
+        const times = [];
+        if (document.getElementById('notif-time-morning').checked) times.push('Morning');
+        if (document.getElementById('notif-time-lunch').checked)   times.push('Lunch');
+        if (document.getElementById('notif-time-evening').checked) times.push('Evening');
+        summary.textContent = 'Mode: ' + (times.length ? times.join(' + ') + ' Roundup' + (times.length > 1 ? 's' : '') : 'Roundup');
+      } else {
+        summary.textContent = 'Mode: Instant notifications';
+      }
+    }
+  }
+}
+
 function onNotifModeChange() {
   _updateRoundupCardsVisibility();
-  saveNotificationSettings();
+  _updateRoundupPreview();
+  _updatePermissionCard();
+}
+
+function onNotifTimesChange() {
+  _updateRoundupPreview();
+  _updatePermissionCard();
 }
 
 let _notifSettingsFrom = 'today';
@@ -1300,6 +1347,8 @@ async function openNotificationSettings() {
   document.getElementById('notif-time-lunch').checked   = !!settings.times.lunch;
   document.getElementById('notif-time-evening').checked = !!settings.times.evening;
   _updateRoundupCardsVisibility();
+  _updateRoundupPreview();
+  _updatePermissionCard();
 }
 
 function closeNotificationSettings() {

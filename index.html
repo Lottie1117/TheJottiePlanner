@@ -105,21 +105,21 @@
   <div class="add-card" id="notif-roundup-times-card">
     <div class="add-card-title">Roundup Times</div>
     <label style="display:flex;align-items:center;gap:10px;margin-bottom:12px;cursor:pointer">
-      <input type="checkbox" id="notif-time-morning" onchange="saveNotificationSettings()" style="width:18px;height:18px;accent-color:var(--primary)">
+      <input type="checkbox" id="notif-time-morning" onchange="onNotifTimesChange()" style="width:18px;height:18px;accent-color:var(--primary)">
       <span>
         <div style="font-weight:700;font-size:14px">Morning</div>
         <div style="font-size:12px;color:var(--muted)">Approx. 08:00</div>
       </span>
     </label>
     <label style="display:flex;align-items:center;gap:10px;margin-bottom:12px;cursor:pointer">
-      <input type="checkbox" id="notif-time-lunch" onchange="saveNotificationSettings()" style="width:18px;height:18px;accent-color:var(--primary)">
+      <input type="checkbox" id="notif-time-lunch" onchange="onNotifTimesChange()" style="width:18px;height:18px;accent-color:var(--primary)">
       <span>
         <div style="font-weight:700;font-size:14px">Lunch</div>
         <div style="font-size:12px;color:var(--muted)">Approx. 13:00</div>
       </span>
     </label>
     <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
-      <input type="checkbox" id="notif-time-evening" onchange="saveNotificationSettings()" style="width:18px;height:18px;accent-color:var(--primary)">
+      <input type="checkbox" id="notif-time-evening" onchange="onNotifTimesChange()" style="width:18px;height:18px;accent-color:var(--primary)">
       <span>
         <div style="font-weight:700;font-size:14px">Evening</div>
         <div style="font-size:12px;color:var(--muted)">Approx. 20:00</div>
@@ -129,13 +129,40 @@
 
   <div class="add-card" id="notif-roundup-preview-card">
     <div class="add-card-title">Preview</div>
-    <div style="background:var(--primary-light);border-radius:14px;padding:14px">
-      <div style="font-weight:700;font-size:14px;color:var(--primary);margin-bottom:6px">💜 Your Jottie Roundup</div>
-      <div style="font-size:13px;margin-bottom:3px">✨ 2 new memories</div>
-      <div style="font-size:13px;margin-bottom:3px">❤️ 4 reactions</div>
-      <div style="font-size:13px;margin-bottom:8px">☑ 3 tasks completed</div>
+    <div id="notif-roundup-preview-inner" style="background:var(--primary-light);border-radius:14px;padding:14px">
+      <div style="font-weight:700;font-size:14px;color:var(--primary);margin-bottom:6px">💜 Good morning!</div>
+      <div style="font-size:13px;margin-bottom:8px;color:var(--text)">You have new updates waiting</div>
       <div style="font-size:12px;font-weight:700;color:var(--primary)">Tap to catch up →</div>
     </div>
+  </div>
+
+  <div class="add-card" id="notif-permission-card">
+    <div class="add-card-title">Push Notifications</div>
+    <div id="notif-permission-granted" style="display:none">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:20px">✅</span>
+        <span style="font-size:14px;font-weight:600;color:var(--text)">Enabled on this device</span>
+      </div>
+      <div id="notif-permission-mode-summary" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
+    </div>
+    <div id="notif-permission-denied" style="display:none">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span style="font-size:20px">🚫</span>
+        <span style="font-size:14px;font-weight:600;color:var(--text)">Blocked by browser</span>
+      </div>
+      <div style="font-size:12px;color:var(--muted)">To enable notifications, open your browser or device settings and allow notifications for this site.</div>
+    </div>
+    <div id="notif-permission-default" style="display:none">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <span style="font-size:20px">⚠️</span>
+        <span style="font-size:14px;font-weight:600;color:var(--text)">Browser permission required</span>
+      </div>
+      <button class="btn-primary" onclick="requestNotifPermission()">Enable Notifications</button>
+    </div>
+  </div>
+
+  <div style="padding-bottom:8px">
+    <button class="btn-primary" id="notif-save-btn" onclick="saveNotificationSettings()">Save Changes</button>
   </div>
 </div>
 

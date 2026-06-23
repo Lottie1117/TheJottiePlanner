@@ -17,7 +17,14 @@ async function sendPush(targetUser, title, body) {
       notification: { title, body },
       webpush: { fcmOptions: { link: 'https://jottieplans.web.app/' } }
     });
-  } catch(e) { console.error('Push send failed:', e.message); }
+  } catch(e) {
+    console.error('Push send failed:', e.message);
+    // Remove stale/invalid tokens so they don't block future sends
+    if (e.code === 'messaging/registration-token-not-registered' ||
+        e.code === 'messaging/invalid-registration-token') {
+      await getFirestore().collection('devices').doc(targetUser).delete();
+    }
+  }
 }
 
 exports.sendShoppingNotification = onDocumentCreated(
@@ -40,10 +47,9 @@ exports.sendShoppingNotification = onDocumentCreated(
   }
 );
 
-// ── Notification Roundups (Phase 3A: basic delivery) ───────────────
+// ── Notification Roundups ──────────────────────────────────────────
 // At each enabled roundup time, send one push per recipient summarising
-// how many notifications have landed since their last roundup. Reuses
-// the existing notifications collection — no new tracking structures.
+// recent activity grouped by type. Reuses the notifications collection.
 async function sendRoundups(timeKey) {
   const db = getFirestore();
   const settingsSnap = await db.collection('settings').get();
@@ -56,25 +62,54 @@ async function sendRoundups(timeKey) {
     const lastRoundupSent = doc.data().lastRoundupSent || null;
     const sinceMillis = lastRoundupSent ? lastRoundupSent.toMillis() : 0;
 
-    // Mirror the app's existing targetUser + orderBy(createdAt) query shape
-    // (no new composite index required), filtering the time window in code.
     const notifSnap = await db.collection('notifications')
       .where('targetUser', '==', targetUser)
       .orderBy('createdAt', 'desc')
       .limit(200)
       .get();
-    const count = notifSnap.docs.filter(d => {
-      const ts = d.data().createdAt;
-      return ts && ts.toMillis() > sinceMillis;
-    }).length;
 
-    if (count === 0) continue;
+    const recent = notifSnap.docs
+      .map(d => d.data())
+      .filter(d => d.createdAt && d.createdAt.toMillis() > sinceMillis);
 
-    await sendPush(
-      targetUser,
-      '💜 Your Jottie Roundup',
-      `You have ${count} new notification${count === 1 ? '' : 's'}.\nTap to catch up →`
-    );
+    if (recent.length === 0) continue;
+
+    // Group by notification type using the icon/type fields written by writeNotif()
+    const groups = {};
+    for (const n of recent) {
+      const key = n.type || 'other';
+      groups[key] = (groups[key] || []);
+      groups[key].push(n);
+    }
+
+    const greetings = { morning: '💜 Good morning!', lunch: '💜 Good afternoon!', evening: '💜 Good evening!' };
+    const greeting = greetings[timeKey] || '💜 Your Jottie Roundup';
+
+    // Build summary lines, at most 4
+    const typeLabels = {
+      glimmer_liked:  (items) => `❤️ ${items.length} glimmer reaction${items.length > 1 ? 's' : ''}`,
+      luna_update:    (items) => `🐾 ${items.length} Luna update${items.length > 1 ? 's' : ''}`,
+      task_completed: (items) => `☑️ ${items.length} task${items.length > 1 ? 's' : ''} completed`,
+      shopping:       (items) => `🛒 ${items.length} shopping update${items.length > 1 ? 's' : ''}`,
+      plans:          (items) => `📅 ${items.length} plan update${items.length > 1 ? 's' : ''}`,
+      thinking:       (items) => `💭 ${items.length} Thinking of You`,
+    };
+
+    // Fall back: use icon from notification doc if type not in map
+    const lines = [];
+    for (const [type, items] of Object.entries(groups)) {
+      if (lines.length >= 4) break;
+      if (typeLabels[type]) {
+        lines.push(typeLabels[type](items));
+      } else {
+        const icon = items[0].icon || '🔔';
+        lines.push(`${icon} ${items.length} new update${items.length > 1 ? 's' : ''}`);
+      }
+    }
+
+    const body = lines.join('\n') + '\nTap to catch up →';
+
+    await sendPush(targetUser, greeting, body);
     await doc.ref.set({ lastRoundupSent: new Date() }, { merge: true });
   }
 }
@@ -91,4 +126,3 @@ exports.sendEveningRoundup = onSchedule(
   { schedule: '0 20 * * *', timeZone: 'Europe/London' },
   () => sendRoundups('evening')
 );
-
