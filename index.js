@@ -1482,6 +1482,7 @@ function switchListTab(name, btn) {
 
 const PROTECTED_NOTES = ['wishlist', 'watchlist', 'dateideas']; // slugs used as doc IDs
 let _notesData = [];
+let _glimmersCache = []; // declared early for search; also referenced near glimmers section
 let _currentNoteId = null;
 let _noteItemsUnsub = null;
 
@@ -2595,7 +2596,7 @@ window.saveGlimmer = async function() {
 // ──────────────────────────────────────────────────────────────
 
 let glimmersUnsubscribe = null;
-let _glimmersCache = []; // in-memory cache for detail view navigation
+// _glimmersCache declared early at top of notes section for search access
 let _glimmerDetailFrom = 'glimmers'; // tracks where detail was opened from
 
 // ── Background options for text-only glimmers ─────────────────────
