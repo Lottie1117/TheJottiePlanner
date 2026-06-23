@@ -1685,13 +1685,13 @@ const SEARCH_PLACEHOLDER = {
 // Per-scope search functions — each returns {type, id, title, subtitle, route}[]
 function _searchNotes(q) {
   return (_notesData || [])
-    .filter(n => !n.archived && (_searchMatch(n.title, q) || _searchMatch(n.emoji, q)))
+    .filter(n => !n.archived && _searchMatch(n.title, q))
     .map(n => ({ type: 'Notes', id: n.id, title: (n.emoji ? n.emoji + ' ' : '') + n.title, subtitle: '', route: 'lists' }));
 }
 function _searchTasks(q) {
   return (_todoData || [])
-    .filter(t => !t.completed && (_searchMatch(t.text, q) || _searchMatch(t.notes, q)))
-    .map(t => ({ type: 'Tasks', id: t.id, title: t.text, subtitle: t.notes || '', route: 'todos' }));
+    .filter(t => !t.completed && _searchMatch(t.title, q))
+    .map(t => ({ type: 'Tasks', id: t.id, title: t.title, subtitle: '', route: 'todos' }));
 }
 function _searchShopping(q) {
   return (_shopData || [])
@@ -1700,8 +1700,8 @@ function _searchShopping(q) {
 }
 function _searchGlimmers(q) {
   return (_glimmersCache || [])
-    .filter(g => !g.archived && (_searchMatch(g.title, q) || _searchMatch(g.note, q)))
-    .map(g => ({ type: 'Glimmers', id: g.id, title: g.title, subtitle: g.note || '', route: 'glimmers' }));
+    .filter(g => !g.archived && _searchMatch(g.text, q))
+    .map(g => ({ type: 'Glimmers', id: g.id, title: g.text, subtitle: g.by || '', route: 'glimmers' }));
 }
 function _searchBirthdays(q) {
   return (_birthdaysData || [])
