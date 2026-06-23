@@ -3658,6 +3658,7 @@ document.querySelectorAll('.tab').forEach(tab => {
 // ══════════════════════════════════════════════════════════════════
 
 const DASH_WIDGET_ORDER_KEY = 'jottie-dash-widget-order';
+const DASH_WIDGET_SIZE_KEY  = 'jottie-dash-widget-size';
 
 // All possible widget IDs in default order
 const DASH_DEFAULT_WIDGETS = [
@@ -3666,7 +3667,11 @@ const DASH_DEFAULT_WIDGETS = [
   'pinned-glimmer-3', 'pinned-glimmer-4'
 ];
 
+// Cards that are always full-width and cannot be resized
+const DASH_ALWAYS_FULL = new Set([]);
+
 let _dashWidgetOrder = null;
+let _dashWidgetSizes = null; // { widgetId: 'full' | 'half' }
 let _dashEditMode = false;
 let _dashDragSrc = null;
 
@@ -3689,6 +3694,43 @@ function dashSaveOrder() {
   localStorage.setItem(DASH_WIDGET_ORDER_KEY, JSON.stringify(_dashWidgetOrder));
 }
 
+function dashGetSizes() {
+  if (_dashWidgetSizes) return _dashWidgetSizes;
+  try {
+    const saved = localStorage.getItem(DASH_WIDGET_SIZE_KEY);
+    if (saved) { _dashWidgetSizes = JSON.parse(saved); return _dashWidgetSizes; }
+  } catch(e) {}
+  _dashWidgetSizes = {};
+  return _dashWidgetSizes;
+}
+
+function dashSaveSizes() {
+  localStorage.setItem(DASH_WIDGET_SIZE_KEY, JSON.stringify(_dashWidgetSizes));
+}
+
+function dashGetWidgetSize(id) {
+  if (DASH_ALWAYS_FULL.has(id)) return 'full';
+  return (dashGetSizes()[id] || 'half');
+}
+
+function dashSetWidgetSize(id, size) {
+  dashGetSizes()[id] = size;
+  dashSaveSizes();
+  // Apply to DOM slot
+  const slot = document.querySelector(`.dash-widget-slot[data-widget-id="${id}"]`);
+  if (slot) _dashApplySlotSize(slot, id);
+  // Re-render content at new size
+  if (typeof renderToday === 'function') renderToday();
+}
+
+function _dashApplySlotSize(slot, id) {
+  const size = dashGetWidgetSize(id);
+  slot.classList.toggle('dash-slot-full', size === 'full');
+  // Update the resize button icon
+  const btn = slot.querySelector('.dash-resize-btn');
+  if (btn) btn.textContent = size === 'full' ? '⊖' : '⊕';
+}
+
 // Build the widget grid from templates, in saved order
 function dashBuildGrid() {
   const grid = document.getElementById('dash-widget-grid');
@@ -3702,10 +3744,29 @@ function dashBuildGrid() {
     slot.className = 'dash-widget-slot';
     slot.dataset.widgetId = id;
     slot.appendChild(tpl.content.cloneNode(true));
+
+    // Drag handle (top-right)
     const handle = document.createElement('div');
     handle.className = 'dash-drag-handle';
     handle.textContent = '⠿';
     slot.appendChild(handle);
+
+    // Resize button (bottom-right) — hidden unless resizable
+    if (!DASH_ALWAYS_FULL.has(id)) {
+      const resizeBtn = document.createElement('button');
+      resizeBtn.className = 'dash-resize-btn';
+      resizeBtn.setAttribute('aria-label', 'Resize widget');
+      resizeBtn.onclick = function(e) {
+        e.stopPropagation();
+        const current = dashGetWidgetSize(id);
+        dashSetWidgetSize(id, current === 'full' ? 'half' : 'full');
+      };
+      slot.appendChild(resizeBtn);
+    }
+
+    // Apply saved size
+    _dashApplySlotSize(slot, id);
+
     // Long-press to enter edit mode
     let pressTimer = null;
     slot.addEventListener('touchstart', function(e) {
@@ -3747,6 +3808,9 @@ window.dashExitEditMode = function() {
   if (bar) bar.style.display = 'none';
   document.body.classList.remove('dash-editing');
 };
+
+// Expose size helper for firebase.js renderToday
+window.dashGetWidgetSize = dashGetWidgetSize;
 
 // ── Mouse drag ─────────────────────────────────────────────────────
 function dashOnDragStart(e) {

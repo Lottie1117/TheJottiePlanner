@@ -1048,6 +1048,10 @@
       position: relative;
       margin-bottom: 10px;
     }
+    /* Full-width slot spans both columns */
+    .dash-widget-slot.dash-slot-full {
+      column-span: all;
+    }
     /* Edit mode: wiggle animation */
     @keyframes dash-wiggle {
       0%,100% { transform: rotate(0deg); }
@@ -1061,7 +1065,7 @@
     #dash-widget-grid.dash-edit-mode .dash-widget-slot:active {
       cursor: grabbing;
     }
-    /* Drag handle shown in edit mode */
+    /* Drag handle shown in edit mode (top-right) */
     .dash-drag-handle {
       display: none;
       position: absolute;
@@ -1078,6 +1082,27 @@
     #dash-widget-grid.dash-edit-mode .dash-drag-handle {
       display: block;
     }
+    /* Resize button shown in edit mode (bottom-right) */
+    .dash-resize-btn {
+      display: none;
+      position: absolute;
+      bottom: 6px; right: 6px;
+      background: rgba(124,92,191,0.85);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      width: 26px; height: 26px;
+      line-height: 1;
+      cursor: pointer;
+      z-index: 10;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #dash-widget-grid.dash-edit-mode .dash-resize-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
     /* Dragging state */
     .dash-widget-slot.dragging {
       opacity: 0.4;
@@ -1086,6 +1111,11 @@
     .dash-widget-slot.drag-over > * {
       outline: 2px dashed var(--primary);
       border-radius: 16px;
+    }
+    /* Supplementary row (e.g. event notes in full-width) */
+    .dash-row-sub {
+      font-size: 11px; color: var(--muted);
+      padding: 0 0 6px 0; line-height: 1.3;
     }
     /* Edit bar — floating fixed at top */
     #dash-edit-bar {

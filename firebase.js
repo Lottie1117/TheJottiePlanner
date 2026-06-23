@@ -59,31 +59,39 @@ function renderToday() {
   document.getElementById('header-greeting').textContent = `${getGreeting()}, ${me}!`;
   document.getElementById('header-date').textContent = fmtFullDate(new Date());
 
+  const sizeOf = (id) => (typeof window.dashGetWidgetSize === 'function') ? window.dashGetWidgetSize(id) : 'half';
   const todayStr = new Date().toISOString().split('T')[0];
-  const weekEnd  = new Date(); weekEnd.setDate(weekEnd.getDate() + 6);
-  const weekEndStr = weekEnd.toISOString().split('T')[0];
 
-  // ── To-Dos (today's tasks: due today or outstanding) ────────────
+  // ── To-Dos ────────────────────────────────────────────────────────
   const openTodos = _todoData.filter(t => !t.completed);
   const todayTasks = openTodos.filter(t => !t.due || t.due <= todayStr);
   const displayTodos = todayTasks.length > 0 ? todayTasks : openTodos;
+  const taskLimit = sizeOf('tasks') === 'full' ? 10 : 3;
   document.getElementById('dash-todo-count').textContent = openTodos.length;
   document.getElementById('dash-todos').innerHTML = displayTodos.length === 0
-    ? '<div class="dash-empty">You\'re all caught up! 🎉</div>'
-    : displayTodos.slice(0, 5).map(t => {
+    ? '<div class="dash-empty">You're all caught up! 🎉</div>'
+    : displayTodos.slice(0, taskLimit).map(t => {
         const whoH = t.who ? whoChip(t.who) : '';
         const dueH = t.due ? `<span class="dash-chip chip-far">Due ${fmtDate(t.due)}</span>` : '';
-        return `<div class="dash-row">${esc(t.title)}</div>`;
+        return sizeOf('tasks') === 'full'
+          ? `<div class="dash-row"><div class="dash-row-title">${esc(t.title)}</div>${whoH}${dueH}</div>`
+          : `<div class="dash-row">${esc(t.title)}</div>`;
       }).join('');
 
-  // ── Coming up (events + birthdays in next 30 days) ────────────────
+  // ── Coming up ─────────────────────────────────────────────────────
   const monthEnd = new Date(); monthEnd.setDate(monthEnd.getDate() + 30);
   const monthEndStr = monthEnd.toISOString().split('T')[0];
+  const evLimit = sizeOf('events') === 'full' ? 10 : 3;
   const upcomingEvents = _calData
     .filter(e => e.date >= todayStr && e.date <= monthEndStr)
     .sort((a,b) => a.date.localeCompare(b.date))
-    .slice(0, 5)
-    .map(ev => { const chip = countdownChip(ev.date); return `<div class="dash-row"><div class="dash-row-title">${esc(ev.title)}</div><span class="dash-chip ${chip.cls}">${chip.label}</span></div>`; });
+    .slice(0, evLimit)
+    .map(ev => {
+      const chip = countdownChip(ev.date);
+      const notes = sizeOf('events') === 'full' && ev.notes
+        ? `<div class="dash-row-sub">${esc(ev.notes)}</div>` : '';
+      return `<div class="dash-row"><div class="dash-row-title">${esc(ev.title)}</div><span class="dash-chip ${chip.cls}">${chip.label}</span></div>${notes}`;
+    });
   const upcomingBdays = typeof _birthdaysData !== 'undefined' ? _birthdaysData
     .map(b => ({...b, ...getBirthdayInfo(b.date, b.birthYear)}))
     .filter(b => b.diffDays <= 30)
@@ -103,11 +111,12 @@ function renderToday() {
 
   // ── Shopping ─────────────────────────────────────────────────────
   const activeShop = _shopData.filter(i => !i.completed);
+  const shopLimit = sizeOf('shopping') === 'full' ? 10 : 3;
   document.getElementById('dash-shop-count').textContent =
     activeShop.length === 1 ? '1 item' : `${activeShop.length} items`;
   document.getElementById('dash-shop').innerHTML = activeShop.length === 0
     ? '<div class="dash-empty">Shopping list is empty</div>'
-    : activeShop.slice(-5).reverse().map(i =>
+    : activeShop.slice(0, shopLimit).map(i =>
         `<div class="dash-row">${esc(i.name)}</div>`
       ).join('');
 
@@ -119,11 +128,12 @@ function renderToday() {
       const items = lunaMergedItems();
       const total = items.length;
       const doneCount = items.filter(i => i.done).length;
-      const next = items.find(i => !i.done);
+      const lunaLimit = sizeOf('luna') === 'full' ? total : 1;
       const _p = (typeof SETTINGS !== 'undefined' && SETTINGS.petName) || 'Luna';
       if (lunaCountEl) lunaCountEl.textContent = `${doneCount}/${total}`;
-      lunaSummaryEl.innerHTML = next
-        ? `<div class="dash-row">Next: ${esc(next.title)} · ${lunaFmtSchedTime(next.time)}</div>`
+      const pending = items.filter(i => !i.done).slice(0, lunaLimit);
+      lunaSummaryEl.innerHTML = pending.length
+        ? pending.map(it => `<div class="dash-row">Next: ${esc(it.title)} · ${lunaFmtSchedTime(it.time)}</div>`).join('')
         : `<div class="dash-empty">${esc(_p)}'s all set for today! 🐾</div>`;
     } else {
       lunaSummaryEl.innerHTML = '<div class="dash-empty">Loading…</div>';
@@ -133,7 +143,6 @@ function renderToday() {
   // ── Recent Glimmers ───────────────────────────────────────────────
   if (typeof renderDashGlimmers === 'function') renderDashGlimmers();
 }
-
 // ── Firebase init ───────────────────────────────────────────────
 function initFirebase() {
   if (!configured) {
