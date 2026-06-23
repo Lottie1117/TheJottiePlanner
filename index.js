@@ -1117,7 +1117,7 @@ function listenLunaMemories() {
       }
       el.innerHTML = '';
       tagged.forEach(doc => {
-        const card = buildGlimmerCard(doc, { mode: 'dash-tile', from: 'luna' });
+        const card = buildGlimmerCard(doc, { mode: 'tile', from: 'luna' });
         if (card) el.appendChild(card);
       });
     }, () => {});
@@ -1128,12 +1128,12 @@ function listenLunaMemories() {
 function listenLunaNotes() {
   if (!db) return;
   db.collection('notes')
-    .where('archived', '==', false)
     .orderBy('updatedAt', 'desc')
     .onSnapshot(snap => {
       const el = document.getElementById('luna-notes-list');
       if (!el) return;
       const docs = snap.docs.filter(d => {
+        if (d.data().archived) return false;
         const tags = d.data().tags || [];
         return tags.some(t => String(t).toLowerCase() === 'luna');
       });
