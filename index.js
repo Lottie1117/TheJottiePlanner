@@ -1653,6 +1653,168 @@ function filterNotes(q) {
   renderNotesGrid(filtered);
 }
 
+// ── Search ──────────────────────────────────────────────────────────
+// Reusable text-match helper (same behaviour as original filterNotes)
+function _searchMatch(val, q) {
+  if (!val) return false;
+  return String(val).toLowerCase().includes(q.toLowerCase());
+}
+
+// Section → scope mapping
+const SEARCH_SCOPE_MAP = {
+  today:     'global',
+  lists:     'notes',
+  todos:     'tasks',
+  shopping:  'shopping',
+  glimmers:  'glimmers',
+  birthdays: 'birthdays',
+  calendar:  'plans',
+};
+
+// Placeholder text per scope
+const SEARCH_PLACEHOLDER = {
+  global:    'Search everything…',
+  notes:     'Search notes…',
+  tasks:     'Search tasks…',
+  shopping:  'Search shopping…',
+  glimmers:  'Search glimmers…',
+  birthdays: 'Search birthdays…',
+  plans:     'Search plans…',
+};
+
+// Per-scope search functions — each returns {type, id, title, subtitle, route}[]
+function _searchNotes(q) {
+  return (_notesData || [])
+    .filter(n => !n.archived && (_searchMatch(n.title, q) || _searchMatch(n.emoji, q)))
+    .map(n => ({ type: 'Notes', id: n.id, title: (n.emoji ? n.emoji + ' ' : '') + n.title, subtitle: '', route: 'lists' }));
+}
+function _searchTasks(q) {
+  return (_todoData || [])
+    .filter(t => !t.completed && (_searchMatch(t.text, q) || _searchMatch(t.notes, q)))
+    .map(t => ({ type: 'Tasks', id: t.id, title: t.text, subtitle: t.notes || '', route: 'todos' }));
+}
+function _searchShopping(q) {
+  return (_shopData || [])
+    .filter(i => _searchMatch(i.name, q))
+    .map(i => ({ type: 'Shopping', id: i.id, title: i.name, subtitle: i.completed ? 'Got it ✓' : '', route: 'shopping' }));
+}
+function _searchGlimmers(q) {
+  return (_glimmersCache || [])
+    .filter(g => !g.archived && (_searchMatch(g.title, q) || _searchMatch(g.note, q)))
+    .map(g => ({ type: 'Glimmers', id: g.id, title: g.title, subtitle: g.note || '', route: 'glimmers' }));
+}
+function _searchBirthdays(q) {
+  return (_birthdaysData || [])
+    .filter(b => _searchMatch(b.name, q))
+    .map(b => ({ type: 'Birthdays', id: b.id, title: b.name, subtitle: '', route: 'birthdays' }));
+}
+function _searchPlans(q) {
+  return (_calData || [])
+    .filter(e => _searchMatch(e.title, q) || _searchMatch(e.notes, q) || _searchMatch(e.date, q))
+    .map(e => ({ type: 'Plans', id: e.id, title: e.title, subtitle: e.notes || e.date || '', route: 'calendar' }));
+}
+
+function _runSearch(q, scope) {
+  if (!q) return {};
+  const groups = {};
+  const add = (results) => {
+    results.forEach(r => {
+      if (!groups[r.type]) groups[r.type] = [];
+      groups[r.type].push(r);
+    });
+  };
+  if (scope === 'global') {
+    add(_searchNotes(q));
+    add(_searchTasks(q));
+    add(_searchShopping(q));
+    add(_searchGlimmers(q));
+    add(_searchBirthdays(q));
+    add(_searchPlans(q));
+  } else if (scope === 'notes')     add(_searchNotes(q));
+  else if (scope === 'tasks')       add(_searchTasks(q));
+  else if (scope === 'shopping')    add(_searchShopping(q));
+  else if (scope === 'glimmers')    add(_searchGlimmers(q));
+  else if (scope === 'birthdays')   add(_searchBirthdays(q));
+  else if (scope === 'plans')       add(_searchPlans(q));
+  return groups;
+}
+
+function _renderSearchResults(q, scope) {
+  const el = document.getElementById('search-results');
+  if (!el) return;
+  if (!q) { el.innerHTML = ''; return; }
+  const groups = _runSearch(q, scope);
+  const keys = Object.keys(groups);
+  let html = '';
+  if (keys.length === 0) {
+    if (scope === 'global') {
+      html = `<div class="search-empty">No results found.<br><small>Try another search term.</small></div>`;
+    } else {
+      const label = (SEARCH_PLACEHOLDER[scope] || 'Search').replace('Search ', '').replace('…', '');
+      html = `<div class="search-empty">No matching ${label} found.</div>`;
+      html += `<span class="search-everywhere-link" onclick="searchEverywhere('${escapeHtml(q)}')">Search "${escapeHtml(q)}" everywhere →</span>`;
+    }
+  } else {
+    keys.forEach(type => {
+      html += `<div class="search-group-label">${type}</div>`;
+      groups[type].forEach(r => {
+        const sub = r.subtitle ? `<div class="search-result-sub">${escapeHtml(r.subtitle)}</div>` : '';
+        html += `<div class="search-result-item" onclick="onSearchResultTap('${r.route}','${r.id}')">
+          <div class="search-result-title">${escapeHtml(r.title)}</div>${sub}
+        </div>`;
+      });
+    });
+    if (scope !== 'global') {
+      html += `<span class="search-everywhere-link" onclick="searchEverywhere('${escapeHtml(q)}')">Search "${escapeHtml(q)}" everywhere →</span>`;
+    }
+  }
+  el.innerHTML = html;
+}
+
+let _searchCurrentScope = 'global';
+
+window.openSearch = function() {
+  const sec = (typeof window._jottieActiveSection !== 'undefined') ? window._jottieActiveSection : 'today';
+  _searchCurrentScope = SEARCH_SCOPE_MAP[sec] || 'global';
+  const input = document.getElementById('search-input');
+  if (input) {
+    input.placeholder = SEARCH_PLACEHOLDER[_searchCurrentScope] || 'Search…';
+    input.value = '';
+  }
+  document.getElementById('search-results').innerHTML = '';
+  document.getElementById('search-overlay').classList.add('open');
+  document.getElementById('search-backdrop').classList.add('open');
+  setTimeout(() => { if (input) input.focus(); }, 50);
+};
+
+window.closeSearch = function() {
+  document.getElementById('search-overlay').classList.remove('open');
+  document.getElementById('search-backdrop').classList.remove('open');
+};
+
+window.onSearchOverlayClick = function(e) {
+  // sheet itself — do nothing (backdrop handles close)
+};
+
+window.onSearchInput = function(q) {
+  _renderSearchResults(q, _searchCurrentScope);
+};
+
+window.searchEverywhere = function(q) {
+  _searchCurrentScope = 'global';
+  const input = document.getElementById('search-input');
+  if (input) {
+    input.placeholder = SEARCH_PLACEHOLDER.global;
+    input.value = q;
+  }
+  _renderSearchResults(q, 'global');
+};
+
+window.onSearchResultTap = function(route, id) {
+  closeSearch();
+  navTo(route);
+};
+
 // ── Open a note ────────────────────────────────────────────────────
 function openNote(noteId) {
   const note = _notesData.find(n => n.id === noteId);
@@ -2945,6 +3107,13 @@ if (lightbox) {
     if (e.key === 'Escape') closeLightbox();
   });
 }
+
+// Close search on Escape
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape' && document.getElementById('search-overlay').classList.contains('open')) {
+    closeSearch();
+  }
+});
 
 // ──────────────────────────────────────────────────────────────
 // STREAK CALCULATION

@@ -146,6 +146,9 @@
     <span class="nav-icon">🏠</span><span>Today</span>
   </button>
   <button class="nav-fab-btn" id="nav-fab-main" onclick="navFabTap()" aria-label="Quick add"><span id="nav-fab-icon"></span>+</button>
+  <button class="nav-btn" id="nav-search-btn" onclick="openSearch()">
+    <span class="nav-icon">🔍</span><span>Search</span>
+  </button>
   <button class="nav-btn" id="nav-more-btn" onclick="openDrawer()">
     <span class="nav-icon">☰</span><span>More</span>
   </button>
@@ -329,10 +332,6 @@
 
 <!-- ── Notes Hub ─────────────────────────────────────────────────── -->
 <div id="lists-section" class="section">
-  <div class="notes-search-wrap">
-    <span class="notes-search-icon">🔍</span>
-    <input type="text" id="notes-search" class="notes-search" placeholder="Search notes…" oninput="filterNotes(this.value)">
-  </div>
   <div id="notes-grid"><div class="loading">Loading…</div></div>
 </div>
 
@@ -798,6 +797,22 @@ if ('serviceWorker' in navigator) {
     .then(() => console.log('Service Worker Registered'));
 }
 </script>
+
+
+<!-- ── Search Overlay ─────────────────────────────────────────────── -->
+<div id="search-backdrop" class="search-overlay-backdrop" onclick="closeSearch()"></div>
+<div id="search-overlay" class="search-overlay" onclick="onSearchOverlayClick(event)">
+  <div class="search-sheet" id="search-sheet">
+    <div class="search-sheet-bar">
+      <div class="search-input-wrap">
+        <span class="search-input-icon">🔍</span>
+        <input type="text" id="search-input" class="search-input" placeholder="Search notes…" oninput="onSearchInput(this.value)" autocomplete="off" autocorrect="off">
+      </div>
+      <button class="search-close-btn" onclick="closeSearch()">✕</button>
+    </div>
+    <div id="search-results" class="search-results"></div>
+  </div>
+</div>
 
 <span id="dash-lottie-status" style="display:none"></span><span id="dash-jonny-status" style="display:none"></span></body>
 </html>
