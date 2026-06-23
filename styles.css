@@ -351,9 +351,10 @@
 
     /* ── Tag pills displayed on glimmer cards ────────────── */
     .glimmer-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+    .glimmer-tags-inline { margin-top: 0; flex: 1; justify-content: center; }
     .glimmer-tag-pill {
-      font-size: 10px; font-weight: 700; color: var(--primary);
-      background: rgba(255,255,255,0.25); padding: 2px 7px;
+      font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.95);
+      background: rgba(255,255,255,0.38); padding: 2px 7px;
       border-radius: 99px; backdrop-filter: blur(4px);
     }
 
@@ -1283,8 +1284,7 @@
     .search-overlay.open .search-sheet { transform: translateY(0); }
     .search-sheet-bar { display: flex; align-items: center; gap: 8px; padding: 16px 12px 12px; }
     .search-input-wrap { position: relative; flex: 1; }
-    .search-input-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 16px; pointer-events: none; }
-    .search-input { width: 100%; padding: 10px 14px 10px 38px; border-radius: 14px; border: 1.5px solid var(--border); background: var(--bg); color: var(--text); font-size: 15px; box-sizing: border-box; outline: none; }
+    .search-input { width: 100%; padding: 10px 14px; border-radius: 14px; border: 1.5px solid var(--border); background: var(--bg); color: var(--text); font-size: 15px; box-sizing: border-box; outline: none; }
     .search-input:focus { border-color: var(--primary); }
     .search-close-btn { background: none; border: none; font-size: 18px; color: var(--muted); cursor: pointer; padding: 6px 8px; -webkit-tap-highlight-color: transparent; }
     .search-results { padding: 0 12px 20px; max-height: 60vh; overflow-y: auto; }
@@ -1809,6 +1809,15 @@
       background: var(--card); border-radius: 16px; overflow: hidden;
       box-shadow: var(--shadow); border: 1px solid var(--border);
       cursor: pointer; -webkit-tap-highlight-color: transparent;
+    }
+    /* Photo pinned glimmer: full-bleed with gradient overlay */
+    .dash-pinned-glimmer-photo-card { border: none; }
+    .dash-pinned-glimmer-photo-card .dash-pinned-glimmer-img-wrap { height: 160px; }
+    .dash-pinned-glimmer-photo-overlay {
+      position: absolute; inset: 0; display: flex;
+      flex-direction: column; justify-content: flex-end;
+      background: linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.15) 55%, transparent 100%);
+      padding: 10px;
     }
     /* Text-only pinned glimmer: full gradient bg with overlay text */
     .dash-pinned-glimmer-text-card {

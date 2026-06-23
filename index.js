@@ -2655,9 +2655,9 @@ function buildGlimmerCard(doc, opts = {}) {
     el.innerHTML = `
       <div class="glimmer-tile-overlay">
         <div class="glimmer-tile-text">${escapeHtml(g.text || '')}</div>
-        ${tagPills ? `<div class="glimmer-tags">${tagPills}</div>` : ''}
         <div class="glimmer-tile-footer">
           <span class="glimmer-tile-author">${avatarBadge(g.by)}</span>
+          ${tagPills ? `<div class="glimmer-tags glimmer-tags-inline">${tagPills}</div>` : ''}
           <button class="glimmer-heart-btn${liked ? ' liked' : ''}" ${heartDisabled}
             onclick="event.stopPropagation(); toggleGlimmerHeart('${id}', ${liked})"
             aria-label="${liked ? 'Unlike' : 'Like'}">${heartIcon}</button>
@@ -3026,29 +3026,32 @@ function renderDashPinnedGlimmer() {
 
     let cardHtml;
     if (imgUrl) {
-      // Photo glimmer: image with gradient overlay
-      cardHtml = `<div class="dash-pinned-glimmer-card" onclick="openGlimmerDetail('${g.id}', 'today')">
+      // Photo glimmer: full-bleed image with gradient overlay (no separate caption bar)
+      const tagPills = (g.tags || []).map(t => `<span class="glimmer-tag-pill">#${escapeHtml(t)}</span>`).join('');
+      cardHtml = `<div class="dash-pinned-glimmer-card dash-pinned-glimmer-photo-card" onclick="openGlimmerDetail('${g.id}', 'today')">
         <div class="dash-pinned-glimmer-img-wrap">
           <img src="${escapeAttr(imgUrl)}" alt="Pinned glimmer" class="dash-pinned-glimmer-img">
-          <div class="dash-pinned-glimmer-gradient"></div>
-        </div>
-        <div class="dash-pinned-glimmer-caption">
-          <span class="dash-pinned-glimmer-text">${escapeHtml(g.text || '')}</span>
-          <div class="dash-pinned-glimmer-footer">
-            <span class="dash-pinned-glimmer-author">${avatarBadge(g.by)}</span>
-            <button class="glimmer-heart-btn${liked ? ' liked' : ''}" ${isOwn ? 'disabled' : ''}
-              onclick="event.stopPropagation(); toggleGlimmerHeart('${g.id}', ${liked})"
-              aria-label="${liked ? 'Unlike' : 'Like'}">${heartIcon}</button>
+          <div class="dash-pinned-glimmer-photo-overlay">
+            <span class="dash-pinned-glimmer-text dash-pinned-glimmer-text-only">${escapeHtml(g.text || '')}</span>
+            <div class="dash-pinned-glimmer-footer">
+              <span class="dash-pinned-glimmer-author">${avatarBadge(g.by)}</span>
+              ${tagPills ? `<div class="glimmer-tags glimmer-tags-inline">${tagPills}</div>` : ''}
+              <button class="glimmer-heart-btn${liked ? ' liked' : ''}" ${isOwn ? 'disabled' : ''}
+                onclick="event.stopPropagation(); toggleGlimmerHeart('${g.id}', ${liked})"
+                aria-label="${liked ? 'Unlike' : 'Like'}">${heartIcon}</button>
+            </div>
           </div>
         </div>
       </div>`;
     } else {
       // Text-only glimmer: text overlaid on gradient background
+      const tagPillsTxt = (g.tags || []).map(t => `<span class="glimmer-tag-pill">#${escapeHtml(t)}</span>`).join('');
       cardHtml = `<div class="dash-pinned-glimmer-card dash-pinned-glimmer-text-card" onclick="openGlimmerDetail('${g.id}', 'today')" style="background:${bg}">
         <div class="dash-pinned-glimmer-text-overlay">
           <span class="dash-pinned-glimmer-text dash-pinned-glimmer-text-only">${escapeHtml(g.text || '')}</span>
           <div class="dash-pinned-glimmer-footer">
             <span class="dash-pinned-glimmer-author">${avatarBadge(g.by)}</span>
+            ${tagPillsTxt ? `<div class="glimmer-tags glimmer-tags-inline">${tagPillsTxt}</div>` : ''}
             <button class="glimmer-heart-btn${liked ? ' liked' : ''}" ${isOwn ? 'disabled' : ''}
               onclick="event.stopPropagation(); toggleGlimmerHeart('${g.id}', ${liked})"
               aria-label="${liked ? 'Unlike' : 'Like'}">${heartIcon}</button>
