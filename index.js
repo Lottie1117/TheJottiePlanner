@@ -2801,7 +2801,7 @@ window.saveGlimmerEdit = async function() {
     closeEditGlimmer();
     showToast('✨ Glimmer updated!');
     // Re-render detail view with updated data
-    showGlimmerDetail(_currentGlimmerId);
+    renderGlimmerDetail(_currentGlimmerId);
   } catch (err) {
     console.error('Edit glimmer error:', err);
     showToast('⚠️ Save failed — check your connection');
