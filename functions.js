@@ -169,14 +169,21 @@ exports.generateSubtasks = onRequest(
     if (req.method === 'OPTIONS') { res.status(204).send(''); return; }
     if (req.method !== 'POST') { res.status(405).send('Method Not Allowed'); return; }
 
-    const taskTitle = (req.body.taskTitle || '').trim();
+    // Parse body — v2 onRequest doesn't auto-parse JSON
+    let body = req.body;
+    if (typeof body === 'string') {
+      try { body = JSON.parse(body); } catch(e) { body = {}; }
+    }
+    if (!body || typeof body !== 'object') body = {};
+
+    const taskTitle = (body.taskTitle || '').trim();
     if (!taskTitle) { res.status(400).json({ error: 'Missing taskTitle' }); return; }
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) { res.status(500).json({ error: 'GEMINI_API_KEY not configured' }); return; }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     const prompt = `You are a helpful assistant for a couple's shared household planner app called Jottie.
 They have added a task: "${taskTitle}"
