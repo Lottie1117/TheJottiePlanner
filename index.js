@@ -322,7 +322,7 @@ function navTo(sec, navItemEl) {
 
   // update header section title
   const _petName = (typeof SETTINGS !== 'undefined' && SETTINGS.petName) || 'Luna';
-  const sectionNames = {"today":"Today","calendar":"Plans","shopping":"Shopping","todos":"To-Do","lists":"Notes","birthdays":"Birthdays","glimmers":"Glimmers","luna":`${_petName} 🐾`,"dev-settings":"🧪 Dev Settings"};
+  const sectionNames = {"today":"Today","calendar":"Plans","shopping":"Shopping","todos":"To-Do","lists":"Notes","birthdays":"Birthdays","mood":"Mood","glimmers":"Glimmers","luna":`${_petName} 🐾`,"dev-settings":"🧪 Dev Settings"};
   const titleEl = document.getElementById('section-title');
   if (titleEl) titleEl.textContent = sectionNames[sec] || '';
   // Toggle greeting (today) vs section title (all others)
@@ -346,6 +346,7 @@ function navTo(sec, navItemEl) {
 
   // section-specific hooks
   if (sec === 'birthdays') renderBirthdaysDash();
+  if (sec === 'mood') listenMood();
   if (sec === 'glimmer-detail') return; // handled by openGlimmerDetail directly
   if (sec === 'glimmers') {
     if (typeof initGlimmerSection === 'function') initGlimmerSection();
@@ -2449,6 +2450,142 @@ function renderBirthdaysDash() {
   }).join('');
 }
 
+
+
+// ── Mood Tracker ──────────────────────────────────────────────────
+let _moodUnsub = null;
+
+// todayKey: "YYYY-MM-DD" in local time
+function _moodTodayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function logMood(emoji) {
+  if (!db) return;
+  const u1 = (typeof SETTINGS !== 'undefined' && SETTINGS.user1Name) || 'Lottie';
+  if (me !== u1) return; // only Lottie logs moods
+  const key = _moodTodayKey();
+  db.collection('moods').doc(key).set({ emoji, by: me, date: key, updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
+    .then(() => {
+      // highlight selected button
+      document.querySelectorAll('#mood-picker-main .mood-btn').forEach(b => {
+        b.classList.toggle('selected', b.dataset.emoji === emoji);
+      });
+      const confirmEl = document.getElementById('mood-today-confirm');
+      if (confirmEl) {
+        confirmEl.style.display = '';
+        confirmEl.textContent = `Mood saved ${emoji}`;
+      }
+    });
+}
+
+function listenMood() {
+  if (!db) return;
+  if (_moodUnsub) { _moodUnsub(); _moodUnsub = null; }
+  // listen to last 90 days of moods
+  const ninetyDaysAgo = new Date();
+  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 89);
+  const fromKey = `${ninetyDaysAgo.getFullYear()}-${String(ninetyDaysAgo.getMonth()+1).padStart(2,'0')}-${String(ninetyDaysAgo.getDate()).padStart(2,'0')}`;
+  _moodUnsub = db.collection('moods').where('date', '>=', fromKey).orderBy('date', 'asc')
+    .onSnapshot(snap => {
+      const entries = {}; // key → emoji
+      snap.docs.forEach(d => { entries[d.id] = d.data().emoji; });
+      _renderMoodCalendar(entries);
+      _renderMoodDash(entries);
+      _syncMoodPicker(entries);
+    });
+}
+
+function _syncMoodPicker(entries) {
+  const todayEmoji = entries[_moodTodayKey()];
+  document.querySelectorAll('#mood-picker-main .mood-btn').forEach(b => {
+    b.classList.toggle('selected', b.dataset.emoji === todayEmoji);
+  });
+  const confirmEl = document.getElementById('mood-today-confirm');
+  if (confirmEl) {
+    if (todayEmoji) {
+      confirmEl.style.display = '';
+      confirmEl.textContent = `Mood saved ${todayEmoji}`;
+    } else {
+      confirmEl.style.display = 'none';
+    }
+  }
+}
+
+function _renderMoodCalendar(entries) {
+  const el = document.getElementById('mood-calendar');
+  if (!el) return;
+
+  // Build a map of year-month → [{day, emoji|null}]
+  const today = new Date();
+  const months = [];
+  for (let m = 2; m >= 0; m--) {
+    const ref = new Date(today.getFullYear(), today.getMonth() - m, 1);
+    months.push({ year: ref.getFullYear(), month: ref.getMonth() });
+  }
+
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  let html = '';
+
+  months.forEach(({ year, month }) => {
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const firstDow = new Date(year, month, 1).getDay(); // 0=Sun
+
+    html += `<div class="mood-month-block">`;
+    html += `<div class="mood-month-label">${monthNames[month]} ${year}</div>`;
+    // Day-of-week headers
+    html += `<div class="mood-week-row">`;
+    ['S','M','T','W','T','F','S'].forEach(d => {
+      html += `<div class="mood-day-cell" style="font-size:10px;font-weight:700;opacity:0.5">${d}</div>`;
+    });
+    html += `</div>`;
+
+    // Weeks
+    let dayNum = 1;
+    while (dayNum <= daysInMonth) {
+      html += `<div class="mood-week-row">`;
+      for (let dow = 0; dow < 7; dow++) {
+        if ((dayNum === 1 && dow < firstDow) || dayNum > daysInMonth) {
+          html += `<div class="mood-day-cell empty"></div>`;
+        } else {
+          const key = `${year}-${String(month+1).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
+          const emoji = entries[key];
+          const isToday = (key === _moodTodayKey());
+          const classes = ['mood-day-cell', emoji ? 'has-mood' : '', isToday ? 'is-today' : ''].filter(Boolean).join(' ');
+          html += `<div class="${classes}" title="${key}">${emoji || String(dayNum)}</div>`;
+          dayNum++;
+        }
+      }
+      html += `</div>`;
+      if (dayNum > daysInMonth) break;
+    }
+    html += `</div>`;
+  });
+
+  el.innerHTML = html;
+}
+
+function _renderMoodDash(entries) {
+  const card = document.getElementById('dash-mood-card');
+  if (!card) return;
+  const u1 = (typeof SETTINGS !== 'undefined' && SETTINGS.user1Name) || 'Lottie';
+  const isUser1 = (me === u1);
+  const label = isUser1 ? "Today's Mood" : `${u1}'s Mood`;
+  const todayEmoji = entries[_moodTodayKey()];
+
+  card.style.display = 'block';
+  card.innerHTML = `
+    <div class="dash-card-sm" onclick="navTo('mood')" style="cursor:pointer">
+      <div class="dash-hdr"><div class="dash-hdr-title">${label}</div></div>
+      <div class="dash-mood-row">
+        ${todayEmoji
+          ? `<div class="dash-mood-emoji">${todayEmoji}</div>`
+          : `<div class="dash-mood-none">${isUser1 ? 'Tap to log today\'s mood' : 'Not logged yet'}</div>`
+        }
+      </div>
+    </div>`;
+}
 
 
 // ── Glimmers (Photo + Streak features loaded below) ──────────────

@@ -165,6 +165,7 @@ function initFirebase() {
   listenLunaNotes();
   initNotes();
   listenBirthdays();
+  if (typeof listenMood === 'function') listenMood();
   // Start glimmer/streak now that db is ready
   if (typeof updateDashboardStreak === 'function') updateDashboardStreak();
   if (typeof loadGlimmersList === 'function') {

@@ -215,6 +215,10 @@
       <img class="luna-tile-img" src="images/lunaface.png" alt="Luna">
       <span class="tile-label">Luna</span>
     </div>
+    <div class="drawer-tile" data-section="mood" onclick="navTo('mood'); closeDrawer()">
+      <span class="tile-icon">😊</span>
+      <span class="tile-label">Mood</span>
+    </div>
     <div class="drawer-tile" id="dev-settings-tile" style="display:none" onclick="navTo('dev-settings'); closeDrawer()">
       <span class="tile-icon">🧪</span>
       <span class="tile-label">Dev Settings</span>
@@ -306,6 +310,7 @@
   <div id="dash-birthdays" style="display:none"></div>
   <div id="dash-bday-card" style="display:none"></div>
   <div id="dash-completed-card" style="display:none"></div>
+  <div id="dash-mood-card" style="display:none"></div>
 
 </div>
 
@@ -386,6 +391,23 @@
 <div id="birthdays-section" class="section">
   <div class="list-label">All Birthdays</div>
   <div id="birthdays-list"><div class="loading">Loading…</div></div>
+</div>
+
+<!-- ── Mood Tracker ───────────────────────────────────────────────── -->
+<div id="mood-section" class="section">
+  <div class="mood-today-block">
+    <div class="list-label">How are you feeling today?</div>
+    <div class="mood-picker" id="mood-picker-main">
+      <button class="mood-btn" data-emoji="😃" onclick="logMood('😃')">😃</button>
+      <button class="mood-btn" data-emoji="😊" onclick="logMood('😊')">😊</button>
+      <button class="mood-btn" data-emoji="😕" onclick="logMood('😕')">😕</button>
+      <button class="mood-btn" data-emoji="😞" onclick="logMood('😞')">😞</button>
+      <button class="mood-btn" data-emoji="😢" onclick="logMood('😢')">😢</button>
+    </div>
+    <div id="mood-today-confirm" class="mood-today-confirm" style="display:none"></div>
+  </div>
+  <div class="list-label" style="margin-top:20px">Mood History</div>
+  <div id="mood-calendar" class="mood-calendar"></div>
 </div>
 
 <!-- ── Glimmers ──────────────────────────────────────────────────── -->

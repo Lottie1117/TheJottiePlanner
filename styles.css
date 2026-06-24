@@ -1990,3 +1990,85 @@
   box-shadow: 0 -4px 24px rgba(0,0,0,0.12);
 }
     .modal-sheet.open { transform: translateY(0); }
+
+/* ── Mood Tracker ──────────────────────────────────────────────── */
+.mood-today-block { padding: 4px 0 8px; }
+
+.mood-picker {
+  display: flex;
+  gap: 10px;
+  padding: 12px 0 8px;
+}
+.mood-btn {
+  flex: 1;
+  font-size: 30px;
+  background: var(--surface);
+  border: 2px solid transparent;
+  border-radius: 14px;
+  padding: 10px 0;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.12s;
+  line-height: 1;
+}
+.mood-btn:active { transform: scale(0.9); }
+.mood-btn.selected {
+  border-color: var(--accent);
+  background: var(--accent-light, rgba(124,92,191,0.12));
+}
+
+.mood-today-confirm {
+  font-size: 14px;
+  color: var(--text-secondary, #888);
+  padding: 4px 2px 0;
+}
+
+/* Calendar grid */
+.mood-calendar { padding: 4px 0 80px; }
+
+.mood-month-block { margin-bottom: 20px; }
+.mood-month-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-secondary, #888);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+.mood-week-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 4px;
+}
+.mood-day-cell {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-size: 11px;
+  color: var(--text-secondary, #888);
+  background: transparent;
+  position: relative;
+}
+.mood-day-cell.has-mood {
+  background: var(--surface);
+  font-size: 20px;
+  color: inherit;
+}
+.mood-day-cell.is-today {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.mood-day-cell.empty { /* placeholder for day-of-week offset */ }
+
+/* Dashboard card */
+.dash-mood-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+}
+.dash-mood-emoji { font-size: 28px; line-height: 1; }
+.dash-mood-label { font-size: 14px; color: var(--text-secondary, #888); }
+.dash-mood-none  { font-size: 13px; color: var(--text-secondary, #888); font-style: italic; }
