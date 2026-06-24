@@ -176,7 +176,7 @@ exports.generateSubtasks = onRequest(
     if (!apiKey) { res.status(500).json({ error: 'GEMINI_API_KEY not configured' }); return; }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     const prompt = `You are a helpful assistant for a couple's shared household planner app called Jottie.
 They have added a task: "${taskTitle}"
