@@ -2567,24 +2567,16 @@ function _renderMoodCalendar(entries) {
 }
 
 function _renderMoodDash(entries) {
-  const card = document.getElementById('dash-mood-card');
-  if (!card) return;
+  const titleEl = document.getElementById('dash-mood-widget-title');
+  const bodyEl  = document.getElementById('dash-mood-widget-body');
+  if (!titleEl || !bodyEl) return;
   const u1 = (typeof SETTINGS !== 'undefined' && SETTINGS.user1Name) || 'Lottie';
   const isUser1 = (me === u1);
-  const label = isUser1 ? "Today's Mood" : `${u1}'s Mood`;
+  titleEl.textContent = isUser1 ? "Today's Mood" : `${u1}'s Mood`;
   const todayEmoji = entries[_moodTodayKey()];
-
-  card.style.display = 'block';
-  card.innerHTML = `
-    <div class="dash-card-sm" onclick="navTo('mood')" style="cursor:pointer">
-      <div class="dash-hdr"><div class="dash-hdr-title">${label}</div></div>
-      <div class="dash-mood-row">
-        ${todayEmoji
-          ? `<div class="dash-mood-emoji">${todayEmoji}</div>`
-          : `<div class="dash-mood-none">${isUser1 ? 'Tap to log today\'s mood' : 'Not logged yet'}</div>`
-        }
-      </div>
-    </div>`;
+  bodyEl.innerHTML = todayEmoji
+    ? `<div class="dash-mood-emoji">${todayEmoji}</div>`
+    : `<div class="dash-mood-none">${isUser1 ? "Tap to log today's mood" : 'Not logged yet'}</div>`;
 }
 
 
@@ -3799,7 +3791,7 @@ const DASH_WIDGET_SIZE_KEY  = 'jottie-dash-widget-size';
 
 // All possible widget IDs in default order
 const DASH_DEFAULT_WIDGETS = [
-  'luna', 'thinking', 'events', 'tasks', 'shopping',
+  'luna', 'thinking', 'events', 'tasks', 'shopping', 'mood',
   'pinned-notes', 'pinned-glimmer-1', 'pinned-glimmer-2',
   'pinned-glimmer-3', 'pinned-glimmer-4'
 ];
