@@ -919,10 +919,8 @@ function renderTaskSubtasks(taskId, subtasks) {
 
   // Show suggest button only for Lottie
   if (isLottie) {
-    const task = _todoData.find(t => t.id === taskId);
-    const taskTitle = task ? task.title : '';
     html += `
-      <button class="td-suggest-btn" id="td-suggest-btn" onclick="suggestSubtasks('${taskId}','${taskTitle.replace(/'/g,"\\'")}')">
+      <button class="td-suggest-btn" id="td-suggest-btn" onclick="suggestSubtasks('${taskId}')">
         ✨ Suggest subtasks
       </button>`;
   }
@@ -952,19 +950,30 @@ function addSubtask(taskId) {
 }
 
 // ── AI Subtask Suggestions ────────────────────────────────────────
-async function suggestSubtasks(taskId, taskTitle) {
+async function suggestSubtasks(taskId) {
   const btn = document.getElementById('td-suggest-btn');
   if (!btn || btn.disabled) return;
+
+  const task = _todoData.find(t => t.id === taskId);
+  const taskTitle = task ? task.title : '';
+  if (!taskTitle) return;
 
   btn.disabled = true;
   btn.textContent = '✨ Thinking…';
   btn.classList.add('td-suggest-btn--loading');
 
   try {
-    const fn = firebase.app().functions('europe-west2');
-    const generateSubtasks = fn.httpsCallable('generateSubtasks');
-    const result = await generateSubtasks({ taskTitle });
-    const subtasks = result.data.subtasks || [];
+    const res = await fetch(
+      'https://europe-west2-jottieplans.cloudfunctions.net/generateSubtasks',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ taskTitle })
+      }
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const result = await res.json();
+    const subtasks = result.subtasks || [];
 
     if (!subtasks.length) throw new Error('No subtasks returned');
 
