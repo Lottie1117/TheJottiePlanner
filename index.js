@@ -961,8 +961,7 @@ async function suggestSubtasks(taskId, taskTitle) {
   btn.classList.add('td-suggest-btn--loading');
 
   try {
-    const fn = firebase.functions();
-    fn.region = 'europe-west2';
+    const fn = firebase.app().functions('europe-west2');
     const generateSubtasks = fn.httpsCallable('generateSubtasks');
     const result = await generateSubtasks({ taskTitle });
     const subtasks = result.data.subtasks || [];
