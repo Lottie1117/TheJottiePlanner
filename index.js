@@ -2611,7 +2611,7 @@ function openMoodRadialPicker(cellEl, dateKey) {
   const btns = positions.map(p => {
     const selected = p.emoji === currentEmoji ? 'mood-radial-btn--selected' : '';
     return `<button class="mood-radial-btn ${selected}" style="top:${p.top};left:${p.left};transform:${p.transform};"
-              onclick="saveMoodForDate('${p.emoji}')">
+              onclick="saveMoodForDate('${p.emoji}',this)">
               <span class="mood-radial-emoji">${p.emoji}</span>
               <span class="mood-radial-label">${p.label}</span>
             </button>`;
@@ -2628,19 +2628,193 @@ function openMoodRadialPicker(cellEl, dateKey) {
       </div>
     </div>`;
   overlay.style.display = 'flex';
+  overlay.style.opacity = '0';
+  requestAnimationFrame(() => {
+    overlay.style.transition = 'opacity 0.2s ease';
+    overlay.style.opacity = '1';
+  });
 }
 
 function closeMoodRadialPicker() {
   const overlay = document.getElementById('mood-radial-overlay');
-  if (overlay) overlay.style.display = 'none';
+  if (!overlay || overlay.style.display === 'none') return;
+  overlay.style.transition = 'opacity 0.25s ease';
+  overlay.style.opacity = '0';
+  setTimeout(() => {
+    overlay.style.display = 'none';
+    overlay.style.transition = '';
+    overlay.style.opacity = '';
+  }, 260);
   _moodPickerDate = null;
 }
 
-function saveMoodForDate(emoji) {
+function saveMoodForDate(emoji, btnEl) {
   if (!db || !_moodPickerDate) return;
   const key = _moodPickerDate;
-  closeMoodRadialPicker();
-  db.collection('moods').doc(key).set({ emoji, by: me, date: key, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+  const overlay = document.getElementById('mood-radial-overlay');
+
+  // Reduced motion: skip flight, update instantly
+  const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (prefersReduced) {
+    closeMoodRadialPicker();
+    _moodEntries[key] = emoji;
+    _renderMoodCalendar();
+    db.collection('moods').doc(key).set({ emoji, by: me, date: key, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    // Pulse the landed cell
+    setTimeout(() => {
+      const cell = document.querySelector(`.mood-day-cell[onclick*="'${key}'"]`);
+      if (cell) { cell.classList.add('mood-land-pulse'); setTimeout(() => cell.classList.remove('mood-land-pulse'), 400); }
+    }, 50);
+    return;
+  }
+
+  // ── Step 1: Selected emoji scales up, others fade ─────────────
+  if (btnEl) {
+    btnEl.classList.add('mood-btn-selected-anim');
+    const ring = overlay.querySelector('.mood-radial-ring');
+    if (ring) {
+      Array.from(ring.querySelectorAll('.mood-radial-btn')).forEach(b => {
+        if (b !== btnEl) b.classList.add('mood-btn-dismiss');
+      });
+    }
+  }
+
+  // Get source rect (centre of selected button)
+  const srcRect = btnEl ? btnEl.getBoundingClientRect() : null;
+  const srcX = srcRect ? srcRect.left + srcRect.width / 2  : window.innerWidth  / 2;
+  const srcY = srcRect ? srcRect.top  + srcRect.height / 2 : window.innerHeight / 2;
+
+  // ── Step 2: Picker fades (backdrop dims, panel fades) ─────────
+  // Start after 80ms so Step 1 is visible first
+  setTimeout(() => {
+    const backdrop = overlay.querySelector('.mood-radial-backdrop');
+    const panel    = overlay.querySelector('.mood-radial-panel');
+    if (backdrop) { backdrop.style.transition = 'opacity 0.2s ease'; backdrop.style.opacity = '0.3'; }
+    if (panel)    { panel.style.transition = 'opacity 0.18s ease';  panel.style.opacity = '0'; }
+  }, 80);
+
+  // ── Step 3 & 4: Emoji flies to target cell ────────────────────
+  setTimeout(() => {
+    // Find the destination cell and get its rect
+    const destCell = document.querySelector(`.mood-day-cell[onclick*="'${key}'"]`);
+    let dstX = window.innerWidth  / 2;
+    let dstY = window.innerHeight / 2;
+    if (destCell) {
+      const dr = destCell.getBoundingClientRect();
+      dstX = dr.left + dr.width  / 2;
+      dstY = dr.top  + dr.height / 2;
+    }
+
+    // Create flying emoji element
+    const flyer = document.createElement('div');
+    flyer.className = 'mood-flyer';
+    flyer.textContent = emoji;
+    flyer.style.cssText = `
+      position:fixed; z-index:9999; pointer-events:none;
+      font-size:36px; line-height:1;
+      top:${srcY}px; left:${srcX}px;
+      transform:translate(-50%,-50%);
+      transition:none;
+    `;
+    document.body.appendChild(flyer);
+
+    // Spawn trail sparkles along the path
+    _moodSpawnTrail(srcX, srcY, dstX, dstY);
+
+    // Arc flight: use cubic-bezier with a control point offset perpendicular to the path
+    const dx = dstX - srcX;
+    const dy = dstY - srcY;
+    // Control point: midpoint offset to the left of direction of travel
+    const cpX = (srcX + dstX) / 2 - dy * 0.25;
+    const cpY = (srcY + dstY) / 2 + dx * 0.25;
+
+    // Animate via JS keyframes for arc support
+    const duration = 280;
+    const start = performance.now();
+    function flyStep(now) {
+      const t = Math.min((now - start) / duration, 1);
+      // Quadratic bezier
+      const eased = t < 0.5 ? 2*t*t : -1+(4-2*t)*t; // ease-in-out
+      const mt = eased;
+      const x = (1-mt)*(1-mt)*srcX + 2*(1-mt)*mt*cpX + mt*mt*dstX;
+      const y = (1-mt)*(1-mt)*srcY + 2*(1-mt)*mt*cpY + mt*mt*dstY;
+      flyer.style.top  = y + 'px';
+      flyer.style.left = x + 'px';
+      if (t < 1) {
+        requestAnimationFrame(flyStep);
+      } else {
+        // ── Step 5: Landing ─────────────────────────────────────
+        flyer.remove();
+        // Optimistically update calendar before Firestore confirms
+        _moodEntries[key] = emoji;
+        _renderMoodCalendar();
+
+        // Bounce the landed cell
+        const cell = document.querySelector(`.mood-day-cell[onclick*="'${key}'"]`);
+        if (cell) {
+          cell.classList.add('mood-land-pulse');
+          // ── Step 6: Glimmer burst on landing ────────────────
+          _moodSpawnBurst(cell);
+          setTimeout(() => cell.classList.remove('mood-land-pulse'), 450);
+        }
+
+        // ── Step 7: Overlay fades out completely ────────────────
+        const backdrop = overlay ? overlay.querySelector('.mood-radial-backdrop') : null;
+        if (overlay) {
+          overlay.style.transition = 'opacity 0.3s ease';
+          overlay.style.opacity = '0';
+          setTimeout(() => {
+            overlay.style.display = 'none';
+            overlay.style.transition = '';
+            overlay.style.opacity = '';
+          }, 320);
+        }
+
+        // Write to Firestore
+        db.collection('moods').doc(key).set({ emoji, by: me, date: key, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+        _moodPickerDate = null;
+      }
+    }
+    requestAnimationFrame(flyStep);
+  }, 160);
+}
+
+// Spawn 2-3 sparkle particles along the flight path
+function _moodSpawnTrail(sx, sy, dx, dy) {
+  const count = 3;
+  for (let i = 0; i < count; i++) {
+    setTimeout(() => {
+      const t = 0.25 + (i / count) * 0.5; // spread along middle of path
+      const x = sx + (dx - sx) * t + (Math.random() - 0.5) * 18;
+      const y = sy + (dy - sy) * t + (Math.random() - 0.5) * 18;
+      _moodSparkle(x, y, 'trail');
+    }, i * 60);
+  }
+}
+
+// Spawn 4 burst particles around a cell on landing
+function _moodSpawnBurst(cell) {
+  const r = cell.getBoundingClientRect();
+  const cx = r.left + r.width  / 2;
+  const cy = r.top  + r.height / 2;
+  const count = 4;
+  for (let i = 0; i < count; i++) {
+    const angle = (i / count) * Math.PI * 2;
+    const dist  = 18 + Math.random() * 10;
+    const x = cx + Math.cos(angle) * dist;
+    const y = cy + Math.sin(angle) * dist;
+    setTimeout(() => _moodSparkle(x, y, 'burst'), i * 30);
+  }
+}
+
+// Create a single sparkle particle at (x, y)
+function _moodSparkle(x, y, type) {
+  const el = document.createElement('div');
+  el.className = 'mood-sparkle mood-sparkle--' + type;
+  el.style.cssText = `left:${x}px; top:${y}px;`;
+  document.body.appendChild(el);
+  // Remove after animation completes
+  setTimeout(() => el.remove(), 600);
 }
 
 

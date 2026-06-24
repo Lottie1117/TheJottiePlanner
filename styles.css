@@ -2175,3 +2175,75 @@
 .dash-mood-emoji { font-size: 28px; line-height: 1; }
 .dash-mood-label { font-size: 14px; color: var(--text-secondary, #888); }
 .dash-mood-none  { font-size: 13px; color: var(--text-secondary, #888); font-style: italic; }
+
+/* ── Mood Animation ─────────────────────────────────────────────── */
+
+/* Step 1: selected button scales up */
+.mood-btn-selected-anim {
+  animation: moodBtnSelect 0.12s cubic-bezier(0.34,1.56,0.64,1) forwards;
+  z-index: 2;
+  position: relative;
+}
+@keyframes moodBtnSelect {
+  0%   { transform: translate(-50%,-50%) scale(1); }
+  60%  { transform: translate(-50%,-50%) scale(1.18); box-shadow: 0 0 0 4px rgba(124,92,191,0.35); }
+  100% { transform: translate(-50%,-50%) scale(1.12); box-shadow: 0 0 0 3px rgba(124,92,191,0.25); }
+}
+
+/* Step 2: other buttons fade+shrink */
+.mood-btn-dismiss {
+  animation: moodBtnDismiss 0.15s ease forwards;
+  pointer-events: none;
+}
+@keyframes moodBtnDismiss {
+  0%   { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%,-50%) scale(0.8); }
+}
+
+/* Step 5: landing bounce on the calendar cell */
+.mood-land-pulse {
+  animation: moodLandBounce 0.38s cubic-bezier(0.36,0.07,0.19,0.97) forwards;
+}
+@keyframes moodLandBounce {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.22); }
+  60%  { transform: scale(0.92); }
+  80%  { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+/* Step 6: sparkle particles */
+.mood-sparkle {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9998;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+.mood-sparkle--trail {
+  width: 5px; height: 5px;
+  background: radial-gradient(circle, #c4a8f0 0%, rgba(196,168,240,0) 100%);
+  animation: moodSparkleTrail 0.5s ease-out forwards;
+}
+.mood-sparkle--burst {
+  width: 6px; height: 6px;
+  background: radial-gradient(circle, #fff 0%, #b39ddb 50%, rgba(179,157,219,0) 100%);
+  animation: moodSparkleBurst 0.45s ease-out forwards;
+}
+@keyframes moodSparkleTrail {
+  0%   { opacity: 0.9; transform: translate(-50%,-50%) scale(1); }
+  100% { opacity: 0;   transform: translate(-50%,-50%) scale(0.3) translateY(-8px); }
+}
+@keyframes moodSparkleBurst {
+  0%   { opacity: 1;   transform: translate(-50%,-50%) scale(1); }
+  60%  { opacity: 0.7; transform: translate(-50%,-50%) scale(1.4); }
+  100% { opacity: 0;   transform: translate(-50%,-50%) scale(0.2); }
+}
+
+/* Reduced motion overrides */
+@media (prefers-reduced-motion: reduce) {
+  .mood-btn-selected-anim,
+  .mood-btn-dismiss,
+  .mood-land-pulse { animation: none; }
+  .mood-sparkle { display: none; }
+}
