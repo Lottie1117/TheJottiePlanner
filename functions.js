@@ -162,7 +162,7 @@ exports.sendTestRoundup = onRequest(
 // Callable function: takes { taskTitle } and returns { subtasks: string[] }
 // API key stored in Firebase Functions config / environment variable.
 exports.generateSubtasks = onCall(
-  { region: 'europe-west2' },
+  { region: 'europe-west2', cors: true, secrets: ['GEMINI_API_KEY'] },
   async (request) => {
     const taskTitle = (request.data.taskTitle || '').trim();
     if (!taskTitle) throw new Error('Missing taskTitle');
