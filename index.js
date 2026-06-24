@@ -898,12 +898,16 @@ function renderTaskSubtasks(taskId, subtasks) {
   const el = document.getElementById('td-subtasks-' + taskId);
   if (!el) return;
 
+  const u1 = (typeof SETTINGS !== 'undefined' && SETTINGS.user1Name) || 'Lottie';
+  const isLottie = (me === u1);
+
   let html = '<div class="td-section-title td-subtasks-header">Subtasks</div>';
   subtasks.forEach(s => {
+    const aiTag = s.aiGenerated ? '<span class="td-subtask-ai-badge">✨</span>' : '';
     html += `
       <div class="td-subtask-row">
         <div class="checkbox${s.completed ? ' checked' : ''}" onclick="toggleSubtask('${taskId}','${s.id}',${s.completed})"></div>
-        <span class="td-subtask-title${s.completed ? ' done-text' : ''}">${esc(s.title)}</span>
+        <span class="td-subtask-title${s.completed ? ' done-text' : ''}">${esc(s.title)}${aiTag}</span>
         <button class="td-subtask-del" onclick="deleteSubtask('${taskId}','${s.id}')" aria-label="Remove subtask">✕</button>
       </div>`;
   });
@@ -912,6 +916,16 @@ function renderTaskSubtasks(taskId, subtasks) {
       <input class="td-subtask-input" id="td-subtask-input" type="text" placeholder="Add subtask…" onkeydown="if(event.key==='Enter')addSubtask('${taskId}')">
       <button class="td-subtask-add-btn" onclick="addSubtask('${taskId}')">+</button>
     </div>`;
+
+  // Show suggest button only for Lottie
+  if (isLottie) {
+    const task = _todoData.find(t => t.id === taskId);
+    const taskTitle = task ? task.title : '';
+    html += `
+      <button class="td-suggest-btn" id="td-suggest-btn" onclick="suggestSubtasks('${taskId}','${taskTitle.replace(/'/g,"\\'")}')">
+        ✨ Suggest subtasks
+      </button>`;
+  }
 
   el.innerHTML = html;
 }
@@ -935,6 +949,61 @@ function addSubtask(taskId) {
     completed: false,
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   });
+}
+
+// ── AI Subtask Suggestions ────────────────────────────────────────
+async function suggestSubtasks(taskId, taskTitle) {
+  const btn = document.getElementById('td-suggest-btn');
+  if (!btn || btn.disabled) return;
+
+  btn.disabled = true;
+  btn.textContent = '✨ Thinking…';
+  btn.classList.add('td-suggest-btn--loading');
+
+  try {
+    const fn = firebase.functions();
+    fn.region = 'europe-west2';
+    const generateSubtasks = fn.httpsCallable('generateSubtasks');
+    const result = await generateSubtasks({ taskTitle });
+    const subtasks = result.data.subtasks || [];
+
+    if (!subtasks.length) throw new Error('No subtasks returned');
+
+    // Write all suggested subtasks to Firestore
+    const batch = db.batch ? db.batch() : null;
+    const writes = subtasks.map((title, i) => {
+      const ref = db.collection('todos').doc(taskId).collection('subtasks').doc();
+      return db.collection('todos').doc(taskId).collection('subtasks').add({
+        title,
+        completed: false,
+        aiGenerated: true,
+        order: 1000 + i, // add after existing subtasks
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    });
+    await Promise.all(writes);
+
+    // Button updates after Firestore listener re-renders
+    if (btn) {
+      btn.textContent = '✨ Suggest subtasks';
+      btn.classList.remove('td-suggest-btn--loading');
+      btn.disabled = false;
+    }
+  } catch (e) {
+    console.error('suggestSubtasks error:', e);
+    if (btn) {
+      btn.textContent = '✨ Suggest subtasks';
+      btn.classList.remove('td-suggest-btn--loading');
+      btn.disabled = false;
+      // Brief error state
+      btn.classList.add('td-suggest-btn--error');
+      btn.textContent = 'Couldn\'t suggest — try again';
+      setTimeout(() => {
+        btn.classList.remove('td-suggest-btn--error');
+        btn.textContent = '✨ Suggest subtasks';
+      }, 3000);
+    }
+  }
 }
 
 // ── Task menu ───────────────────────────────────────────────────

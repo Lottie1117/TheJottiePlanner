@@ -1,9 +1,10 @@
 const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { onSchedule }        = require('firebase-functions/v2/scheduler');
-const { onRequest }         = require('firebase-functions/v2/https');
+const { onRequest, onCall } = require('firebase-functions/v2/https');
 const { initializeApp }     = require('firebase-admin/app');
-const { getFirestore }      = require('firebase-admin/firestore');
+const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { getMessaging }      = require('firebase-admin/messaging');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 initializeApp();
 
@@ -154,5 +155,46 @@ exports.sendTestRoundup = onRequest(
 
     await sendPush(targetUser, title, body);
     res.status(200).send('ok');
+  }
+);
+
+// ── AI Subtask Suggestions ─────────────────────────────────────────
+// Callable function: takes { taskTitle } and returns { subtasks: string[] }
+// API key stored in Firebase Functions config / environment variable.
+exports.generateSubtasks = onCall(
+  { region: 'europe-west2' },
+  async (request) => {
+    const taskTitle = (request.data.taskTitle || '').trim();
+    if (!taskTitle) throw new Error('Missing taskTitle');
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) throw new Error('GEMINI_API_KEY not configured');
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
+    const prompt = `You are a helpful assistant for a couple's shared household planner app called Jottie.
+They have added a task: "${taskTitle}"
+Suggest 3 to 5 short, practical subtasks that would help them complete it.
+Keep each subtask concise (under 8 words). Be specific and actionable.
+Reply with ONLY a valid JSON array of strings. No markdown, no explanation.
+Example: ["Buy ingredients from supermarket","Check recipe beforehand","Preheat oven to 180°C"]`;
+
+    const result = await model.generateContent(prompt);
+    const text = result.response.text().trim();
+
+    let subtasks;
+    try {
+      subtasks = JSON.parse(text);
+    } catch (e) {
+      // Fallback: strip any accidental markdown fences
+      const cleaned = text.replace(/```json|```/g, '').trim();
+      subtasks = JSON.parse(cleaned);
+    }
+
+    if (!Array.isArray(subtasks)) throw new Error('Unexpected response format');
+    // Sanitise: keep only strings, max 6 items
+    subtasks = subtasks.filter(s => typeof s === 'string' && s.trim()).slice(0, 6);
+    return { subtasks };
   }
 );
