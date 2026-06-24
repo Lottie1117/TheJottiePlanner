@@ -306,11 +306,17 @@
   </template>
 
 
+  <template id="widget-tpl-mood">
+    <div class="dash-card-sm" id="dash-mood-widget" onclick="navTo('mood')" style="cursor:pointer">
+      <div class="dash-hdr"><div class="dash-hdr-title" id="dash-mood-widget-title">Mood</div></div>
+      <div id="dash-mood-widget-body" class="dash-mood-row"><div class="dash-mood-none">Loading…</div></div>
+    </div>
+  </template>
+
   <div id="dash-completed" style="display:none"></div>
   <div id="dash-birthdays" style="display:none"></div>
   <div id="dash-bday-card" style="display:none"></div>
   <div id="dash-completed-card" style="display:none"></div>
-  <div id="dash-mood-card" style="display:none"></div>
 
 </div>
 
