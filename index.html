@@ -807,6 +807,19 @@
 
 
 <!-- ── Birthday Detail Modal ─────────────────────────────────────── -->
+<!-- ── Mood Calendar Picker Popover ──────────────────────────────── -->
+<div id="mood-cal-overlay" onclick="closeMoodCalPicker()" style="display:none;position:fixed;inset:0;z-index:300;"></div>
+<div id="mood-cal-picker" style="display:none;position:fixed;z-index:301;background:var(--card,#fff);border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.18);padding:10px 12px;">
+  <div style="font-size:11px;color:var(--text-secondary,#888);margin-bottom:8px;text-align:center" id="mood-cal-picker-date"></div>
+  <div style="display:flex;gap:8px;">
+    <button class="mood-btn" style="font-size:26px;padding:8px;" onclick="saveMoodForDate('😃')">😃</button>
+    <button class="mood-btn" style="font-size:26px;padding:8px;" onclick="saveMoodForDate('😊')">😊</button>
+    <button class="mood-btn" style="font-size:26px;padding:8px;" onclick="saveMoodForDate('😕')">😕</button>
+    <button class="mood-btn" style="font-size:26px;padding:8px;" onclick="saveMoodForDate('😞')">😞</button>
+    <button class="mood-btn" style="font-size:26px;padding:8px;" onclick="saveMoodForDate('😢')">😢</button>
+  </div>
+</div>
+
 <div id="bday-modal-overlay" onclick="closeBirthdayModal()"></div>
 <div id="bday-modal" role="dialog" aria-modal="true" aria-labelledby="bday-modal-name">
   <div class="bday-modal-handle"></div>

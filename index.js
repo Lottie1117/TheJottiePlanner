@@ -2553,7 +2553,7 @@ function _renderMoodCalendar(entries) {
           const emoji = entries[key];
           const isToday = (key === _moodTodayKey());
           const classes = ['mood-day-cell', emoji ? 'has-mood' : '', isToday ? 'is-today' : ''].filter(Boolean).join(' ');
-          html += `<div class="${classes}" title="${key}">${emoji || String(dayNum)}</div>`;
+          html += `<div class="${classes}" data-date="${key}" onclick="openMoodCalPicker(this,'${key}')">${emoji || String(dayNum)}</div>`;
           dayNum++;
         }
       }
@@ -2577,6 +2577,61 @@ function _renderMoodDash(entries) {
   bodyEl.innerHTML = todayEmoji
     ? `<div class="dash-mood-emoji">${todayEmoji}</div>`
     : `<div class="dash-mood-none">${isUser1 ? "Tap to log today's mood" : 'Not logged yet'}</div>`;
+}
+
+let _moodCalPickerDate = null;
+
+function openMoodCalPicker(cellEl, dateKey) {
+  const u1 = (typeof SETTINGS !== 'undefined' && SETTINGS.user1Name) || 'Lottie';
+  if (me !== u1) return; // only Lottie can edit
+  _moodCalPickerDate = dateKey;
+  const picker  = document.getElementById('mood-cal-picker');
+  const overlay = document.getElementById('mood-cal-overlay');
+  const label   = document.getElementById('mood-cal-picker-date');
+  if (!picker || !overlay) return;
+  // Format date label
+  const [y, mo, d] = dateKey.split('-').map(Number);
+  const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  if (label) label.textContent = `${d} ${monthNames[mo-1]} ${y}`;
+  // Position near the cell
+  const rect = cellEl.getBoundingClientRect();
+  picker.style.display = 'block';
+  overlay.style.display = 'block';
+  // After display:block, measure picker width to avoid overflow
+  const pw = picker.offsetWidth || 240;
+  const ph = picker.offsetHeight || 80;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  let left = rect.left + rect.width / 2 - pw / 2;
+  let top  = rect.bottom + 8;
+  if (left < 8) left = 8;
+  if (left + pw > vw - 8) left = vw - pw - 8;
+  if (top + ph > vh - 8) top = rect.top - ph - 8;
+  picker.style.left = left + 'px';
+  picker.style.top  = top  + 'px';
+}
+
+function closeMoodCalPicker() {
+  const picker  = document.getElementById('mood-cal-picker');
+  const overlay = document.getElementById('mood-cal-overlay');
+  if (picker)  picker.style.display  = 'none';
+  if (overlay) overlay.style.display = 'none';
+  _moodCalPickerDate = null;
+}
+
+function saveMoodForDate(emoji) {
+  if (!db || !_moodCalPickerDate) return;
+  const key = _moodCalPickerDate;
+  closeMoodCalPicker();
+  db.collection('moods').doc(key).set({ emoji, by: me, date: key, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+  // If saving today, also sync the top picker
+  if (key === _moodTodayKey()) {
+    document.querySelectorAll('#mood-picker-main .mood-btn').forEach(b => {
+      b.classList.toggle('selected', b.dataset.emoji === emoji);
+    });
+    const confirmEl = document.getElementById('mood-today-confirm');
+    if (confirmEl) { confirmEl.style.display = ''; confirmEl.textContent = `Mood saved ${emoji}`; }
+  }
 }
 
 
