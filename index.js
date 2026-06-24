@@ -1316,7 +1316,8 @@ async function requestNotifPermission() {
 async function _saveFCMToken() {
   if (!messaging || !db || !me) return;
   try {
-    const token = await messaging.getToken({ vapidKey: VAPID_KEY });
+    const swRegistration = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+    const token = await messaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: swRegistration });
     if (token) {
       await db.collection('devices').doc(me).set({
         token, updatedAt: firebase.firestore.FieldValue.serverTimestamp()
