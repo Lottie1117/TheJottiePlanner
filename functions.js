@@ -159,16 +159,21 @@ exports.sendTestRoundup = onRequest(
 );
 
 // ── AI Subtask Suggestions ─────────────────────────────────────────
-// Callable function: takes { taskTitle } and returns { subtasks: string[] }
-// API key stored in Firebase Functions config / environment variable.
-exports.generateSubtasks = onCall(
+// HTTP function: POST { taskTitle } → { subtasks: string[] }
+exports.generateSubtasks = onRequest(
   { region: 'europe-west2', cors: true, secrets: ['GEMINI_API_KEY'] },
-  async (request) => {
-    const taskTitle = (request.data.taskTitle || '').trim();
-    if (!taskTitle) throw new Error('Missing taskTitle');
+  async (req, res) => {
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.set('Access-Control-Allow-Headers', 'Content-Type');
+    if (req.method === 'OPTIONS') { res.status(204).send(''); return; }
+    if (req.method !== 'POST') { res.status(405).send('Method Not Allowed'); return; }
+
+    const taskTitle = (req.body.taskTitle || '').trim();
+    if (!taskTitle) { res.status(400).json({ error: 'Missing taskTitle' }); return; }
 
     const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) throw new Error('GEMINI_API_KEY not configured');
+    if (!apiKey) { res.status(500).json({ error: 'GEMINI_API_KEY not configured' }); return; }
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
@@ -180,21 +185,21 @@ Keep each subtask concise (under 8 words). Be specific and actionable.
 Reply with ONLY a valid JSON array of strings. No markdown, no explanation.
 Example: ["Buy ingredients from supermarket","Check recipe beforehand","Preheat oven to 180°C"]`;
 
-    const result = await model.generateContent(prompt);
-    const text = result.response.text().trim();
-
-    let subtasks;
     try {
-      subtasks = JSON.parse(text);
+      const result = await model.generateContent(prompt);
+      const text = result.response.text().trim();
+      let subtasks;
+      try {
+        subtasks = JSON.parse(text);
+      } catch (e) {
+        subtasks = JSON.parse(text.replace(/```json|```/g, '').trim());
+      }
+      if (!Array.isArray(subtasks)) throw new Error('Unexpected response format');
+      subtasks = subtasks.filter(s => typeof s === 'string' && s.trim()).slice(0, 6);
+      res.status(200).json({ subtasks });
     } catch (e) {
-      // Fallback: strip any accidental markdown fences
-      const cleaned = text.replace(/```json|```/g, '').trim();
-      subtasks = JSON.parse(cleaned);
+      console.error('generateSubtasks error:', e.message);
+      res.status(500).json({ error: e.message });
     }
-
-    if (!Array.isArray(subtasks)) throw new Error('Unexpected response format');
-    // Sanitise: keep only strings, max 6 items
-    subtasks = subtasks.filter(s => typeof s === 'string' && s.trim()).slice(0, 6);
-    return { subtasks };
   }
 );
