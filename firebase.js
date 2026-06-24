@@ -69,7 +69,7 @@ function renderToday() {
   const taskLimit = sizeOf('tasks') === 'full' ? 10 : 3;
   document.getElementById('dash-todo-count').textContent = openTodos.length;
   document.getElementById('dash-todos').innerHTML = displayTodos.length === 0
-    ? '<div class="dash-empty">You're all caught up! 🎉</div>'
+    ? "<div class=\"dash-empty\">You're all caught up! 🎉</div>" 
     : displayTodos.slice(0, taskLimit).map(t => {
         const whoH = t.who ? whoChip(t.who) : '';
         const dueH = t.due ? `<span class="dash-chip chip-far">Due ${fmtDate(t.due)}</span>` : '';
@@ -176,4 +176,3 @@ function initFirebase() {
   if (me) setTimeout(checkNotifStatus, 1200);
   if (typeof listenNotifications === 'function') listenNotifications();
 }
-
