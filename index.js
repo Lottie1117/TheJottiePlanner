@@ -2454,184 +2454,193 @@ function renderBirthdaysDash() {
 
 // ── Mood Tracker ──────────────────────────────────────────────────
 let _moodUnsub = null;
+let _moodEntries = {}; // all fetched entries, keyed YYYY-MM-DD → emoji
+let _moodViewYear  = null; // currently displayed year
+let _moodViewMonth = null; // currently displayed month (0-based)
 
-// todayKey: "YYYY-MM-DD" in local time
+const MOOD_LABELS = { '😃':'Great', '😊':'Good', '😕':'Meh', '😞':'Low', '😢':'Bad' };
+const MOOD_EMOJIS = ['😃','😊','😕','😞','😢'];
+const MOOD_MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MOOD_DAY_NAMES   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
 function _moodTodayKey() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
-function logMood(emoji) {
-  if (!db) return;
-  const u1 = (typeof SETTINGS !== 'undefined' && SETTINGS.user1Name) || 'Lottie';
-  if (me !== u1) return; // only Lottie logs moods
-  const key = _moodTodayKey();
-  db.collection('moods').doc(key).set({ emoji, by: me, date: key, updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
-    .then(() => {
-      // highlight selected button
-      document.querySelectorAll('#mood-picker-main .mood-btn').forEach(b => {
-        b.classList.toggle('selected', b.dataset.emoji === emoji);
-      });
-      const confirmEl = document.getElementById('mood-today-confirm');
-      if (confirmEl) {
-        confirmEl.style.display = '';
-        confirmEl.textContent = `Mood saved ${emoji}`;
-      }
-    });
+function _moodKey(y, m, d) {
+  return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
 }
 
 function listenMood() {
   if (!db) return;
   if (_moodUnsub) { _moodUnsub(); _moodUnsub = null; }
-  // listen to last 90 days of moods
-  const ninetyDaysAgo = new Date();
-  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 89);
-  const fromKey = `${ninetyDaysAgo.getFullYear()}-${String(ninetyDaysAgo.getMonth()+1).padStart(2,'0')}-${String(ninetyDaysAgo.getDate()).padStart(2,'0')}`;
-  _moodUnsub = db.collection('moods').where('date', '>=', fromKey).orderBy('date', 'asc')
+  // Initialise view to current month if not set
+  if (_moodViewYear === null) {
+    const now = new Date();
+    _moodViewYear  = now.getFullYear();
+    _moodViewMonth = now.getMonth();
+  }
+  // Listen to whole collection (small dataset, fine for personal use)
+  _moodUnsub = db.collection('moods').orderBy('date', 'asc')
     .onSnapshot(snap => {
-      const entries = {}; // key → emoji
-      snap.docs.forEach(d => { entries[d.id] = d.data().emoji; });
-      _renderMoodCalendar(entries);
-      _renderMoodDash(entries);
-      _syncMoodPicker(entries);
+      _moodEntries = {};
+      snap.docs.forEach(d => { _moodEntries[d.id] = d.data().emoji; });
+      _renderMoodCalendar();
+      _renderMoodDash();
     });
 }
 
-function _syncMoodPicker(entries) {
-  const todayEmoji = entries[_moodTodayKey()];
-  document.querySelectorAll('#mood-picker-main .mood-btn').forEach(b => {
-    b.classList.toggle('selected', b.dataset.emoji === todayEmoji);
-  });
-  const confirmEl = document.getElementById('mood-today-confirm');
-  if (confirmEl) {
-    if (todayEmoji) {
-      confirmEl.style.display = '';
-      confirmEl.textContent = `Mood saved ${todayEmoji}`;
-    } else {
-      confirmEl.style.display = 'none';
-    }
+function moodNavMonth(delta) {
+  _moodViewMonth += delta;
+  if (_moodViewMonth > 11) { _moodViewMonth = 0;  _moodViewYear++; }
+  if (_moodViewMonth < 0)  { _moodViewMonth = 11; _moodViewYear--; }
+  // Don't allow navigating past current month
+  const now = new Date();
+  if (_moodViewYear > now.getFullYear() || (_moodViewYear === now.getFullYear() && _moodViewMonth > now.getMonth())) {
+    _moodViewMonth = now.getMonth();
+    _moodViewYear  = now.getFullYear();
   }
+  _renderMoodCalendar();
 }
 
-function _renderMoodCalendar(entries) {
+function _renderMoodCalendar() {
   const el = document.getElementById('mood-calendar');
   if (!el) return;
 
-  // Build a map of year-month → [{day, emoji|null}]
-  const today = new Date();
-  const months = [];
-  for (let m = 2; m >= 0; m--) {
-    const ref = new Date(today.getFullYear(), today.getMonth() - m, 1);
-    months.push({ year: ref.getFullYear(), month: ref.getMonth() });
-  }
+  const year  = _moodViewYear;
+  const month = _moodViewMonth;
+  const now   = new Date();
+  const isCurrentMonth = (year === now.getFullYear() && month === now.getMonth());
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDow    = new Date(year, month, 1).getDay(); // 0=Sun
 
-  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  let html = '';
+  // Header
+  let html = `<div class="mood-cal-card">`;
+  html += `<div class="mood-cal-header">
+    <div class="mood-cal-title">${MOOD_MONTH_NAMES[month]} ${year}</div>
+    <div class="mood-cal-nav">
+      <button class="mood-nav-btn" onclick="moodNavMonth(-1)">‹</button>
+      <button class="mood-nav-btn" onclick="moodNavMonth(1)" ${isCurrentMonth ? 'disabled' : ''}>›</button>
+    </div>
+  </div>`;
 
-  months.forEach(({ year, month }) => {
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const firstDow = new Date(year, month, 1).getDay(); // 0=Sun
+  // Day-of-week headers (3-letter)
+  html += `<div class="mood-week-row mood-dow-row">`;
+  ['S','M','T','W','T','F','S'].forEach(d => {
+    html += `<div class="mood-dow">${d}</div>`;
+  });
+  html += `</div>`;
 
-    html += `<div class="mood-month-block">`;
-    html += `<div class="mood-month-label">${monthNames[month]} ${year}</div>`;
-    // Day-of-week headers
+  // Day cells
+  let dayNum = 1;
+  while (dayNum <= daysInMonth) {
     html += `<div class="mood-week-row">`;
-    ['S','M','T','W','T','F','S'].forEach(d => {
-      html += `<div class="mood-day-cell" style="font-size:10px;font-weight:700;opacity:0.5">${d}</div>`;
-    });
-    html += `</div>`;
-
-    // Weeks
-    let dayNum = 1;
-    while (dayNum <= daysInMonth) {
-      html += `<div class="mood-week-row">`;
-      for (let dow = 0; dow < 7; dow++) {
-        if ((dayNum === 1 && dow < firstDow) || dayNum > daysInMonth) {
-          html += `<div class="mood-day-cell empty"></div>`;
-        } else {
-          const key = `${year}-${String(month+1).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
-          const emoji = entries[key];
-          const isToday = (key === _moodTodayKey());
-          const classes = ['mood-day-cell', emoji ? 'has-mood' : '', isToday ? 'is-today' : ''].filter(Boolean).join(' ');
-          html += `<div class="${classes}" data-date="${key}" onclick="openMoodCalPicker(this,'${key}')">${emoji || String(dayNum)}</div>`;
-          dayNum++;
-        }
+    for (let dow = 0; dow < 7; dow++) {
+      if ((dayNum === 1 && dow < firstDow) || dayNum > daysInMonth) {
+        html += `<div class="mood-day-cell empty"></div>`;
+      } else {
+        const key     = _moodKey(year, month, dayNum);
+        const emoji   = _moodEntries[key];
+        const isToday = (key === _moodTodayKey());
+        const isFuture = (new Date(year, month, dayNum) > now && !isToday);
+        const cls = ['mood-day-cell', emoji ? 'has-mood' : '', isToday ? 'is-today' : '', isFuture ? 'future' : ''].filter(Boolean).join(' ');
+        const click = isFuture ? '' : `onclick="openMoodRadialPicker(this,'${key}')"`;
+        html += `<div class="${cls}" ${click}>${emoji || `<span class="mood-day-num">${dayNum}</span>`}</div>`;
+        dayNum++;
       }
-      html += `</div>`;
-      if (dayNum > daysInMonth) break;
     }
     html += `</div>`;
+    if (dayNum > daysInMonth) break;
+  }
+
+  // Legend
+  html += `<div class="mood-legend">`;
+  MOOD_EMOJIS.forEach(e => {
+    html += `<span class="mood-legend-item"><span class="mood-legend-emoji">${e}</span><span class="mood-legend-label">${MOOD_LABELS[e]}</span></span>`;
   });
+  html += `</div>`;
+  html += `<div class="mood-cal-hint">Tap any day to set how it felt — your month fills in as a mood map 🌙</div>`;
+  html += `</div>`;
 
   el.innerHTML = html;
 }
 
-function _renderMoodDash(entries) {
+function _renderMoodDash() {
   const titleEl = document.getElementById('dash-mood-widget-title');
   const bodyEl  = document.getElementById('dash-mood-widget-body');
   if (!titleEl || !bodyEl) return;
   const u1 = (typeof SETTINGS !== 'undefined' && SETTINGS.user1Name) || 'Lottie';
   const isUser1 = (me === u1);
   titleEl.textContent = isUser1 ? "Today's Mood" : `${u1}'s Mood`;
-  const todayEmoji = entries[_moodTodayKey()];
+  const todayEmoji = _moodEntries[_moodTodayKey()];
   bodyEl.innerHTML = todayEmoji
-    ? `<div class="dash-mood-emoji">${todayEmoji}</div>`
+    ? `<div class="dash-mood-emoji">${todayEmoji}</div><div class="dash-mood-label">${MOOD_LABELS[todayEmoji] || ''}</div>`
     : `<div class="dash-mood-none">${isUser1 ? "Tap to log today's mood" : 'Not logged yet'}</div>`;
 }
 
-let _moodCalPickerDate = null;
+// ── Radial Picker ─────────────────────────────────────────────────
+let _moodPickerDate = null;
 
-function openMoodCalPicker(cellEl, dateKey) {
+function openMoodRadialPicker(cellEl, dateKey) {
   const u1 = (typeof SETTINGS !== 'undefined' && SETTINGS.user1Name) || 'Lottie';
-  if (me !== u1) return; // only Lottie can edit
-  _moodCalPickerDate = dateKey;
-  const picker  = document.getElementById('mood-cal-picker');
-  const overlay = document.getElementById('mood-cal-overlay');
-  const label   = document.getElementById('mood-cal-picker-date');
-  if (!picker || !overlay) return;
-  // Format date label
+  if (me !== u1) return;
+  _moodPickerDate = dateKey;
+
+  const overlay = document.getElementById('mood-radial-overlay');
+  if (!overlay) return;
+
+  // Build date label e.g. "Wednesday, June 24"
   const [y, mo, d] = dateKey.split('-').map(Number);
-  const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  if (label) label.textContent = `${d} ${monthNames[mo-1]} ${y}`;
-  // Position near the cell
-  const rect = cellEl.getBoundingClientRect();
-  picker.style.display = 'block';
-  overlay.style.display = 'block';
-  // After display:block, measure picker width to avoid overflow
-  const pw = picker.offsetWidth || 240;
-  const ph = picker.offsetHeight || 80;
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-  let left = rect.left + rect.width / 2 - pw / 2;
-  let top  = rect.bottom + 8;
-  if (left < 8) left = 8;
-  if (left + pw > vw - 8) left = vw - pw - 8;
-  if (top + ph > vh - 8) top = rect.top - ph - 8;
-  picker.style.left = left + 'px';
-  picker.style.top  = top  + 'px';
+  const dt = new Date(y, mo - 1, d);
+  const dayName   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][dt.getDay()];
+  const dateLabel = `${dayName}, ${MOOD_MONTH_NAMES[mo-1]} ${d}`;
+
+  const currentEmoji = _moodEntries[dateKey] || null;
+
+  // Radial positions: Great=top, Good=left, Meh=right, Low=bottom-left, Bad=bottom-right
+  // Centre of radial is the close button
+  const positions = [
+    { emoji: '😃', label: 'Great',  top: '10%',  left: '50%',   transform: 'translate(-50%,-50%)' },
+    { emoji: '😊', label: 'Good',   top: '40%',  left: '12%',   transform: 'translate(-50%,-50%)' },
+    { emoji: '😕', label: 'Meh',    top: '40%',  left: '88%',   transform: 'translate(-50%,-50%)' },
+    { emoji: '😞', label: 'Low',    top: '72%',  left: '25%',   transform: 'translate(-50%,-50%)' },
+    { emoji: '😢', label: 'Bad',    top: '72%',  left: '75%',   transform: 'translate(-50%,-50%)' },
+  ];
+
+  const btns = positions.map(p => {
+    const selected = p.emoji === currentEmoji ? 'mood-radial-btn--selected' : '';
+    return `<button class="mood-radial-btn ${selected}" style="top:${p.top};left:${p.left};transform:${p.transform};"
+              onclick="saveMoodForDate('${p.emoji}')">
+              <span class="mood-radial-emoji">${p.emoji}</span>
+              <span class="mood-radial-label">${p.label}</span>
+            </button>`;
+  }).join('');
+
+  overlay.innerHTML = `
+    <div class="mood-radial-backdrop" onclick="closeMoodRadialPicker()"></div>
+    <div class="mood-radial-panel">
+      <div class="mood-radial-date">${dateLabel}</div>
+      <div class="mood-radial-sub">How did it feel?</div>
+      <div class="mood-radial-ring">
+        ${btns}
+        <button class="mood-radial-close" onclick="closeMoodRadialPicker()">✕</button>
+      </div>
+    </div>`;
+  overlay.style.display = 'flex';
 }
 
-function closeMoodCalPicker() {
-  const picker  = document.getElementById('mood-cal-picker');
-  const overlay = document.getElementById('mood-cal-overlay');
-  if (picker)  picker.style.display  = 'none';
+function closeMoodRadialPicker() {
+  const overlay = document.getElementById('mood-radial-overlay');
   if (overlay) overlay.style.display = 'none';
-  _moodCalPickerDate = null;
+  _moodPickerDate = null;
 }
 
 function saveMoodForDate(emoji) {
-  if (!db || !_moodCalPickerDate) return;
-  const key = _moodCalPickerDate;
-  closeMoodCalPicker();
+  if (!db || !_moodPickerDate) return;
+  const key = _moodPickerDate;
+  closeMoodRadialPicker();
   db.collection('moods').doc(key).set({ emoji, by: me, date: key, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
-  // If saving today, also sync the top picker
-  if (key === _moodTodayKey()) {
-    document.querySelectorAll('#mood-picker-main .mood-btn').forEach(b => {
-      b.classList.toggle('selected', b.dataset.emoji === emoji);
-    });
-    const confirmEl = document.getElementById('mood-today-confirm');
-    if (confirmEl) { confirmEl.style.display = ''; confirmEl.textContent = `Mood saved ${emoji}`; }
-  }
 }
 
 

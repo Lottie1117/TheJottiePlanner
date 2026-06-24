@@ -401,18 +401,6 @@
 
 <!-- ── Mood Tracker ───────────────────────────────────────────────── -->
 <div id="mood-section" class="section">
-  <div class="mood-today-block">
-    <div class="list-label">How are you feeling today?</div>
-    <div class="mood-picker" id="mood-picker-main">
-      <button class="mood-btn" data-emoji="😃" onclick="logMood('😃')">😃</button>
-      <button class="mood-btn" data-emoji="😊" onclick="logMood('😊')">😊</button>
-      <button class="mood-btn" data-emoji="😕" onclick="logMood('😕')">😕</button>
-      <button class="mood-btn" data-emoji="😞" onclick="logMood('😞')">😞</button>
-      <button class="mood-btn" data-emoji="😢" onclick="logMood('😢')">😢</button>
-    </div>
-    <div id="mood-today-confirm" class="mood-today-confirm" style="display:none"></div>
-  </div>
-  <div class="list-label" style="margin-top:20px">Mood History</div>
   <div id="mood-calendar" class="mood-calendar"></div>
 </div>
 
@@ -807,18 +795,8 @@
 
 
 <!-- ── Birthday Detail Modal ─────────────────────────────────────── -->
-<!-- ── Mood Calendar Picker Popover ──────────────────────────────── -->
-<div id="mood-cal-overlay" onclick="closeMoodCalPicker()" style="display:none;position:fixed;inset:0;z-index:300;"></div>
-<div id="mood-cal-picker" style="display:none;position:fixed;z-index:301;background:var(--card,#fff);border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.18);padding:10px 12px;">
-  <div style="font-size:11px;color:var(--text-secondary,#888);margin-bottom:8px;text-align:center" id="mood-cal-picker-date"></div>
-  <div style="display:flex;gap:8px;">
-    <button class="mood-btn" style="font-size:26px;padding:8px;" onclick="saveMoodForDate('😃')">😃</button>
-    <button class="mood-btn" style="font-size:26px;padding:8px;" onclick="saveMoodForDate('😊')">😊</button>
-    <button class="mood-btn" style="font-size:26px;padding:8px;" onclick="saveMoodForDate('😕')">😕</button>
-    <button class="mood-btn" style="font-size:26px;padding:8px;" onclick="saveMoodForDate('😞')">😞</button>
-    <button class="mood-btn" style="font-size:26px;padding:8px;" onclick="saveMoodForDate('😢')">😢</button>
-  </div>
-</div>
+<!-- ── Mood Radial Picker Overlay ─────────────────────────────────── -->
+<div id="mood-radial-overlay" style="display:none;position:fixed;inset:0;z-index:400;align-items:center;justify-content:center;"></div>
 
 <div id="bday-modal-overlay" onclick="closeBirthdayModal()"></div>
 <div id="bday-modal" role="dialog" aria-modal="true" aria-labelledby="bday-modal-name">
