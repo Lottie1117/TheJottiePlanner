@@ -1,7 +1,7 @@
 // ── VERSION — bump this on every deploy to bust the old cache ─────
 // This is updated automatically by the GitHub Action (see deploy.yml note below).
 // If you ever deploy manually, change the date/number here.
-const CACHE_VERSION = 'jottie-v__BUILD_TIME__';
+const CACHE_VERSION = 'jottie-v20260618132754';
 const CACHE_NAME = CACHE_VERSION;
 
 // ── Files to precache ─────────────────────────────────────────────

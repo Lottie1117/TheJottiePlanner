@@ -4,7 +4,6 @@ const { onRequest, onCall } = require('firebase-functions/v2/https');
 const { initializeApp }     = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { getMessaging }      = require('firebase-admin/messaging');
-const { GoogleGenAI }       = require('@google/genai');
 
 initializeApp();
 
@@ -32,52 +31,41 @@ exports.sendShoppingNotification = onDocumentCreated(
   'notifications/{docId}',
   async (event) => {
     const { targetUser, title, body } = event.data.data();
-
     const settingsDoc = await getFirestore().collection('settings').doc(targetUser).get();
     const notifMode = settingsDoc.exists && settingsDoc.data().notificationSettings
       ? settingsDoc.data().notificationSettings.mode
       : 'instant';
     if (notifMode === 'roundup') return;
-
     await sendPush(targetUser, title, body);
   }
 );
 
-// ── Notification Roundups ──────────────────────────────────────────
 async function sendRoundups(timeKey) {
   const db = getFirestore();
   const settingsSnap = await db.collection('settings').get();
-
   for (const doc of settingsSnap.docs) {
     const targetUser = doc.id;
     const ns = doc.data().notificationSettings;
     if (!ns || ns.mode !== 'roundup' || !ns.times || !ns.times[timeKey]) continue;
-
     const lastRoundupSent = doc.data().lastRoundupSent || null;
     const sinceMillis = lastRoundupSent ? lastRoundupSent.toMillis() : 0;
-
     const notifSnap = await db.collection('notifications')
       .where('targetUser', '==', targetUser)
       .orderBy('createdAt', 'desc')
       .limit(200)
       .get();
-
     const recent = notifSnap.docs
       .map(d => d.data())
       .filter(d => d.createdAt && d.createdAt.toMillis() > sinceMillis);
-
     if (recent.length === 0) continue;
-
     const groups = {};
     for (const n of recent) {
       const key = n.type || 'other';
       groups[key] = (groups[key] || []);
       groups[key].push(n);
     }
-
     const greetings = { morning: '💜 Good morning!', lunch: '💜 Good afternoon!', evening: '💜 Good evening!' };
     const greeting = greetings[timeKey] || '💜 Your Jottie Roundup';
-
     const typeLabels = {
       glimmer_liked:  (items) => `❤️ ${items.length} glimmer reaction${items.length > 1 ? 's' : ''}`,
       luna_update:    (items) => `🐾 ${items.length} Luna update${items.length > 1 ? 's' : ''}`,
@@ -86,7 +74,6 @@ async function sendRoundups(timeKey) {
       plans:          (items) => `📅 ${items.length} plan update${items.length > 1 ? 's' : ''}`,
       thinking:       (items) => `💭 ${items.length} Thinking of You`,
     };
-
     const lines = [];
     for (const [type, items] of Object.entries(groups)) {
       if (lines.length >= 4) break;
@@ -97,9 +84,7 @@ async function sendRoundups(timeKey) {
         lines.push(`${icon} ${items.length} new update${items.length > 1 ? 's' : ''}`);
       }
     }
-
     const body = lines.join('\n') + '\nTap to catch up →';
-
     await sendPush(targetUser, greeting, body);
     await doc.ref.set({ lastRoundupSent: new Date() }, { merge: true });
   }
@@ -118,7 +103,6 @@ exports.sendEveningRoundup = onSchedule(
   () => sendRoundups('evening')
 );
 
-// ── Dev: test roundup ─────────────────────────────────────────────
 exports.sendTestRoundup = onRequest(
   { region: 'europe-west2', cors: true },
   async (req, res) => {
@@ -127,10 +111,8 @@ exports.sendTestRoundup = onRequest(
     res.set('Access-Control-Allow-Headers', 'Content-Type');
     if (req.method === 'OPTIONS') { res.status(204).send(''); return; }
     if (req.method !== 'POST') { res.status(405).send('Method Not Allowed'); return; }
-
     const { targetUser } = req.body;
     if (!targetUser) { res.status(400).send('Missing targetUser'); return; }
-
     const title = '💜 Good evening!';
     const body  = [
       '✨ 2 new memories added',
@@ -139,14 +121,12 @@ exports.sendTestRoundup = onRequest(
       '📅 1 plan tomorrow',
       'Tap to catch up →',
     ].join('\n');
-
     await sendPush(targetUser, title, body);
     res.status(200).send('ok');
   }
 );
 
 // ── AI Subtask Suggestions ─────────────────────────────────────────
-// Uses @google/genai SDK with GEMINI_API_KEY secret
 exports.generateSubtasks = onRequest(
   { region: 'europe-west2', cors: true, secrets: ['GEMINI_API_KEY'] },
   async (req, res) => {
@@ -176,12 +156,20 @@ Reply with ONLY a valid JSON array of strings. No markdown, no explanation.
 Example: ["Buy ingredients from supermarket","Check recipe beforehand","Preheat oven to 180°C"]`;
 
     try {
-      const genAI = new GoogleGenAI({ apiKey });
-      const result = await genAI.models.generateContent({
-        model: 'gemini-1.5-flash',
-        contents: prompt
-      });
-      const text = result.text.trim();
+      const apiRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        }
+      );
+      if (!apiRes.ok) {
+        const errData = await apiRes.json();
+        throw new Error(JSON.stringify(errData));
+      }
+      const data = await apiRes.json();
+      const text = data.candidates[0].content.parts[0].text.trim();
       let subtasks;
       try {
         subtasks = JSON.parse(text);
@@ -197,3 +185,5 @@ Example: ["Buy ingredients from supermarket","Check recipe beforehand","Preheat 
     }
   }
 );
+
+

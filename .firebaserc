@@ -1,7 +1,1 @@
-{
-  "projects": {
-    "jottie": "jottieplans"
-  },
-  "targets": {},
-  "etags": {}
-}
+{"projects":{"default":"jottieplans"}}
