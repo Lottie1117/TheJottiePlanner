@@ -4,7 +4,7 @@ const { onRequest, onCall } = require('firebase-functions/v2/https');
 const { initializeApp }     = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { getMessaging }      = require('firebase-admin/messaging');
-const { VertexAI }          = require('@google-cloud/vertexai');
+const { GoogleGenAI }       = require('@google/genai');
 
 initializeApp();
 
@@ -21,7 +21,6 @@ async function sendPush(targetUser, title, body) {
     });
   } catch(e) {
     console.error('Push send failed:', e.message);
-    // Remove stale/invalid tokens so they don't block future sends
     if (e.code === 'messaging/registration-token-not-registered' ||
         e.code === 'messaging/invalid-registration-token') {
       await getFirestore().collection('devices').doc(targetUser).delete();
@@ -34,9 +33,6 @@ exports.sendShoppingNotification = onDocumentCreated(
   async (event) => {
     const { targetUser, title, body } = event.data.data();
 
-    // Respect the recipient's delivery preference: in roundup mode,
-    // activity still lands in the notification centre (this doc is
-    // always kept) but the immediate push is suppressed.
     const settingsDoc = await getFirestore().collection('settings').doc(targetUser).get();
     const notifMode = settingsDoc.exists && settingsDoc.data().notificationSettings
       ? settingsDoc.data().notificationSettings.mode
@@ -44,14 +40,10 @@ exports.sendShoppingNotification = onDocumentCreated(
     if (notifMode === 'roundup') return;
 
     await sendPush(targetUser, title, body);
-
-    // Document is intentionally kept so the in-app notification centre can display it
   }
 );
 
 // ── Notification Roundups ──────────────────────────────────────────
-// At each enabled roundup time, send one push per recipient summarising
-// recent activity grouped by type. Reuses the notifications collection.
 async function sendRoundups(timeKey) {
   const db = getFirestore();
   const settingsSnap = await db.collection('settings').get();
@@ -76,7 +68,6 @@ async function sendRoundups(timeKey) {
 
     if (recent.length === 0) continue;
 
-    // Group by notification type using the icon/type fields written by writeNotif()
     const groups = {};
     for (const n of recent) {
       const key = n.type || 'other';
@@ -87,7 +78,6 @@ async function sendRoundups(timeKey) {
     const greetings = { morning: '💜 Good morning!', lunch: '💜 Good afternoon!', evening: '💜 Good evening!' };
     const greeting = greetings[timeKey] || '💜 Your Jottie Roundup';
 
-    // Build summary lines, at most 4
     const typeLabels = {
       glimmer_liked:  (items) => `❤️ ${items.length} glimmer reaction${items.length > 1 ? 's' : ''}`,
       luna_update:    (items) => `🐾 ${items.length} Luna update${items.length > 1 ? 's' : ''}`,
@@ -97,7 +87,6 @@ async function sendRoundups(timeKey) {
       thinking:       (items) => `💭 ${items.length} Thinking of You`,
     };
 
-    // Fall back: use icon from notification doc if type not in map
     const lines = [];
     for (const [type, items] of Object.entries(groups)) {
       if (lines.length >= 4) break;
@@ -130,8 +119,6 @@ exports.sendEveningRoundup = onSchedule(
 );
 
 // ── Dev: test roundup ─────────────────────────────────────────────
-// Sends a realistic-looking roundup push to a single user immediately.
-// Only callable from the app; restricted to the jottieplans domain.
 exports.sendTestRoundup = onRequest(
   { region: 'europe-west2', cors: true },
   async (req, res) => {
@@ -159,10 +146,9 @@ exports.sendTestRoundup = onRequest(
 );
 
 // ── AI Subtask Suggestions ─────────────────────────────────────────
-// HTTP function: POST { taskTitle } → { subtasks: string[] }
-// Uses Vertex AI with service account auth — no API key required.
+// Uses @google/genai SDK with GEMINI_API_KEY secret
 exports.generateSubtasks = onRequest(
-  { region: 'europe-west2', cors: true },
+  { region: 'europe-west2', cors: true, secrets: ['GEMINI_API_KEY'] },
   async (req, res) => {
     res.set('Access-Control-Allow-Origin', '*');
     res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -170,7 +156,6 @@ exports.generateSubtasks = onRequest(
     if (req.method === 'OPTIONS') { res.status(204).send(''); return; }
     if (req.method !== 'POST') { res.status(405).send('Method Not Allowed'); return; }
 
-    // Parse body — v2 onRequest doesn't auto-parse JSON
     let body = req.body;
     if (typeof body === 'string') {
       try { body = JSON.parse(body); } catch(e) { body = {}; }
@@ -180,8 +165,8 @@ exports.generateSubtasks = onRequest(
     const taskTitle = (body.taskTitle || '').trim();
     if (!taskTitle) { res.status(400).json({ error: 'Missing taskTitle' }); return; }
 
-    const vertexAI = new VertexAI({ project: 'jottieplans', location: 'europe-west2' });
-    const model = vertexAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) { res.status(500).json({ error: 'GEMINI_API_KEY not configured' }); return; }
 
     const prompt = `You are a helpful assistant for a couple's shared household planner app called Jottie.
 They have added a task: "${taskTitle}"
@@ -191,8 +176,12 @@ Reply with ONLY a valid JSON array of strings. No markdown, no explanation.
 Example: ["Buy ingredients from supermarket","Check recipe beforehand","Preheat oven to 180°C"]`;
 
     try {
-      const result = await model.generateContent(prompt);
-      const text = result.response.candidates[0].content.parts[0].text.trim();
+      const genAI = new GoogleGenAI({ apiKey });
+      const result = await genAI.models.generateContent({
+        model: 'gemini-1.5-flash',
+        contents: prompt
+      });
+      const text = result.text.trim();
       let subtasks;
       try {
         subtasks = JSON.parse(text);
