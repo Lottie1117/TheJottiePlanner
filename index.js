@@ -4298,6 +4298,7 @@ let _touchDragEl = null, _touchClone = null, _touchOffX = 0, _touchOffY = 0;
 
 function dashTouchStart(e) {
   if (!_dashEditMode) return;
+  if (e.target.closest('.dash-resize-btn')) return;
   const touch = e.touches[0];
   _touchDragEl = this;
   const rect = this.getBoundingClientRect();
