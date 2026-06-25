@@ -4,7 +4,7 @@ const { onRequest, onCall } = require('firebase-functions/v2/https');
 const { initializeApp }     = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { getMessaging }      = require('firebase-admin/messaging');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { VertexAI }          = require('@google-cloud/vertexai');
 
 initializeApp();
 
@@ -160,8 +160,9 @@ exports.sendTestRoundup = onRequest(
 
 // ── AI Subtask Suggestions ─────────────────────────────────────────
 // HTTP function: POST { taskTitle } → { subtasks: string[] }
+// Uses Vertex AI with service account auth — no API key required.
 exports.generateSubtasks = onRequest(
-  { region: 'europe-west2', cors: true, secrets: ['GEMINI_API_KEY'] },
+  { region: 'europe-west2', cors: true },
   async (req, res) => {
     res.set('Access-Control-Allow-Origin', '*');
     res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -179,11 +180,8 @@ exports.generateSubtasks = onRequest(
     const taskTitle = (body.taskTitle || '').trim();
     if (!taskTitle) { res.status(400).json({ error: 'Missing taskTitle' }); return; }
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) { res.status(500).json({ error: 'GEMINI_API_KEY not configured' }); return; }
-
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const vertexAI = new VertexAI({ project: 'jottieplans', location: 'europe-west2' });
+    const model = vertexAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     const prompt = `You are a helpful assistant for a couple's shared household planner app called Jottie.
 They have added a task: "${taskTitle}"
@@ -194,7 +192,7 @@ Example: ["Buy ingredients from supermarket","Check recipe beforehand","Preheat 
 
     try {
       const result = await model.generateContent(prompt);
-      const text = result.response.text().trim();
+      const text = result.response.candidates[0].content.parts[0].text.trim();
       let subtasks;
       try {
         subtasks = JSON.parse(text);
