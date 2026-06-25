@@ -1190,7 +1190,6 @@ function renderLunaRoutine() {
         <div class="luna-tl-info">
           <div class="luna-tl-title${it.done ? ' done' : ''}">${esc(it.title)}</div>
           ${it.sub ? `<div class="luna-tl-sub">${esc(it.sub)}</div>` : ''}
-          ${it.done ? `<div class="luna-tl-meta">${avatarBadge(it.by)}<span>${esc(it.by)} · ${lunaFmtLoggedTime(it.at)}</span></div>` : ''}
         </div>
         <div class="luna-tl-check${it.done ? ' done' : ''}">✓</div>
       </div>
