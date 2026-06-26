@@ -3961,7 +3961,11 @@ document.querySelectorAll('.tab').forEach(tab => {
 
 // Glimmer/streak startup is called from initFirebase() once db is ready.
 
+  // Expose to outer scope — called by listenLunaMemories, renderDashGlimmers, loadGlimmersList
+  window.buildGlimmerCard = buildGlimmerCard;
+
 })(); // end IIFE
+
 
 
 // ── FAB ──────────────────────────────────────────────────────────
