@@ -3888,7 +3888,7 @@ window.initThinkingOfCard = function initThinkingOfCard() {
   }
 }
 
-window.nudgePersonGlobal = function nudgePerson(name) {
+window.nudgePerson = function nudgePerson(name) {
   // Use push notifications if the app already has that system wired up
   if (typeof sendPushNotification === 'function') {
     sendPushNotification(`👉 Hey ${name}! Time to add your Glimmer today 💖`);
