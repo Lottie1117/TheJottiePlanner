@@ -577,10 +577,40 @@ function bumpShopFrequency(name) {
 
 function listenShopFrequency() {
   if (!db) return;
-  db.collection('shoppingFrequency').orderBy('count', 'desc').limit(50)
-    .onSnapshot(snap => {
-      _shopFrequencyData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  maybeBackfillShopFrequency().finally(() => {
+    db.collection('shoppingFrequency').orderBy('count', 'desc').limit(50)
+      .onSnapshot(snap => {
+        _shopFrequencyData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      });
+  });
+}
+
+// One-time seed: if shoppingFrequency has never been populated, build it from
+// whatever's already in the shopping collection so Quick Add isn't empty on
+// first use. Skips entirely once any frequency data exists.
+async function maybeBackfillShopFrequency() {
+  if (!db) return;
+  const freqSnap = await db.collection('shoppingFrequency').limit(1).get();
+  if (!freqSnap.empty) return;
+  const shopSnap = await db.collection('shopping').get();
+  if (shopSnap.empty) return;
+
+  const counts = {};
+  shopSnap.docs.forEach(doc => {
+    const name = (doc.data().name || '').trim();
+    if (!name) return;
+    const key = name.toLowerCase();
+    if (!counts[key]) counts[key] = { name, count: 0 };
+    counts[key].count++;
+  });
+
+  const batch = db.batch();
+  Object.entries(counts).forEach(([key, { name, count }]) => {
+    batch.set(db.collection('shoppingFrequency').doc(key), {
+      name, count, updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
+  });
+  await batch.commit();
 }
 
 // ── Shopping groups (shared cloud-stored groupings, e.g. "Costco", "Butcher") ──
