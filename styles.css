@@ -2294,3 +2294,39 @@
   opacity: 0.7;
   vertical-align: middle;
 }
+
+/* ── Shopping Groups ──────────────────────────────────────────────── */
+.shop-header-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+.new-group-btn {
+  background: var(--primary-light);
+  color: var(--primary);
+  border: none;
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.new-group-btn:active { opacity: 0.75; }
+.shop-group-label {
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  display: inline-block;
+}
+.shop-group-section {
+  border-radius: 14px;
+  transition: background 0.15s;
+}
+.shop-group-section.drag-over-target {
+  background: var(--primary-light);
+  outline: 2px dashed var(--primary);
+}
+.item-card.shop-dragging {
+  opacity: 0.35;
+}

@@ -332,7 +332,17 @@
 
 <!-- ── Shopping ───────────────────────────────────────── -->
 <div id="shopping-section" class="section">
+  <div class="shop-header-row">
+    <button class="new-group-btn" onclick="createShopGroup()">+ New Group</button>
+  </div>
   <div id="shopping-list"><div class="loading">Loading…</div></div>
+</div>
+
+<!-- Shopping group options menu (long-press a group title) -->
+<div class="note-menu-overlay" id="shop-group-menu-overlay" onclick="closeShopGroupMenu()"></div>
+<div class="note-menu" id="shop-group-menu">
+  <button onclick="shopGroupMenuRename()">✏️ Rename Group</button>
+  <button onclick="shopGroupMenuDelete()" class="note-menu-danger">🗑️ Delete Group</button>
 </div>
 
 <!-- ── To-Do ───────────────────────────────────────────── -->

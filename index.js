@@ -533,7 +533,7 @@ function addShopItem() {
   if (!name) return;
   if (!db) return;
   db.collection('shopping').add({
-    name, completed: false,
+    name, completed: false, groupId: null,
     addedBy: me,
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   }).then(() => {
@@ -550,42 +550,118 @@ function clearDoneShop() {
     .then(s => s.docs.forEach(d => d.ref.delete()));
 }
 
+// ── Shopping groups (shared cloud-stored groupings, e.g. "Costco", "Butcher") ──
+let _shopGroupsData = [];
+
+function listenShopGroups() {
+  if (!db) return;
+  db.collection('shoppingGroups').orderBy('createdAt', 'asc')
+    .onSnapshot(snap => {
+      _shopGroupsData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderShoppingList();
+    });
+}
+
+function createShopGroup() {
+  const title = prompt('New group name:');
+  if (!title || !title.trim() || !db) return;
+  db.collection('shoppingGroups').add({
+    title: title.trim(),
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+}
+
+let _currentShopGroupId = null;
+
+function openShopGroupMenu() {
+  document.getElementById('shop-group-menu-overlay').classList.add('open');
+  document.getElementById('shop-group-menu').classList.add('open');
+}
+function closeShopGroupMenu() {
+  document.getElementById('shop-group-menu-overlay').classList.remove('open');
+  document.getElementById('shop-group-menu').classList.remove('open');
+}
+function shopGroupMenuRename() {
+  closeShopGroupMenu();
+  const group = _shopGroupsData.find(g => g.id === _currentShopGroupId);
+  if (!group) return;
+  const newTitle = prompt('Rename group:', group.title);
+  if (newTitle && newTitle.trim()) {
+    db.collection('shoppingGroups').doc(_currentShopGroupId).update({ title: newTitle.trim() });
+  }
+}
+function shopGroupMenuDelete() {
+  closeShopGroupMenu();
+  if (!_currentShopGroupId) return;
+  if (!confirm('Delete this group? Its items will move back to "To get".')) return;
+  const groupId = _currentShopGroupId;
+  db.collection('shopping').where('groupId', '==', groupId).get().then(snap => {
+    const batch = db.batch();
+    snap.docs.forEach(d => batch.update(d.ref, { groupId: null }));
+    batch.delete(db.collection('shoppingGroups').doc(groupId));
+    return batch.commit();
+  });
+}
+
+// ── Shopping render (groups + items) ──────────────────────────────
 function listenShopping() {
+  initShopDragDelegation();
+  listenShopGroups();
   db.collection('shopping').orderBy('createdAt','asc')
     .onSnapshot(snap => {
       _shopData = snap.docs.map(d => ({id:d.id,...d.data()}));
       renderToday();
-      const el = document.getElementById('shopping-list');
-      if (snap.empty) {
-        el.innerHTML = '<div class="empty"><div class="emo">🛒</div><p>Shopping list is empty!</p></div>';
-        return;
-      }
-      const items  = snap.docs.map(d => ({id:d.id,...d.data()}));
-      const active = items.filter(i => !i.completed);
-      const done   = items.filter(i =>  i.completed);
-
-      let html = '<div class="list-label">To get</div>';
-      if (active.length === 0) {
-        html += '<div class="empty" style="padding:16px"><p>All done! 🎉</p></div>';
-      }
-      active.forEach(i => { html += shopCard(i); });
-
-      if (done.length > 0) {
-        html += `
-          <div class="row-space" style="margin-top:14px">
-            <div class="list-label" style="margin:0;opacity:0.6">Purchased (${done.length})</div>
-            <button class="clear-btn" onclick="clearDoneShop()">Clear all</button>
-          </div>`;
-        done.forEach(i => { html += shopCard(i); });
-      }
-      el.innerHTML = html;
+      renderShoppingList();
     });
+}
+
+function renderShoppingList() {
+  const el = document.getElementById('shopping-list');
+  if (!el) return;
+  const items = _shopData || [];
+  if (items.length === 0 && _shopGroupsData.length === 0) {
+    el.innerHTML = '<div class="empty"><div class="emo">🛒</div><p>Shopping list is empty!</p></div>';
+    return;
+  }
+  const active = items.filter(i => !i.completed);
+  const done   = items.filter(i =>  i.completed);
+
+  let html = '';
+  html += shopGroupSection('default', 'To get', active.filter(i => !i.groupId));
+  _shopGroupsData.forEach(g => {
+    html += shopGroupSection(g.id, g.title, active.filter(i => i.groupId === g.id));
+  });
+
+  if (done.length > 0) {
+    html += `
+      <div class="row-space" style="margin-top:14px">
+        <div class="list-label" style="margin:0;opacity:0.6">Purchased (${done.length})</div>
+        <button class="clear-btn" onclick="clearDoneShop()">Clear all</button>
+      </div>
+      <div class="shop-group-section" data-group-id="purchased">
+        ${done.map(i => shopCard(i)).join('')}
+      </div>`;
+  }
+
+  el.innerHTML = html;
+}
+
+function shopGroupSection(groupId, title, items) {
+  const emptyNote = (groupId === 'default' && items.length === 0)
+    ? '<div class="empty" style="padding:16px"><p>All done! 🎉</p></div>'
+    : '';
+  return `
+    <div class="list-label shop-group-label" data-group-id="${groupId}">${esc(title)}</div>
+    <div class="shop-group-section" data-group-id="${groupId}">
+      ${items.map(i => shopCard(i)).join('')}
+      ${emptyNote}
+    </div>`;
 }
 
 function shopCard(i) {
   const catStr = i.cat ? `${esc(i.cat)} · ` : '';
   return `
-  <div class="item-card${i.completed ? ' done' : ''}">
+  <div class="item-card${i.completed ? ' done' : ''}" data-item-id="${i.id}">
     <div class="checkbox${i.completed ? ' checked' : ''}" onclick="toggleShop('${i.id}',${i.completed})"></div>
     <div class="item-body">
       <div class="item-title">${esc(i.name)}</div>
@@ -593,6 +669,118 @@ function shopCard(i) {
     </div>
     <button class="del-btn" onclick="delShop('${i.id}')">✕</button>
   </div>`;
+}
+
+// ── Shopping drag-to-regroup (long-press item, drag to another group) ──
+// Also handles long-press on a group title to open its rename/delete menu.
+let _shopDragState = null;
+let _shopGroupPressState = null;
+
+function initShopDragDelegation() {
+  const container = document.getElementById('shopping-list');
+  if (!container || container.dataset.dragWired) return;
+  container.dataset.dragWired = '1';
+
+  container.addEventListener('touchstart', (e) => {
+    const card = e.target.closest('.item-card');
+    if (!card) return;
+    const itemId = card.dataset.itemId;
+    if (!itemId) return;
+    const touch = e.touches[0];
+    _shopDragState = {
+      itemId, card,
+      startX: touch.clientX, startY: touch.clientY,
+      longPressFired: false,
+      timer: setTimeout(() => startShopItemDrag(touch), 500)
+    };
+  }, { passive: true });
+
+  container.addEventListener('touchmove', (e) => {
+    if (!_shopDragState) return;
+    if (!_shopDragState.longPressFired) {
+      const touch = e.touches[0];
+      const dx = Math.abs(touch.clientX - _shopDragState.startX);
+      const dy = Math.abs(touch.clientY - _shopDragState.startY);
+      if (dx > 10 || dy > 10) { clearTimeout(_shopDragState.timer); _shopDragState = null; }
+      return;
+    }
+    e.preventDefault();
+    moveShopItemDrag(e.touches[0]);
+  }, { passive: false });
+
+  container.addEventListener('touchend', (e) => {
+    if (!_shopDragState) return;
+    clearTimeout(_shopDragState.timer);
+    if (_shopDragState.longPressFired) endShopItemDrag(e.changedTouches[0]);
+    _shopDragState = null;
+  });
+
+  // Group title long-press → rename/delete menu (default "To get" and "Purchased" aren't editable)
+  container.addEventListener('touchstart', (e) => {
+    const label = e.target.closest('.shop-group-label');
+    if (!label) return;
+    const groupId = label.dataset.groupId;
+    if (groupId === 'default' || groupId === 'purchased') return;
+    _shopGroupPressState = {
+      timer: setTimeout(() => {
+        _currentShopGroupId = groupId;
+        openShopGroupMenu();
+        _shopGroupPressState = null;
+      }, 500)
+    };
+  }, { passive: true });
+  container.addEventListener('touchend', () => {
+    if (_shopGroupPressState) { clearTimeout(_shopGroupPressState.timer); _shopGroupPressState = null; }
+  });
+  container.addEventListener('touchmove', () => {
+    if (_shopGroupPressState) { clearTimeout(_shopGroupPressState.timer); _shopGroupPressState = null; }
+  });
+}
+
+function startShopItemDrag(touch) {
+  if (!_shopDragState) return;
+  _shopDragState.longPressFired = true;
+  const card = _shopDragState.card;
+  card.classList.add('shop-dragging');
+  const rect = card.getBoundingClientRect();
+  const clone = card.cloneNode(true);
+  clone.style.cssText = `
+    position:fixed; top:${rect.top}px; left:${rect.left}px;
+    width:${rect.width}px; pointer-events:none; z-index:9999;
+    opacity:0.9; box-shadow:0 8px 24px rgba(0,0,0,0.25);
+  `;
+  document.body.appendChild(clone);
+  _shopDragState.clone = clone;
+  _shopDragState.offX = touch.clientX - rect.left;
+  _shopDragState.offY = touch.clientY - rect.top;
+}
+
+function moveShopItemDrag(touch) {
+  if (!_shopDragState || !_shopDragState.clone) return;
+  _shopDragState.clone.style.top  = (touch.clientY - _shopDragState.offY) + 'px';
+  _shopDragState.clone.style.left = (touch.clientX - _shopDragState.offX) + 'px';
+  document.querySelectorAll('.shop-group-section').forEach(s => s.classList.remove('drag-over-target'));
+  _shopDragState.clone.style.display = 'none';
+  const el = document.elementFromPoint(touch.clientX, touch.clientY);
+  _shopDragState.clone.style.display = '';
+  const target = el && el.closest('.shop-group-section');
+  if (target) target.classList.add('drag-over-target');
+}
+
+function endShopItemDrag(touch) {
+  const state = _shopDragState;
+  if (state.clone) state.clone.remove();
+  if (state.card) state.card.classList.remove('shop-dragging');
+  document.querySelectorAll('.shop-group-section').forEach(s => s.classList.remove('drag-over-target'));
+  const el = document.elementFromPoint(touch.clientX, touch.clientY);
+  const target = el && el.closest('.shop-group-section');
+  if (target) {
+    const targetGroupId = target.dataset.groupId;
+    if (targetGroupId !== 'purchased') {
+      const newGroupId = targetGroupId === 'default' ? null : targetGroupId;
+      db.collection('shopping').doc(state.itemId).update({ groupId: newGroupId });
+    }
+  }
 }
 
 // ── To-Do ────────────────────────────────────────────────────────
