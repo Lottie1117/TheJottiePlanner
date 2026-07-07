@@ -143,6 +143,8 @@ function openBottomSheet(section) {
   }
   // For notes: render context-aware item form after template is inserted
   if (section === 'lists') renderNoteItemForm();
+  // For shopping: render Quick Add suggestion pills
+  if (section === 'shopping') renderShopQuickAdd();
   // For glimmers: reset tags, render preset buttons, wire image input
   if (section === 'glimmers') {
     resetTagInput('glimmer');
@@ -531,15 +533,23 @@ function addShopItem() {
   const nameEl = document.getElementById('sh-name');
   const name = nameEl.value.trim();
   if (!name) return;
-  if (!db) return;
-  db.collection('shopping').add({
+  addShopItemByName(name).then(() => {
+    nameEl.value = '';
+    nameEl.focus();
+  });
+}
+
+// Shared by the typed "Add to List" flow and Quick Add pill taps, so
+// frequency tracking always happens in exactly one place.
+function addShopItemByName(name) {
+  if (!db || !name) return Promise.resolve();
+  bumpShopFrequency(name);
+  return db.collection('shopping').add({
     name, completed: false, groupId: null, order: Date.now(),
     addedBy: me,
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   }).then(() => {
     sendShoppingNotification(name);
-    nameEl.value = '';
-    nameEl.focus();
   });
 }
 
@@ -548,6 +558,29 @@ function delShop(id)          { db.collection('shopping').doc(id).delete(); }
 function clearDoneShop() {
   db.collection('shopping').where('completed','==',true).get()
     .then(s => s.docs.forEach(d => d.ref.delete()));
+}
+
+// ── Shopping item frequency (backs Quick Add suggestions) ──────────
+// Smallest possible tracking: one doc per item name (lowercased key),
+// incremented every time that name is added, however it was added.
+let _shopFrequencyData = [];
+
+function bumpShopFrequency(name) {
+  const key = name.trim().toLowerCase();
+  if (!key || !db) return;
+  db.collection('shoppingFrequency').doc(key).set({
+    name: name.trim(),
+    count: firebase.firestore.FieldValue.increment(1),
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
+}
+
+function listenShopFrequency() {
+  if (!db) return;
+  db.collection('shoppingFrequency').orderBy('count', 'desc').limit(50)
+    .onSnapshot(snap => {
+      _shopFrequencyData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    });
 }
 
 // ── Shopping groups (shared cloud-stored groupings, e.g. "Costco", "Butcher") ──
@@ -607,6 +640,7 @@ function shopGroupMenuDelete() {
 function listenShopping() {
   initShopDragDelegation();
   listenShopGroups();
+  listenShopFrequency();
   db.collection('shopping').orderBy('createdAt','asc')
     .onSnapshot(snap => {
       _shopData = snap.docs.map(d => ({id:d.id,...d.data()}));
@@ -671,6 +705,72 @@ function shopCard(i) {
     </div>
     <button class="del-btn" onclick="delShop('${i.id}')">✕</button>
   </div>`;
+}
+
+// ── Shopping Quick Add (suggested pills in the Add Item form) ──────
+let _shopQuickAddExpanded = false;
+const SHOP_QUICKADD_COLLAPSED_MAX = 8;
+
+// Frequency-sorted items that aren't already active on the list.
+function getShopSuggestions() {
+  const activeNames = new Set(
+    (_shopData || []).filter(i => !i.completed).map(i => i.name.trim().toLowerCase())
+  );
+  return _shopFrequencyData
+    .filter(f => !activeNames.has(f.id))
+    .sort((a, b) => (b.count || 0) - (a.count || 0));
+}
+
+function renderShopQuickAdd() {
+  const wrap = document.getElementById('sh-quickadd-wrap');
+  if (!wrap) return;
+  _shopQuickAddExpanded = false;
+  wrap.addEventListener('click', shopQuickAddClick);
+  renderShopQuickAddContent();
+}
+
+function renderShopQuickAddContent() {
+  const wrap = document.getElementById('sh-quickadd-wrap');
+  if (!wrap) return;
+  const suggestions = getShopSuggestions();
+  if (!suggestions.length) {
+    wrap.style.display = 'none';
+    wrap.innerHTML = '';
+    return;
+  }
+  wrap.style.display = 'block';
+  const shown = _shopQuickAddExpanded ? suggestions : suggestions.slice(0, SHOP_QUICKADD_COLLAPSED_MAX);
+  const pills = shown.map(s =>
+    `<button type="button" class="shop-quickadd-pill tag-preset-btn" data-name="${esc(s.name)}">${esc(s.name)}</button>`
+  ).join('');
+  const viewAllBtn = suggestions.length > SHOP_QUICKADD_COLLAPSED_MAX
+    ? `<button type="button" class="shop-quickadd-viewall search-everywhere-link">${_shopQuickAddExpanded ? 'Show less' : 'View all'}</button>`
+    : '';
+  wrap.innerHTML = `
+    <div class="tag-preset-label">Quick Add</div>
+    <div class="shop-quickadd-pills tag-presets">${pills}</div>
+    ${viewAllBtn}`;
+}
+
+function shopQuickAddClick(e) {
+  const pill = e.target.closest('.shop-quickadd-pill');
+  if (pill) { quickAddShopItem(pill); return; }
+  if (e.target.closest('.shop-quickadd-viewall')) toggleShopQuickAddExpand();
+}
+
+function toggleShopQuickAddExpand() {
+  _shopQuickAddExpanded = !_shopQuickAddExpanded;
+  renderShopQuickAddContent();
+}
+
+// Adds instantly, shrinks the pill away, and leaves the rest of the
+// list (and the form) untouched so the user can keep tapping.
+function quickAddShopItem(pillEl) {
+  const name = pillEl.dataset.name;
+  if (!name) return;
+  addShopItemByName(name);
+  pillEl.classList.add('shop-quickadd-pill--removing');
+  setTimeout(() => pillEl.remove(), 220);
 }
 
 // ── Shopping drag-to-regroup (long-press item, drag to another group) ──

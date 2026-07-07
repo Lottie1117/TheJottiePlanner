@@ -2295,6 +2295,35 @@
   vertical-align: middle;
 }
 
+/* ── Shopping Quick Add (reuses .tag-preset-btn / .tag-presets / .search-everywhere-link) ── */
+.shop-quickadd-pill {
+  max-width: 200px;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: max-width 0.22s ease, opacity 0.22s ease, padding 0.22s ease,
+              margin 0.22s ease, border-width 0.22s ease, transform 0.15s ease;
+}
+.shop-quickadd-pill:active {
+  color: var(--primary);
+  background: var(--primary-light);
+  border-color: var(--primary);
+  transform: scale(0.95);
+}
+.shop-quickadd-pill--removing {
+  max-width: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  margin: 0 !important;
+  border-width: 0 !important;
+  opacity: 0 !important;
+}
+.shop-quickadd-viewall {
+  background: none;
+  border: none;
+  font: inherit;
+  padding: 0;
+}
+
 /* ── Shopping Groups ──────────────────────────────────────────────── */
 .shop-header-row {
   display: flex;
