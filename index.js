@@ -618,11 +618,30 @@ let _shopGroupsData = [];
 
 function listenShopGroups() {
   if (!db) return;
-  db.collection('shoppingGroups').orderBy('createdAt', 'asc')
-    .onSnapshot(snap => {
-      _shopGroupsData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      renderShoppingList();
-    });
+  ensureDefaultShopGroups().finally(() => {
+    db.collection('shoppingGroups').orderBy('createdAt', 'asc')
+      .onSnapshot(snap => {
+        _shopGroupsData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderShoppingList();
+      });
+  });
+}
+
+// "To get" and "Purchased" are stored as reserved docs (fixed IDs) in the
+// same shoppingGroups collection as custom groups, so renaming them reuses
+// all the existing group-rename logic. They just can't be deleted.
+async function ensureDefaultShopGroups() {
+  if (!db) return;
+  const defaults = [{ id: 'default', title: 'To get' }, { id: 'purchased', title: 'Purchased' }];
+  for (const d of defaults) {
+    const doc = await db.collection('shoppingGroups').doc(d.id).get();
+    if (!doc.exists) {
+      await db.collection('shoppingGroups').doc(d.id).set({
+        title: d.title, reserved: true,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+  }
 }
 
 function createShopGroup() {
@@ -637,6 +656,9 @@ function createShopGroup() {
 let _currentShopGroupId = null;
 
 function openShopGroupMenu() {
+  const isReserved = (_currentShopGroupId === 'default' || _currentShopGroupId === 'purchased');
+  const delBtn = document.querySelector('#shop-group-menu .note-menu-danger');
+  if (delBtn) delBtn.style.display = isReserved ? 'none' : '';
   document.getElementById('shop-group-menu-overlay').classList.add('open');
   document.getElementById('shop-group-menu').classList.add('open');
 }
@@ -655,7 +677,7 @@ function shopGroupMenuRename() {
 }
 function shopGroupMenuDelete() {
   closeShopGroupMenu();
-  if (!_currentShopGroupId) return;
+  if (!_currentShopGroupId || _currentShopGroupId === 'default' || _currentShopGroupId === 'purchased') return;
   if (!confirm('Delete this group? Its items will move back to "To get".')) return;
   const groupId = _currentShopGroupId;
   db.collection('shopping').where('groupId', '==', groupId).get().then(snap => {
@@ -691,17 +713,19 @@ function renderShoppingList() {
   const done   = items.filter(i =>  i.completed);
 
   const byOrder = (a, b) => (a.order || 0) - (b.order || 0);
+  const groupTitle = (id, fallback) => (_shopGroupsData.find(g => g.id === id) || {}).title || fallback;
+  const customGroups = _shopGroupsData.filter(g => g.id !== 'default' && g.id !== 'purchased');
 
   let html = '';
-  html += shopGroupSection('default', 'To get', active.filter(i => !i.groupId).sort(byOrder));
-  _shopGroupsData.forEach(g => {
+  html += shopGroupSection('default', groupTitle('default', 'To get'), active.filter(i => !i.groupId).sort(byOrder));
+  customGroups.forEach(g => {
     html += shopGroupSection(g.id, g.title, active.filter(i => i.groupId === g.id).sort(byOrder));
   });
 
   if (done.length > 0) {
     html += `
       <div class="row-space" style="margin-top:14px">
-        <div class="list-label" style="margin:0;opacity:0.6">Purchased (${done.length})</div>
+        <div class="list-label shop-group-label" style="margin:0;opacity:0.6" data-group-id="purchased">${esc(groupTitle('purchased', 'Purchased'))} (${done.length})</div>
         <button class="clear-btn" onclick="clearDoneShop()">Clear all</button>
       </div>
       <div class="shop-group-section" data-group-id="purchased">
@@ -731,7 +755,7 @@ function shopCard(i) {
     <div class="checkbox${i.completed ? ' checked' : ''}" onclick="toggleShop('${i.id}',${i.completed})"></div>
     <div class="item-body">
       <div class="item-title">${esc(i.name)}</div>
-      <div class="item-meta">${catStr}${badge(i.addedBy)}</div>
+      ${catStr ? `<div class="item-meta">${catStr}</div>` : ''}
     </div>
     <button class="del-btn" onclick="delShop('${i.id}')">✕</button>
   </div>`;
@@ -852,7 +876,6 @@ function initShopDragDelegation() {
     const label = e.target.closest('.shop-group-label');
     if (!label) return;
     const groupId = label.dataset.groupId;
-    if (groupId === 'default' || groupId === 'purchased') return;
     _shopGroupPressState = {
       timer: setTimeout(() => {
         _currentShopGroupId = groupId;

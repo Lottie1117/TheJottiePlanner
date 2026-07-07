@@ -2349,10 +2349,15 @@
   display: inline-block;
 }
 .shop-group-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
   border-radius: 14px;
   min-height: 48px;
   transition: background 0.15s;
 }
+.shop-group-section .item-card { margin-bottom: 0; }
+.shop-group-section .shop-group-empty { grid-column: 1 / -1; }
 .shop-group-section.drag-over-target {
   background: var(--primary-light);
   outline: 2px dashed var(--primary);
