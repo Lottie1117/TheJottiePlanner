@@ -533,7 +533,7 @@ function addShopItem() {
   if (!name) return;
   if (!db) return;
   db.collection('shopping').add({
-    name, completed: false, groupId: null,
+    name, completed: false, groupId: null, order: Date.now(),
     addedBy: me,
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   }).then(() => {
@@ -626,10 +626,12 @@ function renderShoppingList() {
   const active = items.filter(i => !i.completed);
   const done   = items.filter(i =>  i.completed);
 
+  const byOrder = (a, b) => (a.order || 0) - (b.order || 0);
+
   let html = '';
-  html += shopGroupSection('default', 'To get', active.filter(i => !i.groupId));
+  html += shopGroupSection('default', 'To get', active.filter(i => !i.groupId).sort(byOrder));
   _shopGroupsData.forEach(g => {
-    html += shopGroupSection(g.id, g.title, active.filter(i => i.groupId === g.id));
+    html += shopGroupSection(g.id, g.title, active.filter(i => i.groupId === g.id).sort(byOrder));
   });
 
   if (done.length > 0) {
@@ -647,8 +649,8 @@ function renderShoppingList() {
 }
 
 function shopGroupSection(groupId, title, items) {
-  const emptyNote = (groupId === 'default' && items.length === 0)
-    ? '<div class="empty" style="padding:16px"><p>All done! 🎉</p></div>'
+  const emptyNote = items.length === 0
+    ? `<div class="empty shop-group-empty" style="padding:16px"><p>${groupId === 'default' ? 'All done! 🎉' : 'Drag items here'}</p></div>`
     : '';
   return `
     <div class="list-label shop-group-label" data-group-id="${groupId}">${esc(title)}</div>
@@ -760,11 +762,27 @@ function moveShopItemDrag(touch) {
   _shopDragState.clone.style.top  = (touch.clientY - _shopDragState.offY) + 'px';
   _shopDragState.clone.style.left = (touch.clientX - _shopDragState.offX) + 'px';
   document.querySelectorAll('.shop-group-section').forEach(s => s.classList.remove('drag-over-target'));
+  document.querySelectorAll('.item-card').forEach(c => c.classList.remove('shop-drop-before', 'shop-drop-after'));
   _shopDragState.clone.style.display = 'none';
   const el = document.elementFromPoint(touch.clientX, touch.clientY);
   _shopDragState.clone.style.display = '';
-  const target = el && el.closest('.shop-group-section');
-  if (target) target.classList.add('drag-over-target');
+  const section = el && el.closest('.shop-group-section');
+  if (!section) { _shopDragState.dropTarget = null; return; }
+  section.classList.add('drag-over-target');
+
+  const hoverCard = el.closest('.item-card');
+  if (hoverCard && hoverCard.dataset.itemId !== _shopDragState.itemId) {
+    const rect = hoverCard.getBoundingClientRect();
+    const before = touch.clientY < rect.top + rect.height / 2;
+    hoverCard.classList.add(before ? 'shop-drop-before' : 'shop-drop-after');
+    _shopDragState.dropTarget = {
+      groupId: section.dataset.groupId,
+      beforeItemId: before ? hoverCard.dataset.itemId : null,
+      afterItemId: before ? null : hoverCard.dataset.itemId
+    };
+  } else {
+    _shopDragState.dropTarget = { groupId: section.dataset.groupId, beforeItemId: null, afterItemId: null };
+  }
 }
 
 function endShopItemDrag(touch) {
@@ -772,15 +790,35 @@ function endShopItemDrag(touch) {
   if (state.clone) state.clone.remove();
   if (state.card) state.card.classList.remove('shop-dragging');
   document.querySelectorAll('.shop-group-section').forEach(s => s.classList.remove('drag-over-target'));
-  const el = document.elementFromPoint(touch.clientX, touch.clientY);
-  const target = el && el.closest('.shop-group-section');
-  if (target) {
-    const targetGroupId = target.dataset.groupId;
-    if (targetGroupId !== 'purchased') {
-      const newGroupId = targetGroupId === 'default' ? null : targetGroupId;
-      db.collection('shopping').doc(state.itemId).update({ groupId: newGroupId });
-    }
+  document.querySelectorAll('.item-card').forEach(c => c.classList.remove('shop-drop-before', 'shop-drop-after'));
+
+  const target = state.dropTarget;
+  if (!target || target.groupId === 'purchased') return;
+
+  const newGroupId = target.groupId === 'default' ? null : target.groupId;
+
+  // Work out the new manual order relative to neighbouring items in the destination group
+  const groupItems = (_shopData || [])
+    .filter(i => !i.completed && i.id !== state.itemId && (i.groupId || null) === newGroupId)
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+  let newOrder;
+  if (target.beforeItemId) {
+    const idx = groupItems.findIndex(i => i.id === target.beforeItemId);
+    const prev = groupItems[idx - 1];
+    const next = groupItems[idx];
+    newOrder = prev ? ((prev.order || 0) + (next.order || 0)) / 2 : (next.order || 0) - 1000;
+  } else if (target.afterItemId) {
+    const idx = groupItems.findIndex(i => i.id === target.afterItemId);
+    const prev = groupItems[idx];
+    const next = groupItems[idx + 1];
+    newOrder = next ? ((prev.order || 0) + (next.order || 0)) / 2 : (prev.order || 0) + 1000;
+  } else {
+    const last = groupItems[groupItems.length - 1];
+    newOrder = last ? (last.order || 0) + 1000 : Date.now();
   }
+
+  db.collection('shopping').doc(state.itemId).update({ groupId: newGroupId, order: newOrder });
 }
 
 // ── To-Do ────────────────────────────────────────────────────────
