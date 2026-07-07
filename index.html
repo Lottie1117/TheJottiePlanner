@@ -592,18 +592,8 @@
 </template>
 
 <template id="bs-tpl-shopping">
-  <div class="row">
-    <input type="text" id="sh-name" placeholder="Item name" style="flex:2">
-    <select id="sh-cat" style="flex:1" onchange="handleShopSelect(this)">
-      <option value="">Shop</option>
-      <option>🟠 Aldi</option>
-      <option>🔵 Tesco</option>
-      <option>🟠 Sainsbury's</option>
-      <option value="__other__">+ Other…</option>
-    </select>
-  </div>
-  <input type="text" id="sh-cat-custom" placeholder="Shop name" style="display:none;margin-bottom:9px">
-  <button class="btn-primary" onclick="addShopItem();closeBottomSheet()">Add to List</button>
+  <input type="text" id="sh-name" placeholder="Item name">
+  <button class="btn-primary" onclick="addShopItem()">Add to List</button>
 </template>
 
 <template id="bs-tpl-calendar">

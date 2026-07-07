@@ -528,21 +528,18 @@ function evCard(ev, isPast) {
 
 // ── Shopping ─────────────────────────────────────────────────────
 function addShopItem() {
-  const name   = document.getElementById('sh-name').value.trim();
-  const catSel = document.getElementById('sh-cat').value;
-  const cat    = catSel === '__other__' ? document.getElementById('sh-cat-custom').value.trim() : catSel;
+  const nameEl = document.getElementById('sh-name');
+  const name = nameEl.value.trim();
   if (!name) return;
   if (!db) return;
   db.collection('shopping').add({
-    name, cat, completed: false,
+    name, completed: false,
     addedBy: me,
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   }).then(() => {
     sendShoppingNotification(name);
-    document.getElementById('sh-name').value = '';
-    document.getElementById('sh-cat').value  = '';
-    document.getElementById('sh-cat-custom').value = '';
-    document.getElementById('sh-cat-custom').style.display = 'none';
+    nameEl.value = '';
+    nameEl.focus();
   });
 }
 
@@ -576,7 +573,7 @@ function listenShopping() {
       if (done.length > 0) {
         html += `
           <div class="row-space" style="margin-top:14px">
-            <div class="list-label" style="margin:0;opacity:0.6">In basket (${done.length})</div>
+            <div class="list-label" style="margin:0;opacity:0.6">Purchased (${done.length})</div>
             <button class="clear-btn" onclick="clearDoneShop()">Clear all</button>
           </div>`;
         done.forEach(i => { html += shopCard(i); });
@@ -592,7 +589,7 @@ function shopCard(i) {
     <div class="checkbox${i.completed ? ' checked' : ''}" onclick="toggleShop('${i.id}',${i.completed})"></div>
     <div class="item-body">
       <div class="item-title">${esc(i.name)}</div>
-      <div class="item-meta">${catStr}${badge(i.addedBy)} · ${ago(i.createdAt)}</div>
+      <div class="item-meta">${catStr}${badge(i.addedBy)}</div>
     </div>
     <button class="del-btn" onclick="delShop('${i.id}')">✕</button>
   </div>`;
@@ -1609,14 +1606,6 @@ function markAllNotifsRead() {
     batch.update(db.collection('notifications').doc(n.id), { read: true });
   });
   batch.commit().catch(e => console.warn('markAllRead:', e));
-}
-
-
-// ── Shop selector ────────────────────────────────────────────────
-function handleShopSelect(sel) {
-  const c = document.getElementById('sh-cat-custom');
-  c.style.display = sel.value === '__other__' ? 'block' : 'none';
-  if (sel.value === '__other__') c.focus();
 }
 
 // ── Lists Hub ─────────────────────────────────────────────────────
