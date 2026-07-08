@@ -256,12 +256,11 @@
       <div class="dash-hdr">
         <div class="dash-hdr-title dash-hdr-title-luna">
           <img class="dash-luna-face" src="images/lunaface.png" alt="Luna">
-          <span id="dash-luna-title-text">Luna</span>
+          <span id="dash-luna-title-text">Luna's routine</span>
         </div>
-        <span class="dash-count" id="dash-luna-count">-</span>
+        <span class="dash-count dash-count-link" id="dash-luna-count" onclick="navTo('luna'); event.stopPropagation()">-</span>
       </div>
       <div id="dash-luna-summary"><div class="dash-empty">Loading…</div></div>
-      <a class="view-all" onclick="navTo('luna')">View Luna's day →</a>
     </div>
   </template>
   <template id="widget-tpl-thinking">

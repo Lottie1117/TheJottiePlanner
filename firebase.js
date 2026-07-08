@@ -120,7 +120,7 @@ function renderToday() {
         `<div class="dash-row">${esc(i.name)}</div>`
       ).join('');
 
-  // ── Luna (dashboard) ─────────────────────────────────────────────
+  // ── Luna (dashboard routine card) ─────────────────────────────────
   const lunaCountEl = document.getElementById('dash-luna-count');
   const lunaSummaryEl = document.getElementById('dash-luna-summary');
   if (lunaSummaryEl) {
@@ -128,13 +128,22 @@ function renderToday() {
       const items = lunaMergedItems();
       const total = items.length;
       const doneCount = items.filter(i => i.done).length;
-      const lunaLimit = sizeOf('luna') === 'full' ? total : 1;
       const _p = (typeof SETTINGS !== 'undefined' && SETTINGS.petName) || 'Luna';
-      if (lunaCountEl) lunaCountEl.textContent = `${doneCount}/${total}`;
-      const pending = items.filter(i => !i.done).slice(0, lunaLimit);
-      lunaSummaryEl.innerHTML = pending.length
-        ? pending.map(it => `<div class="dash-row">Next: ${esc(it.title)} · ${lunaFmtSchedTime(it.time)}</div>`).join('')
-        : `<div class="dash-empty">${esc(_p)}'s all set for today! 🐾</div>`;
+      if (lunaCountEl) lunaCountEl.textContent = `${doneCount}/${total} done`;
+      // A tap animation may be mid-flight on the row — leave the DOM alone
+      // and let the Firestore write at the end of it trigger the real render.
+      if (typeof _lunaDashAnimating === 'undefined' || _lunaDashAnimating.size === 0) {
+        if (doneCount === total) {
+          lunaSummaryEl.innerHTML = `<div class="luna-dash-alldone">🎉 ${esc(_p)}'s all set for today</div>`;
+        } else {
+          const pending = items.filter(i => !i.done);
+          lunaSummaryEl.innerHTML = `<div class="luna-dash-scroll">` + pending.map(it => `
+            <div class="luna-dash-step" onclick="lunaDashToggleStep('${it.id}', this)">
+              <div class="luna-dash-step-circle">${it.icon}</div>
+              <div class="luna-dash-step-label">${esc(it.title)}</div>
+            </div>`).join('') + `</div>`;
+        }
+      }
     } else {
       lunaSummaryEl.innerHTML = '<div class="dash-empty">Loading…</div>';
     }

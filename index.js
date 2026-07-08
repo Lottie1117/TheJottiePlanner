@@ -30,7 +30,7 @@ function applySettings() {
 
   // Dashboard Luna card title (keep the face image, just rename the text)
   const lunaDashTitle = document.getElementById('dash-luna-title-text');
-  if (lunaDashTitle) lunaDashTitle.textContent = pet;
+  if (lunaDashTitle) lunaDashTitle.textContent = `${pet}'s routine`;
 
   // Option labels in bottom sheet templates (value attributes stay as-is for Firestore)
   document.querySelectorAll('option[value="Lottie"]').forEach(o => { o.textContent = `👩 ${u1}`; });
@@ -1487,6 +1487,22 @@ function listenLunaRoutine() {
     renderLunaRoutine();
     renderToday();
   });
+  // The doc only refreshes for a new day when *some* client writes to it —
+  // if the app is just left open on the dashboard overnight nothing triggers
+  // that write. Poll every 30s so the dashboard card resets itself right
+  // after midnight without needing a manual tick/untick elsewhere first.
+  if (!window._lunaRolloverInterval) {
+    window._lunaRolloverInterval = setInterval(() => {
+      if (_lunaRoutine && _lunaRoutine.dateKey !== lunaDateKey()) {
+        db.collection('luna-routine').doc('current').set({
+          dateKey: lunaDateKey(),
+          items: lunaDefaultItemsMap(),
+          treats: 0,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      }
+    }, 30000);
+  }
 }
 
 function lunaToggleItem(id) {
@@ -1519,6 +1535,27 @@ function lunaRemoveTreat() {
 function lunaMergedItems() {
   if (!_lunaRoutine) return [];
   return LUNA_ROUTINE_DEFS.map(d => ({ ...d, ...(_lunaRoutine.items[d.id] || { done: false, by: null, at: null }) }));
+}
+
+// ── Luna dashboard card — tap-to-complete animation ─────────────────
+// Steps that are mid-animation are tracked here so a Firestore snapshot
+// landing mid-flight doesn't wipe the animation out from under it
+// (renderToday's Luna block checks this set before rebuilding the row).
+const _lunaDashAnimating = new Set();
+
+function lunaDashToggleStep(id, el) {
+  if (_lunaDashAnimating.has(id) || !el) return;
+  _lunaDashAnimating.add(id);
+  el.classList.add('luna-dash-step-done');
+  const circle = el.querySelector('.luna-dash-step-circle');
+  if (circle) circle.textContent = '✓';
+  setTimeout(() => {
+    el.classList.add('luna-dash-step-leaving');
+    setTimeout(() => {
+      lunaToggleItem(id); // Firestore write → onSnapshot → renderToday rebuilds the row
+      _lunaDashAnimating.delete(id);
+    }, 300);
+  }, 650);
 }
 
 function renderLunaRoutine() {
