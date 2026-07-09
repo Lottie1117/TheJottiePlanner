@@ -2,9 +2,18 @@
    Calm, cosy, whimsical. No harsh borders, no bright reds, no
    flashing states — see /js/homeSweetHome/ for behaviour. */
 
+/* Lets the house sit low, just above the bottom nav, leaving open
+   space above it for future status content (freshness, season, etc). */
+#home-section.active {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100dvh - 130px);
+}
+
 .hsh-house-view {
   display: flex;
   justify-content: center;
+  margin-top: auto;
   padding: 8px 0 24px;
 }
 
