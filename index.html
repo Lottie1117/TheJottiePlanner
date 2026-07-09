@@ -20,6 +20,7 @@
 
   <script src="settings.js"></script>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles/homeSweetHome.css">
 
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
   
@@ -223,6 +224,10 @@
       <span class="tile-icon">😊</span>
       <span class="tile-label">Mood</span>
     </div>
+    <div class="drawer-tile" data-section="home" onclick="navTo('home'); closeDrawer()">
+      <span class="tile-icon">🏡</span>
+      <span class="tile-label">Home Sweet Home</span>
+    </div>
     <div class="drawer-tile" id="dev-settings-tile" style="display:none" onclick="navTo('dev-settings'); closeDrawer()">
       <span class="tile-icon">🧪</span>
       <span class="tile-label">Dev Settings</span>
@@ -415,6 +420,18 @@
 <!-- ── Mood Tracker ───────────────────────────────────────────────── -->
 <div id="mood-section" class="section">
   <div id="mood-calendar" class="mood-calendar"></div>
+</div>
+
+<!-- ── Home Sweet Home ──────────────────────────────────────────────
+     House → Hotspots → Room Data → Room Pages (see /js/homeSweetHome/) -->
+<div id="home-section" class="section">
+  <div id="hsh-house-view" class="hsh-house-view">
+    <div class="hsh-house-wrap">
+      <img src="images/fullhouse.png" alt="An illustrated three-storey doll's house. Tap a room to open its routine." class="hsh-house-img" id="hsh-house-img">
+      <div class="hsh-hotspot-layer" id="hsh-hotspot-layer"></div>
+    </div>
+  </div>
+  <div id="hsh-room-view" class="hsh-room-view" style="display:none"></div>
 </div>
 
 <!-- ── Glimmers ──────────────────────────────────────────────────── -->
@@ -786,6 +803,13 @@
 
 <script src="firebase.js"></script>
 <script src="index.js"></script>
+
+<!-- Home Sweet Home (order matters: config → state → UI helpers → entry) -->
+<script src="js/homeSweetHome/roomConfig.js"></script>
+<script src="js/homeSweetHome/homeState.js"></script>
+<script src="js/homeSweetHome/hotspotManager.js"></script>
+<script src="js/homeSweetHome/roomPage.js"></script>
+<script src="js/homeSweetHome/homeSweetHome.js"></script>
 
 <!-- Image Lightbox -->
 <div id="glimmer-lightbox" role="dialog" aria-modal="true" aria-label="Photo viewer">

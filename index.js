@@ -324,7 +324,7 @@ function navTo(sec, navItemEl) {
 
   // update header section title
   const _petName = (typeof SETTINGS !== 'undefined' && SETTINGS.petName) || 'Luna';
-  const sectionNames = {"today":"Today","calendar":"Plans","shopping":"Shopping","todos":"To-Do","lists":"Notes","birthdays":"Birthdays","mood":"Mood","glimmers":"Glimmers","luna":`${_petName} 🐾`,"dev-settings":"🧪 Dev Settings"};
+  const sectionNames = {"today":"Today","calendar":"Plans","shopping":"Shopping","todos":"To-Do","lists":"Notes","birthdays":"Birthdays","mood":"Mood","glimmers":"Glimmers","luna":`${_petName} 🐾`,"home":"🏡 Home Sweet Home","dev-settings":"🧪 Dev Settings"};
   const titleEl = document.getElementById('section-title');
   if (titleEl) titleEl.textContent = sectionNames[sec] || '';
   // Toggle greeting (today) vs section title (all others)
@@ -350,6 +350,9 @@ function navTo(sec, navItemEl) {
   if (sec === 'birthdays') renderBirthdaysDash();
   if (sec === 'mood') listenMood();
   if (sec === 'glimmer-detail') return; // handled by openGlimmerDetail directly
+  if (sec === 'home') {
+    if (typeof initHomeSweetHome === 'function') initHomeSweetHome();
+  }
   if (sec === 'glimmers') {
     if (typeof initGlimmerSection === 'function') initGlimmerSection();
     if (typeof loadGlimmersList === 'function') loadGlimmersList();
