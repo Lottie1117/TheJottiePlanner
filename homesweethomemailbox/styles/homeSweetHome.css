@@ -1,0 +1,473 @@
+/* ── Home Sweet Home ──────────────────────────────────────────────
+   Calm, cosy, whimsical. No harsh borders, no bright reds, no
+   flashing states — see /js/homeSweetHome/ for behaviour. */
+
+/* The home section is a full-bleed "sky" area: a soft gradient fills the
+   space between the app header and the bottom nav, with the house anchored
+   flush to the bottom and a calm caption centred in the space above it. */
+#home-section.active {
+  display: flex;
+  flex-direction: column;
+  padding: 0;                       /* override .section padding — go edge-to-edge */
+  min-height: calc(100dvh - 72px);  /* fill below the sticky header */
+}
+
+.hsh-house-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* New sky gradient, introduced for this screen (see design handoff). */
+  background: linear-gradient(180deg, #FFFFFF 0%, #EFF7FC 45%, #DCEBF6 78%, #DCEBF6 100%);
+  /* Reserve room for the fixed bottom nav so the grass meets its top edge. */
+  padding-bottom: calc(74px + env(safe-area-inset-bottom, 0px));
+}
+
+.hsh-caption {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px 32px;
+}
+
+.hsh-caption span {
+  font-size: 15px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+/* Anchor for the house image + mailbox. The image inside is oversized and
+   side-cropped so it runs edge-to-edge with no empty grass margins. */
+.hsh-house-stage {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+.hsh-house-scale {
+  position: relative;
+  width: 128%;
+  left: -11%;   /* optically centre the oversized image; sides crop away */
+}
+
+.hsh-house-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* Hotspots live inside the scaled box, so their percentage coordinates
+   still map exactly onto the illustration after the resize. */
+.hsh-hotspot-layer {
+  position: absolute;
+  inset: 0;
+}
+
+/* ── Mailbox ─────────────────────────────────────────────────────── */
+
+/* Soft pulsing "unread" glow behind the mailbox (hidden once all done). */
+.hsh-mailbox-glow {
+  position: absolute;
+  left: 64%;
+  bottom: 9%;
+  width: 74px;
+  height: 74px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(233,123,154,0.45) 0%, rgba(233,123,154,0) 70%);
+  animation: hsh-pulseGlow 2.8s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.hsh-mailbox-btn {
+  position: absolute;
+  left: 64%;
+  bottom: 9%;
+  transform: translate(-50%, 42%);  /* dip slightly below its anchor into the grass */
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 5;
+}
+
+.hsh-mailbox-emoji {
+  font-size: 52px;
+  line-height: 1;
+  filter: drop-shadow(0 3px 4px rgba(58,52,80,.25));
+  display: inline-block;
+  transition: transform 180ms ease;
+}
+
+.hsh-mailbox-btn:hover .hsh-mailbox-emoji,
+.hsh-mailbox-btn:focus-visible .hsh-mailbox-emoji {
+  transform: scale(1.06);
+}
+
+.hsh-mailbox-btn:active .hsh-mailbox-emoji { transform: scale(0.96); }
+.hsh-mailbox-btn:focus-visible { outline: none; }
+
+/* Grounding shadow beneath the mailbox, matching the illustration's pots. */
+.hsh-mailbox-shadow {
+  width: 38px;
+  height: 9px;
+  margin-top: -4px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(58,52,80,0.22) 0%, rgba(58,52,80,0) 75%);
+}
+
+/* ── House Notes panel (mailbox popover) ─────────────────────────── */
+
+.hsh-notes-modal {
+  position: fixed;
+  inset: 0;
+  max-width: 600px;
+  margin: 0 auto;   /* stay within the app's centred column */
+  z-index: 400;
+}
+
+.hsh-notes-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(40,34,58,0.44);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  animation: hsh-scrimIn .3s ease both;
+}
+
+.hsh-notes-card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 82%;
+  max-width: 300px;
+  box-sizing: border-box;
+  transform: translate(-50%, -50%);  /* base centring (used when animation is off) */
+  background: #FFFDF6;             /* warm paper white, not pure white */
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  box-shadow: 0 12px 26px -6px rgba(124,92,191,.5);
+  padding: 20px 20px 18px;
+  animation: hsh-letterRise .5s cubic-bezier(0.32,0.72,0,1) both;
+}
+
+.hsh-notes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.hsh-notes-title {
+  font-size: 16.5px;
+  font-weight: 800;
+  color: var(--primary);
+}
+
+.hsh-notes-close {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 50%;
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.hsh-notes-list {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hsh-note-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+}
+
+.hsh-note-check {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.hsh-note-check:hover { border-color: var(--primary); }
+
+.hsh-note-main { flex: 1; }
+
+.hsh-note-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.hsh-note-text {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 1px;
+}
+
+.hsh-note-ack {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent);
+  animation: hsh-sparkleIn .4s ease both;
+}
+
+.hsh-note-done {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  opacity: .55;
+  animation: hsh-settleIn .35s ease both;
+}
+
+.hsh-note-done-star { font-size: 15px; }
+.hsh-note-done-text { font-size: 13px; color: var(--text); }
+
+.hsh-note-alldone {
+  text-align: center;
+  padding: 10px 4px;
+  font-size: 13.5px;
+  color: var(--text);
+  line-height: 1.5;
+  animation: hsh-settleIn .4s ease both;
+}
+
+.hsh-notes-reassure {
+  font-size: 12px;
+  color: var(--muted);
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+/* ── Animations ──────────────────────────────────────────────────── */
+
+@keyframes hsh-pulseGlow {
+  0%, 100% { opacity: .5; transform: translate(-50%, -50%) scale(0.92); }
+  50%      { opacity: .9; transform: translate(-50%, -50%) scale(1.08); }
+}
+@keyframes hsh-letterRise {
+  from { opacity: 0; transform: translate(-50%, -46%) scale(0.85); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes hsh-scrimIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes hsh-sparkleIn {
+  0%   { opacity: 0; transform: scale(0.7); }
+  60%  { opacity: 1; transform: scale(1.08); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes hsh-settleIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hsh-mailbox-glow,
+  .hsh-notes-scrim,
+  .hsh-notes-card,
+  .hsh-note-ack,
+  .hsh-note-done,
+  .hsh-note-alldone {
+    animation: none !important;
+  }
+}
+
+.hsh-hotspot {
+  position: absolute;
+  background: rgba(124, 92, 191, 0);
+  border: 1.5px solid rgba(124, 92, 191, 0);
+  border-radius: 18px;
+  cursor: pointer;
+  padding: 0;
+  transition: background 180ms ease, border-color 180ms ease, transform 180ms ease, filter 180ms ease;
+}
+
+.hsh-hotspot:hover,
+.hsh-hotspot:focus-visible {
+  background: rgba(124, 92, 191, 0.10);
+  border-color: rgba(124, 92, 191, 0.28);
+  transform: scale(1.015);
+  filter: brightness(1.03);
+  outline: none;
+}
+
+.hsh-hotspot:active {
+  background: rgba(124, 92, 191, 0.16);
+  transform: scale(0.99);
+}
+
+/* ── Room Page ──────────────────────────────────────────────────── */
+
+.hsh-room-view {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 4px 4px 32px;
+}
+
+.hsh-room-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.hsh-back-btn {
+  border: none;
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 180ms ease;
+}
+
+.hsh-back-btn:hover { background: #e6ddf7; }
+
+.hsh-room-title {
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.hsh-freshness-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--card);
+  border-radius: 20px;
+  padding: 16px 18px;
+  box-shadow: var(--shadow);
+  margin-bottom: 20px;
+}
+
+.hsh-freshness-emoji { font-size: 28px; line-height: 1; }
+
+.hsh-freshness-label {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.hsh-freshness-sub {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.hsh-checklist-block { margin-bottom: 20px; }
+
+.hsh-checklist-heading {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 10px;
+  padding-left: 2px;
+}
+
+.hsh-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hsh-task {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--card);
+  border-radius: 16px;
+  padding: 13px 16px;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: background 180ms ease, opacity 180ms ease;
+}
+
+.hsh-task.checked { opacity: 0.6; }
+
+.hsh-task input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.hsh-task-check {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: var(--bg);
+  transition: background 180ms ease, border-color 180ms ease;
+  position: relative;
+}
+
+.hsh-task input:checked + .hsh-task-check {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.hsh-task input:checked + .hsh-task-check::after {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: 3px;
+  width: 5px;
+  height: 10px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.hsh-task-label {
+  font-size: 15px;
+  color: var(--text);
+}
+
+.hsh-complete-btn {
+  width: 100%;
+  border: none;
+  background: var(--primary);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 15px;
+  border-radius: 18px;
+  cursor: pointer;
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.hsh-complete-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.hsh-complete-btn:not(:disabled):hover {
+  transform: translateY(-1px);
+}
