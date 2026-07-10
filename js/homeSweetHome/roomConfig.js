@@ -113,6 +113,33 @@ const HSH_FRESHNESS_LEVELS = [
   { key: 'ready',   maxRatio: Infinity, label: 'Ready for a little reset',    emoji: '🍃' },
 ];
 
+// Emoji for each routine task label, keyed by the exact task string used in
+// HSH_TASK_TEMPLATES. Reuses the app-wide legend (🧺 declutter, 🧽 surfaces,
+// 🧹 floors); the rest are gentle, relevant icons for the room page tiles.
+const HSH_TASK_EMOJI = {
+  // core
+  'Declutter':      '🧺',
+  'Surfaces':       '🧽',
+  'Floors':         '🧹',
+  'Floor':          '🧹',
+  'Laundry':        '👕',
+  'Toilet & Basin': '🚽',
+  'Bath/Shower':    '🛁',
+  'Bedding':        '🛏️',
+  'Desk':           '✏️',
+  // optional
+  'Soft Furnishings': '🛋️',
+  'Appliances':       '🍳',
+  'Empty Bin':        '🗑️',
+  'Mirror':           '🪞',
+  'Dust':             '🪶',
+  'Organise Supplies':'🧵',
+};
+
+function hshTaskEmoji(label) {
+  return HSH_TASK_EMOJI[label] || '✨';
+}
+
 // Placeholder for future decorative/visual growth — read by nothing yet,
 // but every room state is created with this shape from day one.
 function hshDefaultVisualState() {
@@ -131,5 +158,7 @@ function hshRoomById(id) {
 window.HSH_ROOMS = HSH_ROOMS;
 window.HSH_TASK_TEMPLATES = HSH_TASK_TEMPLATES;
 window.HSH_FRESHNESS_LEVELS = HSH_FRESHNESS_LEVELS;
+window.HSH_TASK_EMOJI = HSH_TASK_EMOJI;
+window.hshTaskEmoji = hshTaskEmoji;
 window.hshDefaultVisualState = hshDefaultVisualState;
 window.hshRoomById = hshRoomById;

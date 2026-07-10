@@ -373,20 +373,14 @@
 }
 
 .hsh-freshness-banner {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  background: var(--card);
-  border-radius: 20px;
+  background: var(--primary-light);
+  border-radius: 18px;
   padding: 16px 18px;
-  box-shadow: var(--shadow);
-  margin-bottom: 20px;
+  margin-bottom: 22px;
 }
 
-.hsh-freshness-emoji { font-size: 28px; line-height: 1; }
-
 .hsh-freshness-label {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--text);
 }
@@ -394,79 +388,176 @@
 .hsh-freshness-sub {
   font-size: 13px;
   color: var(--muted);
-  margin-top: 2px;
+  margin-top: 3px;
 }
 
-.hsh-checklist-block { margin-bottom: 20px; }
+.hsh-checklist-block { margin-bottom: 24px; }
 
 .hsh-checklist-heading {
   font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-weight: 800;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 10px;
+  color: var(--primary);
+  margin-bottom: 14px;
   padding-left: 2px;
 }
 
-.hsh-checklist {
+/* ── Core reset — a row of big circular emoji tiles ──────────────── */
+.hsh-refresh-tiles {
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
   gap: 8px;
 }
 
-.hsh-task {
+.hsh-tile {
+  flex: 1 1 0;
+  min-width: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
-  background: var(--card);
-  border-radius: 16px;
-  padding: 13px 16px;
-  box-shadow: var(--shadow);
+  gap: 10px;
   cursor: pointer;
-  transition: background 180ms ease, opacity 180ms ease;
+  transition: opacity 180ms ease;
 }
 
-.hsh-task.checked { opacity: 0.6; }
+.hsh-tile.checked { opacity: 0.55; }
 
-.hsh-task input[type="checkbox"] {
+.hsh-tile input[type="checkbox"] {
   position: absolute;
   opacity: 0;
   width: 0;
   height: 0;
 }
 
-.hsh-task-check {
-  flex: none;
-  width: 22px;
-  height: 22px;
+.hsh-tile-circle {
+  width: 100%;
+  max-width: 96px;
+  aspect-ratio: 1 / 1;
   border-radius: 50%;
-  border: 2px solid var(--border);
-  background: var(--bg);
-  transition: background 180ms ease, border-color 180ms ease;
-  position: relative;
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 180ms ease;
 }
 
-.hsh-task input:checked + .hsh-task-check {
+.hsh-tile:hover .hsh-tile-circle,
+.hsh-tile:focus-within .hsh-tile-circle { transform: translateY(-2px); }
+
+.hsh-tile-emoji { font-size: 40px; line-height: 1; }
+
+.hsh-tile-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: center;
+}
+
+.hsh-tile-check {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: var(--card);
+  position: relative;
+  transition: background 180ms ease, border-color 180ms ease;
+}
+
+.hsh-tile input:checked ~ .hsh-tile-check {
   background: var(--primary);
   border-color: var(--primary);
 }
 
-.hsh-task input:checked + .hsh-task-check::after {
+.hsh-tile input:checked ~ .hsh-tile-check::after {
   content: "";
   position: absolute;
-  left: 7px;
-  top: 3px;
-  width: 5px;
-  height: 10px;
+  left: 8px;
+  top: 4px;
+  width: 6px;
+  height: 11px;
   border: solid #fff;
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
 }
 
-.hsh-task-label {
+/* ── Optional extras — gentle horizontal cards ──────────────────── */
+.hsh-optional-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hsh-optional-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 12px 16px;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: opacity 180ms ease;
+}
+
+.hsh-optional-row.checked { opacity: 0.55; }
+
+.hsh-optional-row input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.hsh-optional-icon {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--primary-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+}
+
+.hsh-optional-label {
+  flex: 1;
   font-size: 15px;
+  font-weight: 600;
   color: var(--text);
+}
+
+.hsh-optional-check {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: var(--card);
+  position: relative;
+  transition: background 180ms ease, border-color 180ms ease;
+}
+
+.hsh-optional-row input:checked ~ .hsh-optional-check {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.hsh-optional-row input:checked ~ .hsh-optional-check::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  top: 4px;
+  width: 6px;
+  height: 11px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
 }
 
 .hsh-complete-btn {
