@@ -340,9 +340,22 @@
 /* ── Room Page ──────────────────────────────────────────────────── */
 
 .hsh-room-view {
+  width: 100%;
   max-width: 480px;
   margin: 0 auto;
-  padding: 4px 4px 32px;
+  padding: 8px 16px 32px;
+  box-sizing: border-box;
+}
+
+/* Decorative per-room shelf, sitting above the freshness banner. All shelf
+   PNGs share the same width, so it spans the content column edge-to-edge. */
+.hsh-room-shelf {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-bottom: 6px;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 .hsh-room-header {
@@ -560,24 +573,3 @@
   transform: rotate(45deg);
 }
 
-.hsh-complete-btn {
-  width: 100%;
-  border: none;
-  background: var(--primary);
-  color: #fff;
-  font-size: 15px;
-  font-weight: 700;
-  padding: 15px;
-  border-radius: 18px;
-  cursor: pointer;
-  transition: opacity 180ms ease, transform 180ms ease;
-}
-
-.hsh-complete-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.hsh-complete-btn:not(:disabled):hover {
-  transform: translateY(-1px);
-}

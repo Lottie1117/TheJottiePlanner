@@ -1,10 +1,14 @@
 /**
  * Home Sweet Home — Room Page
  * ──────────────────────────────
- * Calm room routine screen: a soft freshness banner, today's core reset as a
- * row of big circular emoji tiles, and optional extras as gentle cards.
- * Emojis come from HSH_TASK_EMOJI (🧺 declutter, 🧽 surfaces, 🧹 floors, …).
- * No streaks, no red, no "overdue".
+ * Calm room routine screen: a decorative shelf, a soft freshness banner,
+ * today's core reset as a row of big circular emoji tiles, and optional
+ * extras as gentle cards. Emojis come from HSH_TASK_EMOJI (🧺 declutter,
+ * 🧽 surfaces, 🧹 floors, …).
+ *
+ * There is no explicit "complete" button: ticking all of the room's core
+ * tasks automatically marks it refreshed, so the banner flips to "Fresh /
+ * Freshened today". Optional tasks don't affect this.
  */
 
 function hshRenderRoomPage(containerEl, roomId, onBack) {
@@ -39,7 +43,6 @@ function hshRenderRoomPage(containerEl, roomId, onBack) {
       </label>`;
   }).join('');
 
-  const allCoreChecked = cfg.tasks.core.every(label => !!state.tasks[label]);
   const hasOptional = cfg.tasks.optional && cfg.tasks.optional.length;
 
   containerEl.innerHTML = `
@@ -47,6 +50,8 @@ function hshRenderRoomPage(containerEl, roomId, onBack) {
       <button type="button" class="hsh-back-btn" aria-label="Back to the house">← House</button>
       <div class="hsh-room-title">${cfg.icon || ''} ${cfg.title || cfg.name}</div>
     </div>
+
+    <img class="hsh-room-shelf" src="images/${cfg.id}shelf.png" alt="" aria-hidden="true">
 
     <div class="hsh-freshness-banner">
       <div class="hsh-freshness-label">${level.label}</div>
@@ -63,10 +68,6 @@ function hshRenderRoomPage(containerEl, roomId, onBack) {
       <div class="hsh-checklist-heading">If You Have Time</div>
       <div class="hsh-optional-list">${renderOptionalRows(cfg.tasks.optional)}</div>
     </div>` : ''}
-
-    <button type="button" class="hsh-complete-btn" ${allCoreChecked ? '' : 'disabled'}>
-      Complete ✨
-    </button>
   `;
 
   containerEl.querySelector('.hsh-back-btn').addEventListener('click', onBack);
@@ -74,14 +75,28 @@ function hshRenderRoomPage(containerEl, roomId, onBack) {
   containerEl.querySelectorAll('input[type="checkbox"]').forEach(input => {
     input.addEventListener('change', () => {
       hshToggleTask(roomId, input.dataset.task, input.checked);
+      hshMaybeAutoRefresh(containerEl, cfg, roomId, input);
     });
   });
+}
 
-  const completeBtn = containerEl.querySelector('.hsh-complete-btn');
-  completeBtn.addEventListener('click', () => {
-    if (completeBtn.disabled) return;
-    hshCompleteRoomReset(roomId);
-  });
+/**
+ * When all of a room's core tasks are ticked, mark it refreshed (stamps
+ * lastCompleted today and clears the checklist for next time — the banner
+ * then reads "Fresh / Freshened today"). Optional tasks are ignored.
+ * A short delay lets the final tick register visually before it settles.
+ */
+function hshMaybeAutoRefresh(containerEl, cfg, roomId, input) {
+  if (!input.checked || !cfg.tasks.core.includes(input.dataset.task)) return;
+  const coreInputs = [...containerEl.querySelectorAll('.hsh-refresh-tiles input[type="checkbox"]')];
+  if (!coreInputs.every(i => i.checked)) return;
+
+  setTimeout(() => {
+    const st = HSH_STATE.rooms[roomId];
+    if (st && cfg.tasks.core.every(label => !!st.tasks[label])) {
+      hshCompleteRoomReset(roomId);
+    }
+  }, 650);
 }
 
 window.hshRenderRoomPage = hshRenderRoomPage;
