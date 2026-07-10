@@ -41,12 +41,19 @@ function hshRefreshActiveView() {
   }
   // Keep the mailbox (emoji, unread glow, open panel) in sync with room data.
   if (typeof hshRenderMailbox === 'function') hshRenderMailbox();
+  // Keep the house overlays (clutter / surface / floor) in sync with room data.
+  if (typeof hshRenderHouseOverlays === 'function') {
+    hshRenderHouseOverlays(document.getElementById('hsh-overlay-layer'));
+  }
 }
 
 function initHomeSweetHome() {
   if (!_hshInitialised) {
     const layer = document.getElementById('hsh-hotspot-layer');
     hshRenderHotspots(layer, hshShowRoom);
+    if (typeof hshRenderHouseOverlays === 'function') {
+      hshRenderHouseOverlays(document.getElementById('hsh-overlay-layer'));
+    }
     if (typeof hshInitMailbox === 'function') hshInitMailbox();
     hshListenHomeSweetHome(hshRefreshActiveView);
     hshShowHouseView();

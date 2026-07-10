@@ -38,6 +38,14 @@ const HSH_ROOMS = [
     tasks: HSH_TASK_TEMPLATES.living,
     targetFrequencyDays: 7,
     note: { emoji: '🧺', text: 'A little declutter and a surface wipe.' },
+    // House overlays: clutter shows until core[0] (declutter) is done; surface
+    // 🌷 shows once core[1] is done; floor ✨ once core[2] is done. x/y are % of
+    // the house image — placeholder positions, tune per room / per final art.
+    overlays: {
+      clutter: { asset: '📚', x: 18, y: 74 },
+      surface: { asset: '🌷', x: 16, y: 68 },
+      floor:   { asset: '✨', x: 14, y: 84 },
+    },
   },
   {
     id: 'kitchen',
@@ -48,6 +56,11 @@ const HSH_ROOMS = [
     tasks: HSH_TASK_TEMPLATES.kitchen,
     targetFrequencyDays: 5,
     note: { emoji: '🧺', text: 'A little declutter.' },
+    overlays: {
+      clutter: { asset: '🍽️', x: 50, y: 76 },
+      surface: { asset: '🌷', x: 44, y: 69 },
+      floor:   { asset: '✨', x: 52, y: 88 },
+    },
   },
   {
     id: 'laundry',
@@ -58,6 +71,11 @@ const HSH_ROOMS = [
     tasks: HSH_TASK_TEMPLATES.laundry,
     targetFrequencyDays: 7,
     note: { emoji: '🧺', text: 'A load on and a quick tidy.' },
+    overlays: {
+      clutter: { asset: '🧦', x: 73, y: 76 },
+      surface: { asset: '🌷', x: 70, y: 69 },
+      floor:   { asset: '✨', x: 78, y: 88 },
+    },
   },
 
   // ── Middle Floor ──────────────────────────────────────────────
@@ -70,6 +88,11 @@ const HSH_ROOMS = [
     tasks: HSH_TASK_TEMPLATES.bedroom,
     targetFrequencyDays: 7,
     note: { emoji: '🧹', text: 'Smooth the bedding, clear the floor.' },
+    overlays: {
+      clutter: { asset: '👗', x: 22, y: 48 },
+      surface: { asset: '🌷', x: 20, y: 43 },
+      floor:   { asset: '✨', x: 24, y: 60 },
+    },
   },
   {
     id: 'bathroom',
@@ -80,6 +103,11 @@ const HSH_ROOMS = [
     tasks: HSH_TASK_TEMPLATES.bathroom,
     targetFrequencyDays: 4,
     note: { emoji: '🧽', text: 'Freshen the surfaces.' },
+    overlays: {
+      clutter: { asset: '🗺️', x: 47, y: 48 },
+      surface: { asset: '🌷', x: 44, y: 43 },
+      floor:   { asset: '✨', x: 47, y: 60 },
+    },
   },
   {
     id: 'bedroom2',
@@ -90,6 +118,11 @@ const HSH_ROOMS = [
     tasks: HSH_TASK_TEMPLATES.bedroom,
     targetFrequencyDays: 7,
     note: { emoji: '🧹', text: 'Smooth the bedding, clear the floor.' },
+    overlays: {
+      clutter: { asset: '🧣', x: 62, y: 48 },
+      surface: { asset: '🌷', x: 60, y: 43 },
+      floor:   { asset: '✨', x: 64, y: 60 },
+    },
   },
 
   // ── Top Floor ─────────────────────────────────────────────────
@@ -102,6 +135,11 @@ const HSH_ROOMS = [
     tasks: HSH_TASK_TEMPLATES.craft,
     targetFrequencyDays: 10,
     note: { emoji: '🧺', text: 'Tidy the desk when you pass.' },
+    overlays: {
+      clutter: { asset: '🧶', x: 30, y: 24 },
+      surface: { asset: '🌷', x: 48, y: 20 },
+      floor:   { asset: '✨', x: 40, y: 34 },
+    },
   },
 ];
 

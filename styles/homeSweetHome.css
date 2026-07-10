@@ -73,6 +73,37 @@
   inset: 0;
 }
 
+/* ── House overlays (per-room progress indicators) ───────────────────
+   Small emoji/PNG/SVG markers layered on the illustration. They live inside
+   the scaled house box, so their percentage coordinates track the artwork.
+   pointer-events:none keeps the room hotspots fully clickable underneath. */
+.hsh-overlay-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.hsh-overlay {
+  position: absolute;
+  transform: translate(-50%, -50%);  /* x/y coordinate is the marker's centre */
+  --hsh-overlay-size: 22px;
+  line-height: 1;
+}
+
+.hsh-overlay span {
+  display: block;
+  font-size: var(--hsh-overlay-size);
+  filter: drop-shadow(0 1px 2px rgba(58, 52, 80, 0.28));
+}
+
+.hsh-overlay img {
+  display: block;
+  width: var(--hsh-overlay-size);
+  height: auto;
+  filter: drop-shadow(0 1px 2px rgba(58, 52, 80, 0.28));
+}
+
 /* ── Mailbox ─────────────────────────────────────────────────────── */
 
 /* Soft pulsing "unread" glow behind the mailbox (hidden once all done). */
