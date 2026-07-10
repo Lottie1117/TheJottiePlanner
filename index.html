@@ -426,12 +426,34 @@
      House → Hotspots → Room Data → Room Pages (see /js/homeSweetHome/) -->
 <div id="home-section" class="section">
   <div id="hsh-house-view" class="hsh-house-view">
-    <div class="hsh-house-wrap">
-      <img src="images/fullhouse.png" alt="An illustrated three-storey doll's house. Tap a room to open its routine." class="hsh-house-img" id="hsh-house-img">
-      <div class="hsh-hotspot-layer" id="hsh-hotspot-layer"></div>
+    <div class="hsh-caption">
+      <span>Check the mailbox to see which rooms could use a little refresh, or select a room to focus on.</span>
+    </div>
+
+    <div class="hsh-house-stage">
+      <!-- House + hotspots share a slightly-oversized, side-cropped box so
+           the illustration runs edge-to-edge (see homeSweetHome.css). -->
+      <div class="hsh-house-scale">
+        <img src="images/fullhouse.png" alt="An illustrated three-storey doll's house. Tap a room to open its routine." class="hsh-house-img" id="hsh-house-img">
+        <div class="hsh-hotspot-layer" id="hsh-hotspot-layer"></div>
+      </div>
+
+      <!-- Mailbox — a calm notification centre, anchored to the stage. -->
+      <div class="hsh-mailbox-glow" id="hsh-mailbox-glow" aria-hidden="true" style="display:none"></div>
+      <button type="button" class="hsh-mailbox-btn" id="hsh-mailbox-btn" aria-label="Open the mailbox for today's House Notes">
+        <span class="hsh-mailbox-emoji" id="hsh-mailbox-emoji">📬</span>
+        <span class="hsh-mailbox-shadow" aria-hidden="true"></span>
+      </button>
     </div>
   </div>
+
   <div id="hsh-room-view" class="hsh-room-view" style="display:none"></div>
+
+  <!-- House Notes panel (mailbox popover) -->
+  <div id="hsh-notes-modal" class="hsh-notes-modal" role="dialog" aria-modal="true" aria-label="Today's House Notes" style="display:none">
+    <div class="hsh-notes-scrim" id="hsh-notes-scrim"></div>
+    <div class="hsh-notes-card" id="hsh-notes-card"></div>
+  </div>
 </div>
 
 <!-- ── Glimmers ──────────────────────────────────────────────────── -->
@@ -809,6 +831,7 @@
 <script src="js/homeSweetHome/homeState.js"></script>
 <script src="js/homeSweetHome/hotspotManager.js"></script>
 <script src="js/homeSweetHome/roomPage.js"></script>
+<script src="js/homeSweetHome/mailbox.js"></script>
 <script src="js/homeSweetHome/homeSweetHome.js"></script>
 
 <!-- Image Lightbox -->
