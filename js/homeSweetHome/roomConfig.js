@@ -8,6 +8,10 @@
  * /images/fullhouse.png — nudge the numbers below if a hotspot feels
  * slightly off; nothing else in the app needs to change.
  *
+ * `note` is the gentle one-line House Note shown in the mailbox when the
+ * freshness engine surfaces this room (emoji legend: 🧺 declutter,
+ * 🧽 surfaces, 🧹 floors). Copy is calm and non-nagging by design.
+ *
  * Adding a future room, floor, or artwork swap should only ever require
  * editing this file.
  */
@@ -33,6 +37,7 @@ const HSH_ROOMS = [
     hotspot: { x: 12, y: 66, width: 26, height: 30 },
     tasks: HSH_TASK_TEMPLATES.living,
     targetFrequencyDays: 7,
+    note: { emoji: '🧺', text: 'A little declutter and a surface wipe.' },
   },
   {
     id: 'kitchen',
@@ -42,6 +47,7 @@ const HSH_ROOMS = [
     hotspot: { x: 39, y: 66, width: 23, height: 30 },
     tasks: HSH_TASK_TEMPLATES.kitchen,
     targetFrequencyDays: 5,
+    note: { emoji: '🧺', text: 'A little declutter.' },
   },
   {
     id: 'laundry',
@@ -51,6 +57,7 @@ const HSH_ROOMS = [
     hotspot: { x: 63, y: 66, width: 25, height: 30 },
     tasks: HSH_TASK_TEMPLATES.laundry,
     targetFrequencyDays: 7,
+    note: { emoji: '🧺', text: 'A load on and a quick tidy.' },
   },
 
   // ── Middle Floor ──────────────────────────────────────────────
@@ -62,6 +69,7 @@ const HSH_ROOMS = [
     hotspot: { x: 17, y: 38, width: 21, height: 26 },
     tasks: HSH_TASK_TEMPLATES.bedroom,
     targetFrequencyDays: 7,
+    note: { emoji: '🧹', text: 'Smooth the bedding, clear the floor.' },
   },
   {
     id: 'bathroom',
@@ -71,6 +79,7 @@ const HSH_ROOMS = [
     hotspot: { x: 39, y: 38, width: 17, height: 26 },
     tasks: HSH_TASK_TEMPLATES.bathroom,
     targetFrequencyDays: 4,
+    note: { emoji: '🧽', text: 'Freshen the surfaces.' },
   },
   {
     id: 'bedroom2',
@@ -80,6 +89,7 @@ const HSH_ROOMS = [
     hotspot: { x: 57, y: 38, width: 21, height: 26 },
     tasks: HSH_TASK_TEMPLATES.bedroom,
     targetFrequencyDays: 7,
+    note: { emoji: '🧹', text: 'Smooth the bedding, clear the floor.' },
   },
 
   // ── Top Floor ─────────────────────────────────────────────────
@@ -91,6 +101,7 @@ const HSH_ROOMS = [
     hotspot: { x: 13, y: 13, width: 74, height: 24 },
     tasks: HSH_TASK_TEMPLATES.craft,
     targetFrequencyDays: 10,
+    note: { emoji: '🧺', text: 'Tidy the desk when you pass.' },
   },
 ];
 

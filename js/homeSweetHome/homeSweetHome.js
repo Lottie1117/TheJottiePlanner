@@ -39,12 +39,15 @@ function hshRefreshActiveView() {
     const roomView = document.getElementById('hsh-room-view');
     if (roomView) hshRenderRoomPage(roomView, _hshActiveRoomId, hshShowHouseView);
   }
+  // Keep the mailbox (emoji, unread glow, open panel) in sync with room data.
+  if (typeof hshRenderMailbox === 'function') hshRenderMailbox();
 }
 
 function initHomeSweetHome() {
   if (!_hshInitialised) {
     const layer = document.getElementById('hsh-hotspot-layer');
     hshRenderHotspots(layer, hshShowRoom);
+    if (typeof hshInitMailbox === 'function') hshInitMailbox();
     hshListenHomeSweetHome(hshRefreshActiveView);
     hshShowHouseView();
     _hshInitialised = true;
