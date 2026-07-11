@@ -1,20 +1,26 @@
 /**
  * Home Sweet Home — Room Configuration
  * ─────────────────────────────────────
- * Pure data. No UI logic lives here.
+ * Pure data / configuration. No UI logic and no date maths live here — the
+ * scheduling engine (scheduler.js) reads this config and Firebase's per-task
+ * `lastCompleted` timestamps to derive everything else.
  *
- * Hotspot coordinates are percentages (0–100) of the house illustration's
- * width/height, measured from the top-left. They are estimates against
- * /images/fullhouse.png — nudge the numbers below if a hotspot feels
- * slightly off; nothing else in the app needs to change.
+ * Configuration lives here; user data lives in Firebase. Firebase only ever
+ * stores WHEN a task was last completed — how often it should reset is
+ * configured below and can be overridden per room / per task without touching
+ * any scheduling logic.
  *
- * `note` is the gentle one-line House Note shown in the mailbox when the
- * freshness engine surfaces this room (emoji legend: 🧺 declutter,
- * 🧽 surfaces, 🧹 floors). Copy is calm and non-nagging by design.
- *
- * Adding a future room, floor, or artwork swap should only ever require
- * editing this file.
+ * `note` is the gentle one-line House Note shown in the mailbox.
+ * `overlays` position the little house-illustration progress markers.
+ * Hotspot / overlay coordinates are percentages of the house image.
  */
+
+// ── Task frequency (configuration, never stored in Firebase) ─────────
+// How many days a completed task stays "done" before it naturally becomes
+// due again. V1 uses one shared default for every task; this is only a
+// temporary testing value. Override per room/task in `frequencies` below —
+// no scheduling code needs to change.
+const DEFAULT_TASK_FREQUENCY = 3;
 
 // Gentle, non-judgemental task templates shared by room "type".
 const HSH_TASK_TEMPLATES = {
@@ -27,6 +33,9 @@ const HSH_TASK_TEMPLATES = {
 };
 
 // The house, room by room. Order here also drives tab/floor order in the UI.
+// `frequencies` map each core task label → its reset frequency in days. V1
+// points every task at DEFAULT_TASK_FREQUENCY; change a number here to give a
+// single task its own cadence. Tasks not listed fall back to the default.
 const HSH_ROOMS = [
   // ── Ground Floor ──────────────────────────────────────────────
   {
@@ -36,7 +45,11 @@ const HSH_ROOMS = [
     icon: '🛋️',
     hotspot: { x: 12, y: 66, width: 26, height: 30 },
     tasks: HSH_TASK_TEMPLATES.living,
-    targetFrequencyDays: 7,
+    frequencies: {
+      'Declutter': DEFAULT_TASK_FREQUENCY,
+      'Surfaces':  DEFAULT_TASK_FREQUENCY,
+      'Floors':    DEFAULT_TASK_FREQUENCY,
+    },
     note: { emoji: '🧺', text: 'A little declutter and a surface wipe.' },
     // House overlays: clutter shows until core[0] (declutter) is done; surface
     // 🌷 shows once core[1] is done; floor ✨ once core[2] is done. x/y are % of
@@ -54,7 +67,11 @@ const HSH_ROOMS = [
     icon: '🍽️',
     hotspot: { x: 39, y: 66, width: 23, height: 30 },
     tasks: HSH_TASK_TEMPLATES.kitchen,
-    targetFrequencyDays: 5,
+    frequencies: {
+      'Declutter': DEFAULT_TASK_FREQUENCY,
+      'Surfaces':  DEFAULT_TASK_FREQUENCY,
+      'Floors':    DEFAULT_TASK_FREQUENCY,
+    },
     note: { emoji: '🧺', text: 'A little declutter.' },
     overlays: {
       clutter: { asset: '🍽️', x: 50, y: 76 },
@@ -69,7 +86,11 @@ const HSH_ROOMS = [
     icon: '🧺',
     hotspot: { x: 63, y: 66, width: 25, height: 30 },
     tasks: HSH_TASK_TEMPLATES.laundry,
-    targetFrequencyDays: 7,
+    frequencies: {
+      'Laundry':  DEFAULT_TASK_FREQUENCY,
+      'Surfaces': DEFAULT_TASK_FREQUENCY,
+      'Floors':   DEFAULT_TASK_FREQUENCY,
+    },
     note: { emoji: '🧺', text: 'A load on and a quick tidy.' },
     overlays: {
       clutter: { asset: '🧦', x: 73, y: 76 },
@@ -86,7 +107,11 @@ const HSH_ROOMS = [
     icon: '🛏️',
     hotspot: { x: 17, y: 38, width: 21, height: 26 },
     tasks: HSH_TASK_TEMPLATES.bedroom,
-    targetFrequencyDays: 7,
+    frequencies: {
+      'Declutter': DEFAULT_TASK_FREQUENCY,
+      'Bedding':   DEFAULT_TASK_FREQUENCY,
+      'Floor':     DEFAULT_TASK_FREQUENCY,
+    },
     note: { emoji: '🧹', text: 'Smooth the bedding, clear the floor.' },
     overlays: {
       clutter: { asset: '👗', x: 22, y: 48 },
@@ -101,7 +126,11 @@ const HSH_ROOMS = [
     icon: '🛁',
     hotspot: { x: 39, y: 38, width: 17, height: 26 },
     tasks: HSH_TASK_TEMPLATES.bathroom,
-    targetFrequencyDays: 4,
+    frequencies: {
+      'Toilet & Basin': DEFAULT_TASK_FREQUENCY,
+      'Bath/Shower':    DEFAULT_TASK_FREQUENCY,
+      'Floor':          DEFAULT_TASK_FREQUENCY,
+    },
     note: { emoji: '🧽', text: 'Freshen the surfaces.' },
     overlays: {
       clutter: { asset: '🗺️', x: 47, y: 48 },
@@ -116,7 +145,11 @@ const HSH_ROOMS = [
     icon: '🛏️',
     hotspot: { x: 57, y: 38, width: 21, height: 26 },
     tasks: HSH_TASK_TEMPLATES.bedroom,
-    targetFrequencyDays: 7,
+    frequencies: {
+      'Declutter': DEFAULT_TASK_FREQUENCY,
+      'Bedding':   DEFAULT_TASK_FREQUENCY,
+      'Floor':     DEFAULT_TASK_FREQUENCY,
+    },
     note: { emoji: '🧹', text: 'Smooth the bedding, clear the floor.' },
     overlays: {
       clutter: { asset: '🧣', x: 62, y: 48 },
@@ -133,7 +166,11 @@ const HSH_ROOMS = [
     icon: '🧵',
     hotspot: { x: 13, y: 13, width: 74, height: 24 },
     tasks: HSH_TASK_TEMPLATES.craft,
-    targetFrequencyDays: 10,
+    frequencies: {
+      'Declutter': DEFAULT_TASK_FREQUENCY,
+      'Desk':      DEFAULT_TASK_FREQUENCY,
+      'Floor':     DEFAULT_TASK_FREQUENCY,
+    },
     note: { emoji: '🧺', text: 'Tidy the desk when you pass.' },
     overlays: {
       clutter: { asset: '🧶', x: 30, y: 24 },
@@ -143,12 +180,14 @@ const HSH_ROOMS = [
   },
 ];
 
-// Gentle freshness copy — never negative, never punishing.
-// `maxRatio` is daysSinceLastCompleted / targetFrequencyDays.
-const HSH_FRESHNESS_LEVELS = [
-  { key: 'fresh',   maxRatio: 1,        label: 'Fresh',                       emoji: '🌸' },
-  { key: 'settling', maxRatio: 2,       label: 'Could use a refresh',         emoji: '🌿' },
-  { key: 'ready',   maxRatio: Infinity, label: 'Ready for a little reset',    emoji: '🍃' },
+// Room status derived from how many CORE tasks are currently complete.
+// `min` is the completed-count threshold (checked high → low). No status is
+// ever stored — the scheduler computes it live from the completion dates.
+const HSH_ROOM_STATUS = [
+  { min: 3, emoji: '💚', label: 'Cosy & Cute' },
+  { min: 2, emoji: '🌸', label: 'Looking Lovely' },
+  { min: 1, emoji: '🌿', label: 'Feeling Fresher' },
+  { min: 0, emoji: '🍃', label: 'Could use a little refresh' },
 ];
 
 // Emoji for each routine task label, keyed by the exact task string used in
@@ -178,25 +217,15 @@ function hshTaskEmoji(label) {
   return HSH_TASK_EMOJI[label] || '✨';
 }
 
-// Placeholder for future decorative/visual growth — read by nothing yet,
-// but every room state is created with this shape from day one.
-function hshDefaultVisualState() {
-  return {
-    plantLevel: 0,
-    cosyLevel: 0,
-    decorationLevel: 0,
-  };
-}
-
 function hshRoomById(id) {
   return HSH_ROOMS.find(r => r.id === id) || null;
 }
 
 // Expose on window — this codebase uses plain <script> tags, not modules.
+window.DEFAULT_TASK_FREQUENCY = DEFAULT_TASK_FREQUENCY;
 window.HSH_ROOMS = HSH_ROOMS;
 window.HSH_TASK_TEMPLATES = HSH_TASK_TEMPLATES;
-window.HSH_FRESHNESS_LEVELS = HSH_FRESHNESS_LEVELS;
+window.HSH_ROOM_STATUS = HSH_ROOM_STATUS;
 window.HSH_TASK_EMOJI = HSH_TASK_EMOJI;
 window.hshTaskEmoji = hshTaskEmoji;
-window.hshDefaultVisualState = hshDefaultVisualState;
 window.hshRoomById = hshRoomById;

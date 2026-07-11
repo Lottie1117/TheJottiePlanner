@@ -56,11 +56,9 @@ function hshRenderHouseOverlays(layerEl) {
     const ov = cfg.overlays;
     if (!ov) return;
 
-    const state = HSH_STATE.rooms[cfg.id] || hshDefaultRoomState(cfg);
-    const core = cfg.tasks.core;
-    const declutterDone = !!state.tasks[core[0]];
-    const surfaceDone   = !!state.tasks[core[1]];
-    const floorDone     = !!state.tasks[core[2]];
+    // Derived live from the scheduling engine — nothing about overlay state
+    // is stored; it follows task completion (which expires over time).
+    const { declutterDone, surfaceDone, floorDone } = hshRoomOverlayState(cfg.id);
 
     if (ov.clutter && !declutterDone) layerEl.appendChild(hshCreateOverlay(ov.clutter, 'clutter'));
     if (ov.surface && surfaceDone)    layerEl.appendChild(hshCreateOverlay(ov.surface, 'surface'));

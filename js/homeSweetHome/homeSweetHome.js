@@ -7,8 +7,8 @@
  *
  *   House → Background Image → Hotspots → Room Data → Room Pages
  *
- * Future versions (garden, seasons, wildlife, decor) plug into
- * HSH_STATE and hshGetHomeState() without touching this flow.
+ * Room freshness (status, overlays, House Notes) is derived by scheduler.js
+ * from HSH_STATE + room config, so this flow just re-renders on each update.
  */
 
 let _hshInitialised = false;

@@ -6,9 +6,9 @@
  * freshness engine thinks could use a gentle refresh today.
  *
  * No counters, streaks, or badges by design — just a quiet nudge and a
- * reachable finish line. Ticking a note completes that room's reset for
- * real (hshCompleteRoomReset), so it stamps lastCompleted, refreshes the
- * room, and syncs to both phones.
+ * reachable finish line. Ticking a note completes that room's core tasks
+ * for real (hshCompleteRoomCore), which the scheduler then reflects across
+ * the whole house, synced to both phones.
  *
  * Notes are captured as a stable session snapshot the first time the room
  * data has loaded, so completing one settles it to "sorted" in place
@@ -25,32 +25,20 @@ const HSH_MAILBOX = {
   hadNotes: false,  // whether there was ever anything to do today
 };
 
-/** daysSinceLastCompleted / targetFrequencyDays — >1 means past due for a refresh. */
-function hshNeedRatio(roomState) {
-  const days = hshDaysSince(roomState.lastCompleted);
-  return days / (roomState.targetFrequency || 7);
-}
-
 /** True once every room doc has arrived from Firestore, so notes are safe to capture. */
 function hshAllRoomsLoaded() {
   return HSH_ROOMS.every(cfg => HSH_STATE.rooms[cfg.id]);
 }
 
-/** Pick up to two neediest rooms (most-ready first) as today's House Notes. */
+/** Pick up to two neediest rooms as today's House Notes (via the scheduler). */
 function hshComputeHouseNotes() {
-  return HSH_ROOMS
-    .map(cfg => {
-      const state = HSH_STATE.rooms[cfg.id] || hshDefaultRoomState(cfg);
-      return { cfg, ratio: hshNeedRatio(state) };
-    })
-    .filter(s => s.ratio > 1)
-    .sort((a, b) => b.ratio - a.ratio)
+  return hshRoomsNeedingAttention()
     .slice(0, 2)
-    .map(s => ({
-      roomId: s.cfg.id,
-      emoji: (s.cfg.note && s.cfg.note.emoji) || '✨',
-      room: s.cfg.name,
-      text: (s.cfg.note && s.cfg.note.text) || 'Ready for a little reset.',
+    .map(({ cfg }) => ({
+      roomId: cfg.id,
+      emoji: (cfg.note && cfg.note.emoji) || '✨',
+      room: cfg.name,
+      text: (cfg.note && cfg.note.text) || 'Ready for a little reset.',
       status: 'active', // 'active' | 'ack' | 'done'
     }));
 }
@@ -75,9 +63,9 @@ function hshRenderMailbox() {
   const allDone = captured && notes.every(n => n.status === 'done');
   const unread = notes.some(n => n.status !== 'done');
 
-  const emojiEl = document.getElementById('hsh-mailbox-emoji');
+  const imgEl = document.getElementById('hsh-mailbox-img');
   const glowEl = document.getElementById('hsh-mailbox-glow');
-  if (emojiEl) emojiEl.textContent = allDone ? '📪' : '📬';
+  if (imgEl) imgEl.src = allDone ? 'images/mailboxempty.png' : 'images/mailboxfull.png';
   if (glowEl) glowEl.style.display = unread ? '' : 'none';
 
   if (HSH_MAILBOX.open) hshRenderNotesPanel();
@@ -176,8 +164,9 @@ function hshCompleteNote(roomId) {
   note.status = 'ack';
   hshRenderNotesPanel();
 
-  // Real data: stamp the room's reset (syncs to both phones, refreshes freshness).
-  if (typeof hshCompleteRoomReset === 'function') hshCompleteRoomReset(roomId);
+  // Real data: stamp all of this room's core tasks complete (syncs to both
+  // phones); the scheduler re-derives freshness / status / overlays from it.
+  if (typeof hshCompleteRoomCore === 'function') hshCompleteRoomCore(roomId);
 
   setTimeout(() => {
     note.status = 'done';
