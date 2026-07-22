@@ -480,6 +480,7 @@ function listenCalendar() {
     .onSnapshot(snap => {
       _calData = snap.docs.map(d => ({id:d.id,...d.data()}));
       renderToday();
+      if (typeof renderDashPinnedPlansBirthdays === 'function') renderDashPinnedPlansBirthdays();
       const el = document.getElementById('calendar-list');
       if (snap.empty) {
         el.innerHTML = '<div class="empty"><div class="emo">📅</div><p>No events yet — add your first one above!</p></div>';
@@ -516,19 +517,116 @@ function listenCalendar() {
 
 function evCard(ev, isPast) {
   return `
-  <div class="item-card${isPast ? ' done' : ''}">
+  <div class="item-card${isPast ? ' done' : ''}" onclick="openEventDetail('${ev.id}')">
     <div class="date-pill">
       <div class="date-day">${dayOf(ev.date)}</div>
       <div class="date-month">${monOf(ev.date)}</div>
     </div>
     <div class="item-body">
-      <div class="item-title">${esc(ev.title)}</div>
+      <div class="item-title">${ev.pinned ? '<span class="item-pin">📌</span>' : ''}${esc(ev.title)}</div>
       ${ev.time  ? `<div class="item-notes">⏰ ${esc(ev.time)}</div>` : ''}
       ${ev.notes ? `<div class="item-notes">${esc(ev.notes)}</div>` : ''}
       <div class="item-meta">${badge(ev.addedBy)} · ${ago(ev.createdAt)}</div>
     </div>
-    <button class="del-btn" onclick="delEvent('${ev.id}')">✕</button>
+    <button class="del-btn" onclick="event.stopPropagation();delEvent('${ev.id}')">✕</button>
   </div>`;
+}
+
+// ── Event Detail View ────────────────────────────────────────────
+let _currentEventId = null;
+
+function openEventDetail(id) {
+  const ev = _calData.find(e => e.id === id);
+  if (!ev) return;
+  _currentEventId = id;
+  renderEventDetailBody(ev);
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('event-detail-section').classList.add('active');
+  document.getElementById('section-title').textContent = 'Plan';
+  if (typeof updateFabForSection === 'function') updateFabForSection('event-detail');
+}
+
+function closeEventDetail() {
+  _currentEventId = null;
+  navTo('calendar');
+}
+
+function renderEventDetailBody(ev) {
+  const metaParts = [];
+  if (ev.addedBy)   metaParts.push(`Added by ${esc(ev.addedBy)}`);
+  if (ev.createdAt) metaParts.push(ago(ev.createdAt));
+  const metaHtml = metaParts.length ? `<div class="td-meta-footer">${metaParts.join(' · ')}</div>` : '';
+
+  document.getElementById('event-detail-body').innerHTML = `
+    <h1 class="td-title">${ev.pinned ? '<span class="item-pin">📌</span>' : ''}${esc(ev.title)}</h1>
+    <div class="td-meta-row">
+      <span class="td-due-date">📅 ${fmtDate(ev.date)}${ev.time ? ' · ⏰ ' + esc(ev.time) : ''}</span>
+    </div>
+    ${ev.notes ? `
+    <div class="td-section-card td-notes-card">
+      <div class="td-section-title">Notes</div>
+      <div class="td-notes-text">${esc(ev.notes).replace(/\n/g,'<br>')}</div>
+    </div>` : ''}
+    ${metaHtml}
+  `;
+}
+
+// ── Event menu ──────────────────────────────────────────────────
+function openEventMenu() {
+  document.getElementById('event-menu-overlay').classList.add('open');
+  document.getElementById('event-menu').classList.add('open');
+}
+function closeEventMenu() {
+  document.getElementById('event-menu-overlay').classList.remove('open');
+  document.getElementById('event-menu').classList.remove('open');
+}
+function eventMenuEdit() {
+  closeEventMenu();
+  const ev = _calData.find(e => e.id === _currentEventId);
+  if (!ev) return;
+  document.getElementById('event-detail-body').innerHTML = `
+    <input type="text" id="ev-edit-title" value="${escapeAttr(ev.title)}" placeholder="Event title">
+    <div class="row">
+      <input type="date" id="ev-edit-date" value="${ev.date || ''}">
+      <input type="time" id="ev-edit-time" value="${ev.time || ''}">
+    </div>
+    <textarea id="ev-edit-notes" placeholder="Notes (optional)">${esc(ev.notes || '')}</textarea>
+    <div class="row">
+      <button class="btn-primary" onclick="saveEventEdit()">Save</button>
+      <button onclick="renderEventDetailBody(_calData.find(e=>e.id==='${ev.id}'))">Cancel</button>
+    </div>
+  `;
+}
+function saveEventEdit() {
+  const title = document.getElementById('ev-edit-title').value.trim();
+  const date  = document.getElementById('ev-edit-date').value;
+  const time  = document.getElementById('ev-edit-time').value;
+  const notes = document.getElementById('ev-edit-notes').value.trim();
+  if (!title || !date || !_currentEventId) return;
+  db.collection('calendar').doc(_currentEventId).update({ title, date, time, notes })
+    .then(() => {
+      showToast('✏️ Plan updated');
+      const ev = _calData.find(e => e.id === _currentEventId);
+      if (ev) renderEventDetailBody({ ...ev, title, date, time, notes });
+    });
+}
+function eventMenuPin() {
+  closeEventMenu();
+  if (!_currentEventId) return;
+  const ev = _calData.find(e => e.id === _currentEventId);
+  if (!ev) return;
+  db.collection('calendar').doc(_currentEventId).update({ pinned: !ev.pinned })
+    .then(() => showToast(ev.pinned ? 'Unpinned' : '📌 Plan pinned'));
+}
+function eventMenuDelete() {
+  closeEventMenu();
+  if (!_currentEventId) return;
+  if (!confirm('Delete this plan permanently? This cannot be undone.')) return;
+  const id = _currentEventId;
+  closeEventDetail();
+  db.collection('calendar').doc(id).delete()
+    .then(() => showToast('Plan deleted'))
+    .catch(() => showToast('⚠️ Delete failed'));
 }
 
 // ── Shopping ─────────────────────────────────────────────────────
@@ -2147,6 +2245,46 @@ function renderDashPinnedNotes() {
   });
 }
 
+// ── Render pinned Plans & Birthdays on Today dashboard ─────────────
+function renderDashPinnedPlansBirthdays() {
+  const el = document.getElementById('dash-pinned-plans');
+  if (!el) return;
+  const slot = el.closest('.dash-widget-slot');
+  const pinnedEvents = (_calData || []).filter(e => e.pinned).map(e => ({
+    type: 'event', id: e.id, emoji: '📅', label: e.title,
+    sub: fmtDate(e.date) + (e.time ? ' · ' + e.time : '')
+  }));
+  const pinnedBdays = (typeof _birthdaysData !== 'undefined' ? _birthdaysData : []).filter(b => b.pinned).map(b => {
+    const { dateLabel } = getBirthdayInfo(b.date, b.birthYear);
+    return { type: 'birthday', id: b.id, emoji: '🎂', label: b.name, sub: dateLabel };
+  });
+  const pinned = [...pinnedEvents, ...pinnedBdays];
+  if (!pinned.length) {
+    el.style.display = 'none';
+    el.innerHTML = '';
+    if (slot) slot.style.display = 'none';
+    return;
+  }
+  el.style.display = 'block';
+  if (slot) slot.style.display = '';
+  el.innerHTML = `<div class="dash-pinned-card">
+    <div class="dash-hdr">
+      <div class="dash-hdr-title">Pinned Plans &amp; Birthdays  📌</div>
+    </div>
+    <div class="dash-pinned-items" id="dash-pinned-plans-items"></div>
+  </div>`;
+  const itemsEl = document.getElementById('dash-pinned-plans-items');
+  pinned.forEach(p => {
+    const row = document.createElement('div');
+    row.className = 'dash-pinned-row';
+    row.innerHTML = `<span class="dash-pinned-emoji">${p.emoji}</span>
+      <span class="dash-pinned-title">${esc(p.label)}</span>
+      <span class="dash-pinned-count">${esc(p.sub)}</span>`;
+    row.onclick = () => p.type === 'event' ? openEventDetail(p.id) : openBirthday(p.id);
+    itemsEl.appendChild(row);
+  });
+}
+
 // ── Listen to notes collection ─────────────────────────────────────
 function listenNotes() {
   db.collection('notes')
@@ -2412,30 +2550,140 @@ function closeNoteDetail() {
   navTo('lists');
 }
 
+let _currentNoteItems = [];
+
 function renderNoteItems(snap) {
   const el = document.getElementById('note-items-list');
   if (!el) return;
   if (snap.empty) {
     el.innerHTML = '<div class="empty"><div class="emo">💬</div><p>No items yet — tap + to add one!</p></div>';
+    _currentNoteItems = [];
     return;
   }
-  el.innerHTML = snap.docs.map(doc => {
-    const it = { id: doc.id, ...doc.data() };
+  const items = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  items.sort((a, b) => {
+    if (a.pinned && !b.pinned) return -1;
+    if (!a.pinned && b.pinned) return 1;
+    return 0;
+  });
+  _currentNoteItems = items;
+  el.innerHTML = items.map(it => {
     const domain = it.link ? (()=>{ try { return new URL(it.link).hostname.replace('www.',''); } catch(e) { return ''; } })() : '';
     const metaParts = [it.addedBy ? badge(it.addedBy) : '', it.createdAt ? ago(it.createdAt) : ''].filter(Boolean);
-    return `<div class="item-card note-item-card${it.completed ? ' done' : ''}">
+    return `<div class="item-card note-item-card${it.completed ? ' done' : ''}" onclick="openNoteItemDetail('${_currentNoteId}','${it.id}')">
       <div class="note-item-body">
-        <div class="item-title">${esc(it.text)}</div>
+        <div class="item-title">${it.pinned ? '<span class="item-pin">📌</span>' : ''}${esc(it.text)}</div>
         ${it.notes ? `<div class="item-meta" style="color:var(--text)">${esc(it.notes)}</div>` : ''}
-        ${domain ? `<div class="item-meta"><a class="wish-link" href="${esc(it.link)}" target="_blank">${esc(domain)} — Open link →</a></div>` : ''}
+        ${domain ? `<div class="item-meta"><a class="wish-link" href="${esc(it.link)}" target="_blank" onclick="event.stopPropagation()">${esc(domain)} — Open link →</a></div>` : ''}
         ${metaParts.length ? `<div class="item-meta">${metaParts.join(' · ')}</div>` : ''}
       </div>
       <div class="note-item-actions">
-        <button class="note-item-check${it.completed ? ' checked' : ''}" onclick="toggleNoteItem('${_currentNoteId}','${it.id}',${!it.completed})" aria-label="Complete">${it.completed ? '✓' : '○'}</button>
-        <button class="del-btn" onclick="deleteNoteItem('${_currentNoteId}','${it.id}')">✕</button>
+        <button class="note-item-check${it.completed ? ' checked' : ''}" onclick="event.stopPropagation();toggleNoteItem('${_currentNoteId}','${it.id}',${!it.completed})" aria-label="Complete">${it.completed ? '✓' : '○'}</button>
+        <button class="del-btn" onclick="event.stopPropagation();deleteNoteItem('${_currentNoteId}','${it.id}')">✕</button>
       </div>
     </div>`;
   }).join('');
+}
+
+// ── Note Item Detail View ────────────────────────────────────────
+let _currentNoteItemId = null;
+
+function openNoteItemDetail(noteId, itemId) {
+  const item = _currentNoteItems.find(i => i.id === itemId);
+  if (!item) return;
+  _currentNoteItemId = itemId;
+  renderNoteItemDetailBody(item);
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('note-item-detail-section').classList.add('active');
+  document.getElementById('section-title').textContent = 'Item';
+  if (typeof updateFabForSection === 'function') updateFabForSection('note-item-detail');
+}
+
+function closeNoteItemDetail() {
+  _currentNoteItemId = null;
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('note-detail-section').classList.add('active');
+  const note = _notesData.find(n => n.id === _currentNoteId);
+  document.getElementById('section-title').textContent = note ? note.title : '';
+  if (typeof updateFabForSection === 'function') updateFabForSection('note-detail');
+}
+
+function renderNoteItemDetailBody(item) {
+  const domain = item.link ? (()=>{ try { return new URL(item.link).hostname.replace('www.',''); } catch(e) { return ''; } })() : '';
+  const metaParts = [];
+  if (item.addedBy)   metaParts.push(`Added by ${esc(item.addedBy)}`);
+  if (item.createdAt) metaParts.push(ago(item.createdAt));
+  const metaHtml = metaParts.length ? `<div class="td-meta-footer">${metaParts.join(' · ')}</div>` : '';
+
+  document.getElementById('note-item-detail-body').innerHTML = `
+    <h1 class="td-title">${item.pinned ? '<span class="item-pin">📌</span>' : ''}${esc(item.text)}</h1>
+    ${item.notes ? `
+    <div class="td-section-card td-notes-card">
+      <div class="td-section-title">Notes</div>
+      <div class="td-notes-text">${esc(item.notes).replace(/\n/g,'<br>')}</div>
+    </div>` : ''}
+    ${item.link ? `
+    <div class="td-section-card">
+      <a class="wish-link" href="${esc(item.link)}" target="_blank">${esc(domain)} — Open link →</a>
+    </div>` : ''}
+    ${metaHtml}
+  `;
+}
+
+// ── Note item menu ────────────────────────────────────────────────
+function openNoteItemMenu() {
+  document.getElementById('note-item-menu-overlay').classList.add('open');
+  document.getElementById('note-item-menu').classList.add('open');
+}
+function closeNoteItemMenu() {
+  document.getElementById('note-item-menu-overlay').classList.remove('open');
+  document.getElementById('note-item-menu').classList.remove('open');
+}
+function noteItemMenuEdit() {
+  closeNoteItemMenu();
+  const item = _currentNoteItems.find(i => i.id === _currentNoteItemId);
+  if (!item) return;
+  document.getElementById('note-item-detail-body').innerHTML = `
+    <input type="text" id="ni-edit-text" value="${escapeAttr(item.text)}" placeholder="Item text">
+    <input type="url" id="ni-edit-link" value="${escapeAttr(item.link || '')}" placeholder="Link (optional)">
+    <textarea id="ni-edit-notes" placeholder="Notes (optional)">${esc(item.notes || '')}</textarea>
+    <div class="row">
+      <button class="btn-primary" onclick="saveNoteItemEdit()">Save</button>
+      <button onclick="renderNoteItemDetailBody(_currentNoteItems.find(i=>i.id==='${item.id}'))">Cancel</button>
+    </div>
+  `;
+}
+function saveNoteItemEdit() {
+  const text  = document.getElementById('ni-edit-text').value.trim();
+  const link  = document.getElementById('ni-edit-link').value.trim();
+  const notes = document.getElementById('ni-edit-notes').value.trim();
+  if (!text || !_currentNoteId || !_currentNoteItemId) return;
+  db.collection('notes').doc(_currentNoteId).collection('items').doc(_currentNoteItemId)
+    .update({ text, link, notes })
+    .then(() => {
+      showToast('✏️ Item updated');
+      const item = _currentNoteItems.find(i => i.id === _currentNoteItemId);
+      if (item) renderNoteItemDetailBody({ ...item, text, link, notes });
+    });
+}
+function noteItemMenuPin() {
+  closeNoteItemMenu();
+  if (!_currentNoteId || !_currentNoteItemId) return;
+  const item = _currentNoteItems.find(i => i.id === _currentNoteItemId);
+  if (!item) return;
+  db.collection('notes').doc(_currentNoteId).collection('items').doc(_currentNoteItemId)
+    .update({ pinned: !item.pinned })
+    .then(() => showToast(item.pinned ? 'Unpinned' : '📌 Item pinned'));
+}
+function noteItemMenuDelete() {
+  closeNoteItemMenu();
+  if (!_currentNoteId || !_currentNoteItemId) return;
+  if (!confirm('Delete this item permanently? This cannot be undone.')) return;
+  const noteId = _currentNoteId, itemId = _currentNoteItemId;
+  closeNoteItemDetail();
+  db.collection('notes').doc(noteId).collection('items').doc(itemId).delete()
+    .then(() => showToast('Item deleted'))
+    .catch(() => showToast('⚠️ Delete failed'));
 }
 
 // ── Note item CRUD ─────────────────────────────────────────────────
@@ -2719,23 +2967,100 @@ function openBirthday(id) {
   const b = _birthdaysData.find(x => x.id === id);
   if (!b) return;
   _currentBdayId = id;
-  const { diffDays, dateLabel, ageStr } = getBirthdayInfo(b.date, b.birthYear);
-  const dayLabel = diffDays === 0 ? '🎉 Today!' : diffDays === 1 ? 'Tomorrow!' : `In ${diffDays} days`;
-  document.getElementById('bday-modal-name').textContent = b.name;
-  document.getElementById('bday-modal-meta').textContent = `${dateLabel} · ${dayLabel}${ageStr ? ' · ' + ageStr : ''}`;
-  document.getElementById('bday-modal-overlay').classList.add('open');
-  document.getElementById('bday-modal').classList.add('open');
-  document.getElementById('gift-name').value = '';
+  renderBirthdayDetailBody(b);
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('birthday-detail-section').classList.add('active');
+  document.getElementById('section-title').textContent = b.name;
+  if (typeof updateFabForSection === 'function') updateFabForSection('birthday-detail');
   listenGifts(id);
-  const giftInput = document.getElementById('gift-name');
-  setTimeout(() => { if (giftInput) { giftInput.focus(); giftInput.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); addGift(); } }; } }, 320);
 }
 
-function closeBirthdayModal() {
-  document.getElementById('bday-modal-overlay').classList.remove('open');
-  document.getElementById('bday-modal').classList.remove('open');
+function closeBirthdayDetail() {
   if (_giftsUnsubscribe) { _giftsUnsubscribe(); _giftsUnsubscribe = null; }
   _currentBdayId = null;
+  navTo('birthdays');
+}
+
+function renderBirthdayDetailBody(b) {
+  const { diffDays, dateLabel, ageStr } = getBirthdayInfo(b.date, b.birthYear);
+  const dayLabel = diffDays === 0 ? '🎉 Today!' : diffDays === 1 ? 'Tomorrow!' : `In ${diffDays} days`;
+  document.getElementById('bday-detail-title').textContent = (b.pinned ? '📌 ' : '') + b.name;
+  document.getElementById('bday-detail-body').innerHTML = `
+    <div class="td-meta-row">
+      <span class="td-due-date">${dateLabel} · ${dayLabel}${ageStr ? ' · ' + ageStr : ''}</span>
+    </div>
+    <div class="td-section-title" style="margin:4px 2px 8px">Gift Ideas</div>
+    <div id="gift-list"><div class="loading">Loading…</div></div>
+    <div id="gift-add-row" style="display:flex;gap:8px;align-items:center;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+      <input type="text" id="gift-name" placeholder="Add a gift idea…" style="flex:1">
+      <button onclick="addGift()" style="width:42px;height:42px;border-radius:50%;background:var(--primary);color:white;border:none;font-size:22px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center">+</button>
+    </div>
+  `;
+  const giftInput = document.getElementById('gift-name');
+  if (giftInput) giftInput.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); addGift(); } };
+}
+
+// ── Birthday menu ─────────────────────────────────────────────────
+function openBdayMenu() {
+  document.getElementById('bday-menu-overlay').classList.add('open');
+  document.getElementById('bday-menu').classList.add('open');
+}
+function closeBdayMenu() {
+  document.getElementById('bday-menu-overlay').classList.remove('open');
+  document.getElementById('bday-menu').classList.remove('open');
+}
+function bdayMenuEdit() {
+  closeBdayMenu();
+  const b = _birthdaysData.find(x => x.id === _currentBdayId);
+  if (!b) return;
+  const [, month, day] = b.date.split('-').map(Number);
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('bday-detail-body').innerHTML = `
+    <input type="text" id="bd-edit-name" value="${escapeAttr(b.name)}" placeholder="Name">
+    <div class="row">
+      <select id="bd-edit-day">${Array.from({length:31},(_,i)=>i+1).map(d=>`<option value="${d}"${d===day?' selected':''}>${d}</option>`).join('')}</select>
+      <select id="bd-edit-month">${monthNames.map((m,i)=>`<option value="${i+1}"${i+1===month?' selected':''}>${m}</option>`).join('')}</select>
+    </div>
+    <input type="text" id="bd-edit-year" value="${b.birthYear || ''}" placeholder="Birth year (optional)">
+    <div class="row">
+      <button class="btn-primary" onclick="saveBdayEdit()">Save</button>
+      <button onclick="renderBirthdayDetailBody(_birthdaysData.find(x=>x.id==='${b.id}'));listenGifts('${b.id}')">Cancel</button>
+    </div>
+  `;
+}
+function saveBdayEdit() {
+  const name  = document.getElementById('bd-edit-name').value.trim();
+  const day   = document.getElementById('bd-edit-day').value;
+  const month = document.getElementById('bd-edit-month').value;
+  const year  = document.getElementById('bd-edit-year').value.trim();
+  if (!name || !day || !month || !_currentBdayId) return;
+  const mm = month.padStart(2,'0'), dd = String(day).padStart(2,'0');
+  const date = '2000-' + mm + '-' + dd;
+  const birthYear = year ? parseInt(year) : null;
+  db.collection('birthdays').doc(_currentBdayId).update({ name, date, birthYear })
+    .then(() => {
+      showToast('✏️ Birthday updated');
+      const b = _birthdaysData.find(x => x.id === _currentBdayId);
+      if (b) { renderBirthdayDetailBody({ ...b, name, date, birthYear }); listenGifts(_currentBdayId); }
+    });
+}
+function bdayMenuPin() {
+  closeBdayMenu();
+  if (!_currentBdayId) return;
+  const b = _birthdaysData.find(x => x.id === _currentBdayId);
+  if (!b) return;
+  db.collection('birthdays').doc(_currentBdayId).update({ pinned: !b.pinned })
+    .then(() => showToast(b.pinned ? 'Unpinned' : '📌 Birthday pinned'));
+}
+function bdayMenuDelete() {
+  closeBdayMenu();
+  if (!_currentBdayId) return;
+  if (!confirm('Delete this birthday permanently? This cannot be undone.')) return;
+  const id = _currentBdayId;
+  closeBirthdayDetail();
+  db.collection('birthdays').doc(id).delete()
+    .then(() => showToast('Birthday deleted'))
+    .catch(() => showToast('⚠️ Delete failed'));
 }
 
 function listenGifts(bdayId) {
@@ -2842,6 +3167,7 @@ function listenBirthdays() {
     _birthdaysData = snap.docs.map(d => ({id:d.id,...d.data()}));
     renderBirthdaysList();
     renderBirthdaysDash();
+    if (typeof renderDashPinnedPlansBirthdays === 'function') renderDashPinnedPlansBirthdays();
   });
 }
 
@@ -2874,7 +3200,7 @@ function renderBirthdaysList() {
     bdayHtml += `<div class="bday-card${upcoming ? ' bday-upcoming' : ''}" onclick="openBirthday('${b.id}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter')openBirthday('${b.id}')">
       <div class="bday-emoji">${diffDays <= 7 ? '🎉' : '🎂'}</div>
       <div class="bday-body">
-        <div class="bday-name">${esc(b.name)}</div>
+        <div class="bday-name">${b.pinned ? '<span class="item-pin">📌</span>' : ''}${esc(b.name)}</div>
         <div class="bday-date">${dateLabel} · ${dayLabel}</div>
         ${ageStr ? `<div class="bday-age">${ageStr}</div>` : ''}
         <div class="bday-gift-count">${giftLabel}</div>
@@ -4427,7 +4753,7 @@ document.querySelectorAll('.tab').forEach(tab => {
       navBtn.innerHTML = '<span id="nav-fab-icon"></span>+';
     } else if (sec === 'glimmer-detail') {
       navBtn.style.display = 'none';
-    } else if (sec === 'task-detail') {
+    } else if (sec === 'task-detail' || sec === 'event-detail' || sec === 'birthday-detail' || sec === 'note-item-detail') {
       navBtn.style.display = 'none';
     } else {
       navBtn.setAttribute('aria-label', sec === 'lists' ? 'New note' : 'Add to ' + sec);
@@ -4519,7 +4845,7 @@ const DASH_WIDGET_SIZE_KEY  = 'jottie-dash-widget-size';
 // All possible widget IDs in default order
 const DASH_DEFAULT_WIDGETS = [
   'luna', 'thinking', 'events', 'tasks', 'shopping', 'mood',
-  'pinned-notes', 'pinned-glimmer-1', 'pinned-glimmer-2',
+  'pinned-notes', 'pinned-plans', 'pinned-glimmer-1', 'pinned-glimmer-2',
   'pinned-glimmer-3', 'pinned-glimmer-4'
 ];
 

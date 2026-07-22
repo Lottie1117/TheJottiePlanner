@@ -300,6 +300,9 @@
   <template id="widget-tpl-pinned-notes">
     <div id="dash-pinned-notes" style="display:none"></div>
   </template>
+  <template id="widget-tpl-pinned-plans">
+    <div id="dash-pinned-plans" style="display:none"></div>
+  </template>
   <template id="widget-tpl-pinned-glimmer-1">
     <div id="dash-pinned-glimmer-1" style="display:none"></div>
   </template>
@@ -332,6 +335,24 @@
 <div id="calendar-section" class="section">
   <div class="list-label">Upcoming</div>
   <div id="calendar-list"><div class="loading">Loading…</div></div>
+</div>
+
+<!-- ── Event Detail ─────────────────────────────────────────────── -->
+<div id="event-detail-section" class="section">
+  <div id="event-detail-body"></div>
+  <div class="task-detail-bottombar">
+    <button class="glimmer-detail-back" onclick="closeEventDetail()" aria-label="Back to Plans">‹</button>
+    <div style="flex:1"></div>
+    <button class="glimmer-detail-menu-btn" onclick="openEventMenu()" aria-label="Plan options">⋮</button>
+  </div>
+</div>
+
+<!-- Plan options menu -->
+<div class="note-menu-overlay" id="event-menu-overlay" onclick="closeEventMenu()"></div>
+<div class="note-menu" id="event-menu">
+  <button onclick="eventMenuEdit()">✏️ Edit Plan</button>
+  <button onclick="eventMenuPin()">📌 Pin Plan</button>
+  <button onclick="eventMenuDelete()" class="note-menu-danger">🗑️ Delete Plan</button>
 </div>
 
 <!-- ── Shopping ───────────────────────────────────────── -->
@@ -411,10 +432,46 @@
   <button id="note-menu-delete-btn" onclick="noteMenuDelete()" class="note-menu-danger">🗑️ Delete</button>
 </div>
 
+<!-- ── Note Item Detail ─────────────────────────────────────────── -->
+<div id="note-item-detail-section" class="section">
+  <div id="note-item-detail-body"></div>
+  <div class="task-detail-bottombar">
+    <button class="glimmer-detail-back" onclick="closeNoteItemDetail()" aria-label="Back">‹</button>
+    <div style="flex:1"></div>
+    <button class="glimmer-detail-menu-btn" onclick="openNoteItemMenu()" aria-label="Item options">⋮</button>
+  </div>
+</div>
+
+<!-- Note item options menu -->
+<div class="note-menu-overlay" id="note-item-menu-overlay" onclick="closeNoteItemMenu()"></div>
+<div class="note-menu" id="note-item-menu">
+  <button onclick="noteItemMenuEdit()">✏️ Edit Item</button>
+  <button onclick="noteItemMenuPin()">📌 Pin Item</button>
+  <button onclick="noteItemMenuDelete()" class="note-menu-danger">🗑️ Delete Item</button>
+</div>
+
 <!-- ── Birthdays ────────────────────────────────────────────────── -->
 <div id="birthdays-section" class="section">
   <div class="list-label">All Birthdays</div>
   <div id="birthdays-list"><div class="loading">Loading…</div></div>
+</div>
+
+<!-- ── Birthday Detail Page ──────────────────────────────────────── -->
+<div id="birthday-detail-section" class="section">
+  <div class="note-detail-header">
+    <button class="note-back-btn" onclick="closeBirthdayDetail()" aria-label="Back to Birthdays">‹ Birthdays</button>
+    <div class="note-detail-title" id="bday-detail-title"></div>
+    <button class="note-menu-btn" onclick="openBdayMenu()" aria-label="Birthday options">⋮</button>
+  </div>
+  <div id="bday-detail-body"></div>
+</div>
+
+<!-- Birthday options menu -->
+<div class="note-menu-overlay" id="bday-menu-overlay" onclick="closeBdayMenu()"></div>
+<div class="note-menu" id="bday-menu">
+  <button onclick="bdayMenuEdit()">✏️ Edit Birthday</button>
+  <button onclick="bdayMenuPin()">📌 Pin Birthday</button>
+  <button onclick="bdayMenuDelete()" class="note-menu-danger">🗑️ Delete Birthday</button>
 </div>
 
 <!-- ── Mood Tracker ───────────────────────────────────────────────── -->
@@ -849,29 +906,8 @@
 
 
 
-<!-- ── Birthday Detail Modal ─────────────────────────────────────── -->
 <!-- ── Mood Radial Picker Overlay ─────────────────────────────────── -->
 <div id="mood-radial-overlay" style="display:none;position:fixed;inset:0;z-index:400;align-items:center;justify-content:center;"></div>
-
-<div id="bday-modal-overlay" onclick="closeBirthdayModal()"></div>
-<div id="bday-modal" role="dialog" aria-modal="true" aria-labelledby="bday-modal-name">
-  <div class="bday-modal-handle"></div>
-  <div class="bday-modal-header">
-    <div>
-      <div class="bday-modal-name" id="bday-modal-name">–</div>
-      <div class="bday-modal-meta" id="bday-modal-meta"></div>
-    </div>
-    <button class="bday-modal-close" onclick="closeBirthdayModal()" aria-label="Close">✕</button>
-  </div>
-
-  <div id="gift-list"><div class="loading">Loading…</div></div>
-
-  <!-- Add gift inline row -->
-  <div id="gift-add-row" style="display:flex;gap:8px;align-items:center;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
-    <input type="text" id="gift-name" placeholder="Add a gift idea…" style="flex:1;padding:10px 12px;border-radius:12px;border:1.5px solid var(--border);font-size:14px;outline:none;background:var(--bg)">
-    <button onclick="addGift()" style="width:42px;height:42px;border-radius:50%;background:var(--primary);color:white;border:none;font-size:22px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center">+</button>
-  </div>
-</div>
 
 <!-- ── FAB ───────────────────────────────────────────────────────── -->
 <div class="fab-overlay" id="fab-overlay" onclick="closeFab()" aria-hidden="true"></div>
