@@ -1961,7 +1961,7 @@
       transform: translateX(-50%) translateY(16px);
       background: #1a1a2e;
       color: white;
-      padding: 11px 22px;
+      padding: 11px 16px 11px 22px;
       border-radius: 24px;
       font-size: 14px;
       font-weight: 600;
@@ -1971,8 +1971,73 @@
       white-space: nowrap;
       pointer-events: none;
       box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+      display: flex;
+      align-items: center;
+      gap: 14px;
     }
     #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    #toast.has-action { pointer-events: auto; }
+    .toast-action-btn {
+      background: none;
+      border: none;
+      color: #7dd3fc;
+      font-weight: 800;
+      font-size: 14px;
+      cursor: pointer;
+      padding: 2px 0;
+      flex-shrink: 0;
+    }
+
+    /* ── Custom Confirm/Prompt Dialog ─────────────────── */
+    #app-dialog-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 500;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      box-sizing: border-box;
+    }
+    #app-dialog-overlay.open { display: flex; }
+    #app-dialog {
+      width: 100%;
+      max-width: 340px;
+      background: var(--card);
+      border-radius: 20px;
+      padding: 22px 20px 16px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+      transform: scale(0.94);
+      opacity: 0;
+      transition: opacity 0.18s, transform 0.18s;
+    }
+    #app-dialog-overlay.open #app-dialog { transform: scale(1); opacity: 1; }
+    .app-dialog-title { font-size: 17px; font-weight: 800; color: var(--text); margin-bottom: 6px; }
+    .app-dialog-body { font-size: 14px; color: var(--muted); line-height: 1.4; }
+    #app-dialog-input {
+      width: 100%;
+      margin-top: 14px;
+      box-sizing: border-box;
+    }
+    .app-dialog-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 18px;
+    }
+    .app-dialog-btn {
+      flex: 1;
+      padding: 11px 0;
+      border-radius: 12px;
+      border: none;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .app-dialog-btn:active { opacity: 0.8; }
+    .app-dialog-cancel { background: var(--bg); color: var(--text); }
+    .app-dialog-confirm { background: var(--primary); color: white; }
+    .app-dialog-confirm.danger { background: #e0455a; }
 
     /* ── Edit Glimmer Modal ──────────────────────────── */
     .modal-overlay {

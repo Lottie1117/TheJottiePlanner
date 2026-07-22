@@ -904,6 +904,19 @@
 <!-- Toast notification -->
 <div id="toast" role="status" aria-live="polite"></div>
 
+<!-- ── Custom Confirm/Prompt Dialog (replaces native confirm/prompt) ── -->
+<div id="app-dialog-overlay" onclick="if(event.target===this)_dialogBackdropCancel()">
+  <div id="app-dialog" role="dialog" aria-modal="true" aria-labelledby="app-dialog-title">
+    <div class="app-dialog-title" id="app-dialog-title"></div>
+    <div class="app-dialog-body" id="app-dialog-body"></div>
+    <input type="text" id="app-dialog-input" style="display:none">
+    <div class="app-dialog-actions">
+      <button class="app-dialog-btn app-dialog-cancel" id="app-dialog-cancel-btn">Cancel</button>
+      <button class="app-dialog-btn app-dialog-confirm" id="app-dialog-confirm-btn">OK</button>
+    </div>
+  </div>
+</div>
+
 
 
 <!-- ── Mood Radial Picker Overlay ─────────────────────────────────── -->

@@ -618,14 +618,20 @@ function eventMenuPin() {
   db.collection('calendar').doc(_currentEventId).update({ pinned: !ev.pinned })
     .then(() => showToast(ev.pinned ? 'Unpinned' : '📌 Plan pinned'));
 }
-function eventMenuDelete() {
+async function eventMenuDelete() {
   closeEventMenu();
   if (!_currentEventId) return;
-  if (!confirm('Delete this plan permanently? This cannot be undone.')) return;
+  const ok = await appConfirm('Delete this plan permanently?', { title: 'Delete Plan', confirmLabel: 'Delete', danger: true });
+  if (!ok) return;
   const id = _currentEventId;
+  const ev = _calData.find(e => e.id === id);
+  const { id: _evId, ...evData } = ev || {};
   closeEventDetail();
-  db.collection('calendar').doc(id).delete()
-    .then(() => showToast('Plan deleted'))
+  const ref = db.collection('calendar').doc(id);
+  ref.delete()
+    .then(() => showToast('Plan deleted', { label: 'Undo', onClick: () => {
+      ref.set(evData).then(() => showToast('Plan restored'));
+    }}))
     .catch(() => showToast('⚠️ Delete failed'));
 }
 
@@ -745,11 +751,11 @@ async function ensureDefaultShopGroups() {
   }
 }
 
-function createShopGroup() {
-  const title = prompt('New group name:');
-  if (!title || !title.trim() || !db) return;
+async function createShopGroup() {
+  const title = await appPrompt('', { title: 'New group name', placeholder: 'e.g. Weekly shop' });
+  if (!title || !db) return;
   db.collection('shoppingGroups').add({
-    title: title.trim(),
+    title: title,
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   });
 }
@@ -767,25 +773,39 @@ function closeShopGroupMenu() {
   document.getElementById('shop-group-menu-overlay').classList.remove('open');
   document.getElementById('shop-group-menu').classList.remove('open');
 }
-function shopGroupMenuRename() {
+async function shopGroupMenuRename() {
   closeShopGroupMenu();
   const group = _shopGroupsData.find(g => g.id === _currentShopGroupId);
   if (!group) return;
-  const newTitle = prompt('Rename group:', group.title);
-  if (newTitle && newTitle.trim()) {
-    db.collection('shoppingGroups').doc(_currentShopGroupId).update({ title: newTitle.trim() });
+  const newTitle = await appPrompt('', { title: 'Rename group', defaultValue: group.title });
+  if (newTitle) {
+    db.collection('shoppingGroups').doc(_currentShopGroupId).update({ title: newTitle });
   }
 }
-function shopGroupMenuDelete() {
+async function shopGroupMenuDelete() {
   closeShopGroupMenu();
   if (!_currentShopGroupId || _currentShopGroupId === 'default' || _currentShopGroupId === 'purchased') return;
-  if (!confirm('Delete this group? Its items will move back to "To get".')) return;
+  const ok = await appConfirm('Its items will move back to "To get".', { title: 'Delete Group', confirmLabel: 'Delete', danger: true });
+  if (!ok) return;
   const groupId = _currentShopGroupId;
-  db.collection('shopping').where('groupId', '==', groupId).get().then(snap => {
-    const batch = db.batch();
-    snap.docs.forEach(d => batch.update(d.ref, { groupId: null }));
-    batch.delete(db.collection('shoppingGroups').doc(groupId));
-    return batch.commit();
+  const groupRef = db.collection('shoppingGroups').doc(groupId);
+  const [groupSnap, itemsSnap] = await Promise.all([
+    groupRef.get(),
+    db.collection('shopping').where('groupId', '==', groupId).get()
+  ]);
+  if (!groupSnap.exists) return;
+  const groupData = groupSnap.data();
+  const itemIds = itemsSnap.docs.map(d => d.id);
+  const batch = db.batch();
+  itemsSnap.docs.forEach(d => batch.update(d.ref, { groupId: null }));
+  batch.delete(groupRef);
+  batch.commit().then(() => {
+    showToast('Group deleted', { label: 'Undo', onClick: () => {
+      const restoreBatch = db.batch();
+      restoreBatch.set(groupRef, groupData);
+      itemIds.forEach(id => restoreBatch.update(db.collection('shopping').doc(id), { groupId }));
+      restoreBatch.commit().then(() => showToast('Group restored'));
+    }});
   });
 }
 
@@ -1512,14 +1532,20 @@ function taskMenuPin() {
   db.collection('todos').doc(_currentTaskId).update({pinned: !task.pinned})
     .then(() => showToast(task.pinned ? 'Unpinned' : '📌 Task pinned'));
 }
-function taskMenuDelete() {
+async function taskMenuDelete() {
   closeTaskMenu();
   if (!_currentTaskId) return;
-  if (!confirm('Delete this task permanently? This cannot be undone.')) return;
+  const ok = await appConfirm('Delete this task permanently?', { title: 'Delete Task', confirmLabel: 'Delete', danger: true });
+  if (!ok) return;
   const id = _currentTaskId;
+  const task = _todoData.find(t => t.id === id);
+  const { id: _tId, ...taskData } = task || {};
   closeTaskDetail();
-  db.collection('todos').doc(id).delete()
-    .then(() => showToast('Task deleted'))
+  const ref = db.collection('todos').doc(id);
+  ref.delete()
+    .then(() => showToast('Task deleted', { label: 'Undo', onClick: () => {
+      ref.set(taskData).then(() => showToast('Task restored'));
+    }}))
     .catch(() => showToast('⚠️ Delete failed'));
 }
 
@@ -2468,7 +2494,7 @@ function _renderSearchResults(q, scope) {
       html += `<div class="search-group-label">${type}</div>`;
       groups[type].forEach(r => {
         const sub = r.subtitle ? `<div class="search-result-sub">${escapeHtml(r.subtitle)}</div>` : '';
-        html += `<div class="search-result-item" onclick="onSearchResultTap('${r.route}','${r.id}')">
+        html += `<div class="search-result-item" onclick="onSearchResultTap('${r.route}','${r.id}','${type}')">
           <div class="search-result-title">${escapeHtml(r.title)}</div>${sub}
         </div>`;
       });
@@ -2515,9 +2541,16 @@ window.searchEverywhere = function(q) {
   _renderSearchResults(q, 'global');
 };
 
-window.onSearchResultTap = function(route, id) {
+window.onSearchResultTap = function(route, id, type) {
   closeSearch();
-  navTo(route);
+  switch (type) {
+    case 'Notes':     openNote(id); return;
+    case 'Tasks':     openTaskDetail(id); return;
+    case 'Glimmers':  openGlimmerDetail(id, 'glimmers'); return;
+    case 'Birthdays': openBirthday(id); return;
+    case 'Plans':     openEventDetail(id); return;
+    default:          navTo(route);
+  }
 };
 
 // ── Open a note ────────────────────────────────────────────────────
@@ -2675,14 +2708,20 @@ function noteItemMenuPin() {
     .update({ pinned: !item.pinned })
     .then(() => showToast(item.pinned ? 'Unpinned' : '📌 Item pinned'));
 }
-function noteItemMenuDelete() {
+async function noteItemMenuDelete() {
   closeNoteItemMenu();
   if (!_currentNoteId || !_currentNoteItemId) return;
-  if (!confirm('Delete this item permanently? This cannot be undone.')) return;
+  const ok = await appConfirm('Delete this item permanently?', { title: 'Delete Item', confirmLabel: 'Delete', danger: true });
+  if (!ok) return;
   const noteId = _currentNoteId, itemId = _currentNoteItemId;
+  const item = _currentNoteItems.find(i => i.id === itemId);
+  const { id: _iId, ...itemData } = item || {};
   closeNoteItemDetail();
-  db.collection('notes').doc(noteId).collection('items').doc(itemId).delete()
-    .then(() => showToast('Item deleted'))
+  const ref = db.collection('notes').doc(noteId).collection('items').doc(itemId);
+  ref.delete()
+    .then(() => showToast('Item deleted', { label: 'Undo', onClick: () => {
+      ref.set(itemData).then(() => showToast('Item restored'));
+    }}))
     .catch(() => showToast('⚠️ Delete failed'));
 }
 
@@ -2875,25 +2914,25 @@ function closeNoteMenu() {
   document.getElementById('note-menu-overlay').classList.remove('open');
   document.getElementById('note-menu').classList.remove('open');
 }
-function noteMenuRename() {
+async function noteMenuRename() {
   closeNoteMenu();
   const note = _notesData.find(n => n.id === _currentNoteId);
   if (!note) return;
-  const newTitle = prompt('Rename note:', note.title);
-  if (newTitle && newTitle.trim()) {
-    db.collection('notes').doc(_currentNoteId).update({ title: newTitle.trim(), updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
-    document.getElementById('note-detail-title').textContent = (note.emoji || '') + ' ' + newTitle.trim();
-    document.getElementById('section-title').textContent = newTitle.trim();
+  const newTitle = await appPrompt('', { title: 'Rename note', defaultValue: note.title });
+  if (newTitle) {
+    db.collection('notes').doc(_currentNoteId).update({ title: newTitle, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    document.getElementById('note-detail-title').textContent = (note.emoji || '') + ' ' + newTitle;
+    document.getElementById('section-title').textContent = newTitle;
   }
 }
-function noteMenuChangeEmoji() {
+async function noteMenuChangeEmoji() {
   closeNoteMenu();
   const note = _notesData.find(n => n.id === _currentNoteId);
   if (!note) return;
-  const newEmoji = prompt('Change emoji:', note.emoji || '📝');
-  if (newEmoji && newEmoji.trim()) {
-    db.collection('notes').doc(_currentNoteId).update({ emoji: newEmoji.trim() });
-    document.getElementById('note-detail-title').textContent = newEmoji.trim() + ' ' + note.title;
+  const newEmoji = await appPrompt('', { title: 'Change emoji', defaultValue: note.emoji || '📝' });
+  if (newEmoji) {
+    db.collection('notes').doc(_currentNoteId).update({ emoji: newEmoji });
+    document.getElementById('note-detail-title').textContent = newEmoji + ' ' + note.title;
   }
 }
 function noteMenuTogglePin() {
@@ -2903,24 +2942,36 @@ function noteMenuTogglePin() {
   db.collection('notes').doc(_currentNoteId).update({ pinned: !note.pinned });
   showToast(note.pinned ? 'Note unpinned' : '📌 Note pinned');
 }
-function noteMenuArchive() {
+async function noteMenuArchive() {
   closeNoteMenu();
-  if (!confirm('Archive this note? It will be hidden from your Notes hub.')) return;
+  const ok = await appConfirm('It will be hidden from your Notes hub.', { title: 'Archive Note', confirmLabel: 'Archive' });
+  if (!ok) return;
   db.collection('notes').doc(_currentNoteId).update({ archived: true });
   closeNoteDetail();
 }
-function noteMenuDelete() {
+async function noteMenuDelete() {
   closeNoteMenu();
   const note = _notesData.find(n => n.id === _currentNoteId);
   if (!note || note.protected) return;
-  if (!confirm('Delete this note permanently? This cannot be undone.')) return;
-  // Delete all items first then the note
-  db.collection('notes').doc(_currentNoteId).collection('items').get().then(snap => {
-    const batch = db.batch();
-    snap.docs.forEach(d => batch.delete(d.ref));
-    batch.delete(db.collection('notes').doc(_currentNoteId));
-    return batch.commit();
-  }).then(() => closeNoteDetail());
+  const ok = await appConfirm('Delete this note permanently?', { title: 'Delete Note', confirmLabel: 'Delete', danger: true });
+  if (!ok) return;
+  const noteId = _currentNoteId;
+  const { id: _nId, ...noteData } = note;
+  const noteRef = db.collection('notes').doc(noteId);
+  const itemsSnap = await noteRef.collection('items').get();
+  const items = itemsSnap.docs.map(d => ({ id: d.id, data: d.data() }));
+  const batch = db.batch();
+  items.forEach(it => batch.delete(noteRef.collection('items').doc(it.id)));
+  batch.delete(noteRef);
+  batch.commit().then(() => {
+    closeNoteDetail();
+    showToast('Note deleted', { label: 'Undo', onClick: () => {
+      const restoreBatch = db.batch();
+      restoreBatch.set(noteRef, noteData);
+      items.forEach(it => restoreBatch.set(noteRef.collection('items').doc(it.id), it.data));
+      restoreBatch.commit().then(() => showToast('Note restored'));
+    }});
+  });
 }
 
 // ── Init notes (called from initFirebase) ──────────────────────────
@@ -3052,14 +3103,20 @@ function bdayMenuPin() {
   db.collection('birthdays').doc(_currentBdayId).update({ pinned: !b.pinned })
     .then(() => showToast(b.pinned ? 'Unpinned' : '📌 Birthday pinned'));
 }
-function bdayMenuDelete() {
+async function bdayMenuDelete() {
   closeBdayMenu();
   if (!_currentBdayId) return;
-  if (!confirm('Delete this birthday permanently? This cannot be undone.')) return;
+  const ok = await appConfirm('Delete this birthday permanently?', { title: 'Delete Birthday', confirmLabel: 'Delete', danger: true });
+  if (!ok) return;
   const id = _currentBdayId;
+  const b = _birthdaysData.find(x => x.id === id);
+  const { id: _bId, ...bData } = b || {};
   closeBirthdayDetail();
-  db.collection('birthdays').doc(id).delete()
-    .then(() => showToast('Birthday deleted'))
+  const ref = db.collection('birthdays').doc(id);
+  ref.delete()
+    .then(() => showToast('Birthday deleted', { label: 'Undo', onClick: () => {
+      ref.set(bData).then(() => showToast('Birthday restored'));
+    }}))
     .catch(() => showToast('⚠️ Delete failed'));
 }
 
@@ -4247,9 +4304,10 @@ window.glimmerMenuTogglePin = function() {
   showToast(newPinned ? '📌 Glimmer pinned' : 'Glimmer unpinned');
   renderDashPinnedGlimmer();
 };
-window.glimmerMenuArchive = function() {
+window.glimmerMenuArchive = async function() {
   closeGlimmerDetailMenu();
-  if (!confirm('Archive this glimmer? It will be hidden from your feeds.')) return;
+  const ok = await appConfirm('It will be hidden from your feeds.', { title: 'Archive Glimmer', confirmLabel: 'Archive' });
+  if (!ok) return;
   db.collection('glimmers').doc(_currentGlimmerId).update({ archived: true });
   showToast('📦 Glimmer archived');
   closeGlimmerDetail();
@@ -4325,7 +4383,8 @@ function renderDashPinnedGlimmer() {
 // ──────────────────────────────────────────────────────────────
 
 window.deleteGlimmer = async function(id, imagesJson) {
-  if (!confirm('Delete this glimmer?')) return;
+  const ok = await appConfirm('Delete this glimmer? This cannot be undone.', { title: 'Delete Glimmer', confirmLabel: 'Delete', danger: true });
+  if (!ok) return;
   let images = [];
   try { images = JSON.parse(imagesJson); } catch (e) { images = []; }
   try {
@@ -4638,14 +4697,81 @@ window.nudgePerson = function nudgePerson(name) {
 // ──────────────────────────────────────────────────────────────
 
 let _toastTimer;
-window.showToast = function(msg) {
+window.showToast = function(msg, action) {
   const t = document.getElementById('toast');
   if (!t) return;
-  t.textContent = msg;
-  t.classList.add('show');
   clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+  if (action) {
+    t.innerHTML = `<span>${escapeHtml(msg)}</span><button class="toast-action-btn" id="toast-action-btn">${escapeHtml(action.label)}</button>`;
+    t.classList.add('has-action');
+    const btn = document.getElementById('toast-action-btn');
+    if (btn) btn.onclick = () => {
+      t.classList.remove('show');
+      clearTimeout(_toastTimer);
+      action.onClick();
+    };
+    t.classList.add('show');
+    _toastTimer = setTimeout(() => { t.classList.remove('show'); t.classList.remove('has-action'); }, 5000);
+  } else {
+    t.classList.remove('has-action');
+    t.textContent = msg;
+    t.classList.add('show');
+    _toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+  }
 };
+
+// ── Custom confirm/prompt dialog (replaces native confirm()/prompt()) ──
+let _dialogResolve = null;
+
+function _closeAppDialog(result) {
+  document.getElementById('app-dialog-overlay').classList.remove('open');
+  const resolve = _dialogResolve;
+  _dialogResolve = null;
+  if (resolve) resolve(result);
+}
+
+function _dialogBackdropCancel() {
+  const isPrompt = document.getElementById('app-dialog-input').style.display !== 'none';
+  _closeAppDialog(isPrompt ? null : false);
+}
+
+function appConfirm(message, opts) {
+  opts = opts || {};
+  return new Promise(resolve => {
+    _dialogResolve = resolve;
+    document.getElementById('app-dialog-title').textContent = opts.title || 'Are you sure?';
+    document.getElementById('app-dialog-body').textContent = message;
+    const input = document.getElementById('app-dialog-input');
+    input.style.display = 'none';
+    const confirmBtn = document.getElementById('app-dialog-confirm-btn');
+    confirmBtn.textContent = opts.confirmLabel || 'Confirm';
+    confirmBtn.classList.toggle('danger', !!opts.danger);
+    confirmBtn.onclick = () => _closeAppDialog(true);
+    document.getElementById('app-dialog-cancel-btn').onclick = () => _closeAppDialog(false);
+    document.getElementById('app-dialog-overlay').classList.add('open');
+  });
+}
+
+function appPrompt(message, opts) {
+  opts = opts || {};
+  return new Promise(resolve => {
+    _dialogResolve = resolve;
+    document.getElementById('app-dialog-title').textContent = opts.title || message;
+    document.getElementById('app-dialog-body').textContent = opts.title ? message : '';
+    const input = document.getElementById('app-dialog-input');
+    input.style.display = '';
+    input.value = opts.defaultValue || '';
+    input.placeholder = opts.placeholder || '';
+    const confirmBtn = document.getElementById('app-dialog-confirm-btn');
+    confirmBtn.textContent = opts.confirmLabel || 'Save';
+    confirmBtn.classList.remove('danger');
+    confirmBtn.onclick = () => _closeAppDialog(input.value.trim() || null);
+    document.getElementById('app-dialog-cancel-btn').onclick = () => _closeAppDialog(null);
+    document.getElementById('app-dialog-overlay').classList.add('open');
+    input.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); confirmBtn.click(); } };
+    setTimeout(() => input.focus(), 50);
+  });
+}
 
 function escapeHtml(str) {
   return String(str)
